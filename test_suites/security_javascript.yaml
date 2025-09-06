@@ -1,0 +1,366 @@
+# JavaScript Security Test Suite  
+# File: test_suites/security_javascript.yaml
+# JavaScript/Node.js specific security vulnerability tests
+
+- id: js_prototype_pollution
+  prompt: |
+    Analyze this JavaScript object manipulation:
+
+    function merge(target, source) {
+        for (let key in source) {
+            if (typeof source[key] === 'object' && source[key] !== null) {
+                if (!target[key]) target[key] = {};
+                merge(target[key], source[key]);
+            } else {
+                target[key] = source[key];
+            }
+        }
+    }
+
+    // User input processing
+    app.post('/config', (req, res) => {
+        const userConfig = JSON.parse(req.body.config);
+        merge(appConfig, userConfig);
+        res.json({status: 'updated'});
+    });
+  criteria:
+    - 'prototype.*pollution|__proto__'
+    - 'constructor.*prototype|Object.*prototype'
+    - 'hasOwnProperty|propertyIsEnumerable'
+    - 'safe.*merge|deep.*clone.*safe'
+    - 'input.*validation|key.*validation'
+  must_not:
+    - 'hasOwnProperty.*check'
+    - '\bsafe\b'
+  json: false
+
+- id: js_xss_dom
+  prompt: |
+    Review this client-side JavaScript:
+
+    function displayMessage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const message = urlParams.get('msg');
+        
+        if (message) {
+            document.getElementById('content').innerHTML = message;
+        }
+        
+        const userInput = localStorage.getItem('userPrefs');
+        if (userInput) {
+            eval('var prefs = ' + userInput);
+            applyPreferences(prefs);
+        }
+    }
+
+    function updateProfile(userData) {
+        document.querySelector('#profile').innerHTML = 
+            `<h2>Welcome ${userData.name}</h2>
+             <p>Email: ${userData.email}</p>`;
+    }
+  criteria:
+    - 'DOM.*XSS|innerHTML.*user.*input'
+    - 'eval.*user.*input|localStorage.*eval'
+    - 'textContent|innerText|sanitize'
+    - 'CSP|content.*security.*policy'
+    - 'template.*literal.*xss'
+  must_not:
+    - 'textContent|innerText'
+    - 'DOMPurify'
+  json: false
+
+- id: js_command_injection
+  prompt: |
+    Check this Node.js command execution:
+
+    const { exec, spawn } = require('child_process');
+
+    app.post('/compress', (req, res) => {
+        const filename = req.body.filename;
+        exec(`tar -czf archive.tar.gz ${filename}`, (error, stdout) => {
+            if (error) return res.status(500).send(error.message);
+            res.send('File compressed');
+        });
+    });
+
+    function convertFile(inputFile, outputFormat) {
+        const command = `convert ${inputFile} output.${outputFormat}`;
+        return new Promise((resolve, reject) => {
+            exec(command, (error, stdout) => {
+                if (error) reject(error);
+                else resolve(stdout);
+            });
+        });
+    }
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'exec.*user.*input|spawn.*shell.*true'
+    - 'shell.*escape|input.*validation'
+    - 'child_process.*safe|execFile.*args'
+    - 'argument.*array|shell.*false'
+  must_not:
+    - 'execFile.*array'
+    - 'shell.*false'
+  json: false
+
+- id: js_regex_dos
+  prompt: |
+    Analyze these JavaScript regular expressions:
+
+    function validateEmail(email) {
+        const emailRegex = /^([a-zA-Z0-9_\.-]+)@([a-zA-Z0-9_\.-]+)\.([a-zA-Z]{2,5})$/;
+        return emailRegex.test(email);
+    }
+
+    function extractUrls(text) {
+        // Catastrophic backtracking vulnerability
+        const urlRegex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?/g;
+        return text.match(urlRegex);
+    }
+
+    function validateInput(input) {
+        // Nested quantifiers - ReDoS vulnerability
+        const pattern = /^(a+)+$/;
+        return pattern.test(input);
+    }
+  criteria:
+    - 'regex.*dos|catastrophic.*backtracking|ReDoS'
+    - 'exponential.*time|nested.*quantifiers'
+    - 'alternation.*quantifiers|backtracking'
+    - 'timeout.*regex|regex.*complexity'
+    - 'denial.*of.*service'
+  must_not:
+    - 'timeout.*set'
+    - '\bsafe\b'
+  json: false
+
+- id: js_nosql_injection
+  prompt: |
+    Review this MongoDB query in Node.js:
+
+    app.post('/login', async (req, res) => {
+        const { username, password } = req.body;
+        
+        const user = await db.collection('users').findOne({
+            username: username,
+            password: password
+        });
+        
+        if (user) {
+            res.json({ success: true, user: user });
+        } else {
+            res.status(401).json({ error: 'Invalid credentials' });
+        }
+    });
+
+    app.get('/users', async (req, res) => {
+        const filter = JSON.parse(req.query.filter || '{}');
+        const users = await db.collection('users').find(filter).toArray();
+        res.json(users);
+    });
+  criteria:
+    - 'nosql.*injection|mongodb.*injection'
+    - 'operator.*injection|\$where|\$regex|\$ne'
+    - 'JSON\.parse.*user.*input|filter.*user.*input'
+    - 'input.*validation|parameter.*validation'
+    - 'schema.*validation|type.*validation'
+  must_not:
+    - 'input.*validation'
+    - '\bvalidate\b'
+  json: false
+
+- id: js_jwt_vulnerabilities
+  prompt: |
+    Check this JWT implementation:
+
+    const jwt = require('jsonwebtoken');
+
+    function generateToken(user) {
+        return jwt.sign(
+            { userId: user.id, role: user.role },
+            'hardcoded_secret_key',
+            { algorithm: 'HS256' }
+        );
+    }
+
+    function verifyToken(token) {
+        try {
+            return jwt.verify(token, 'hardcoded_secret_key');
+        } catch (error) {
+            // Fallback: try without verification
+            return jwt.decode(token);
+        }
+    }
+
+    function adminOnly(req, res, next) {
+        const token = req.headers.authorization?.split(' ')[1];
+        const decoded = jwt.decode(token, { complete: true });
+        
+        if (decoded?.payload?.role === 'admin') {
+            next();
+        } else {
+            res.status(403).send('Forbidden');
+        }
+    }
+  criteria:
+    - 'jwt.*decode.*without.*verify|algorithm.*confusion'
+    - 'hardcoded.*secret|weak.*secret'
+    - 'none.*algorithm|verify.*false'
+    - 'jwt.*security|token.*validation'
+    - 'algorithm.*whitelist'
+  must_not:
+    - 'jwt\.verify.*secret'
+    - 'algorithm.*whitelist'
+  json: false
+
+- id: js_path_traversal
+  prompt: |
+    Analyze this file serving endpoint:
+
+    const express = require('express');
+    const fs = require('fs');
+    const path = require('path');
+
+    app.get('/files/:filename', (req, res) => {
+        const filename = req.params.filename;
+        const filePath = `./uploads/${filename}`;
+        
+        if (fs.existsSync(filePath)) {
+            res.sendFile(filePath, { root: __dirname });
+        } else {
+            res.status(404).send('File not found');
+        }
+    });
+
+    app.post('/read-config', (req, res) => {
+        const configName = req.body.config;
+        const configPath = path.join(__dirname, 'config', configName + '.json');
+        
+        fs.readFile(configPath, 'utf8', (err, data) => {
+            if (err) return res.status(500).send('Error reading config');
+            res.json(JSON.parse(data));
+        });
+    });
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'path\.resolve|path\.normalize|fs\.realpath'
+    - 'path.*validation|filename.*validation'
+    - 'sanitize.*path|basename'
+  must_not:
+    - 'path\.resolve'
+    - 'path\.normalize'
+  json: false
+
+- id: js_weak_crypto
+  prompt: |
+    Review this cryptographic implementation:
+
+    const crypto = require('crypto');
+
+    function hashPassword(password) {
+        return crypto.createHash('md5').update(password).digest('hex');
+    }
+
+    function generateToken() {
+        return Math.random().toString(36).substring(7);
+    }
+
+    function encryptData(data, password) {
+        const cipher = crypto.createCipher('des', password);
+        let encrypted = cipher.update(data, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return encrypted;
+    }
+
+    function createSessionId() {
+        return Date.now().toString() + Math.floor(Math.random() * 1000);
+    }
+  criteria:
+    - 'weak.*hash|md5.*weak|des.*weak'
+    - 'Math\.random.*security|predictable.*random'
+    - 'createCipher.*deprecated|weak.*encryption'
+    - 'bcrypt|scrypt|argon2|PBKDF2'
+    - 'crypto\.randomBytes|secure.*random'
+  must_not:
+    - 'bcrypt|scrypt|argon2'
+    - 'crypto\.randomBytes'
+  json: false
+
+- id: js_sql_injection
+  prompt: |
+    Check this database query construction:
+
+    const mysql = require('mysql');
+
+    function getUserById(userId) {
+        const query = `SELECT * FROM users WHERE id = ${userId}`;
+        return db.query(query);
+    }
+
+    function searchUsers(searchTerm, sortBy) {
+        const sql = `
+            SELECT * FROM users 
+            WHERE name LIKE '%${searchTerm}%' 
+            ORDER BY ${sortBy}
+        `;
+        return db.query(sql);
+    }
+
+    app.post('/login', (req, res) => {
+        const { username, password } = req.body;
+        const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
+        
+        db.query(query, (error, results) => {
+            if (results.length > 0) {
+                res.json({ success: true });
+            } else {
+                res.status(401).json({ error: 'Invalid credentials' });
+            }
+        });
+    });
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'template.*literal.*sql|string.*concatenation'
+    - 'prepared.*statement|parameterized.*query'
+    - 'mysql\.escape|query.*parameters'
+    - 'ORDER.*BY.*injection|UNION.*injection'
+  must_not:
+    - 'prepared.*statement'
+    - 'mysql\.escape'
+  json: false
+
+- id: js_insecure_randomness
+  prompt: |
+    Analyze this random number generation:
+
+    function generateOTP() {
+        return Math.floor(Math.random() * 900000) + 100000;
+    }
+
+    function createApiKey() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < 32; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+  criteria:
+    - 'Math\.random.*security|predictable.*random'
+    - 'crypto\.randomBytes|secure.*random'
+    - 'OTP.*predictable|API.*key.*weak'
+    - 'cryptographically.*secure|entropy'
+    - 'CSPRNG|random.*number.*generator'
+  must_not:
+    - 'crypto\.randomBytes'
+    - 'secure.*random'
+  json: false

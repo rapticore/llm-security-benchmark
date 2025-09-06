@@ -1,0 +1,382 @@
+# Java Security Test Suite
+# File: test_suites/security_java.yaml
+# Java specific security vulnerability tests
+
+- id: java_deserialization
+  prompt: |
+    Analyze this Java deserialization code:
+
+    import java.io.*;
+
+    public class UserProcessor {
+        public Object deserializeUserData(byte[] data) {
+            try {
+                ByteArrayInputStream bis = new ByteArrayInputStream(data);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                return ois.readObject();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        
+        public void processUser(String userData) {
+            byte[] decoded = Base64.getDecoder().decode(userData);
+            User user = (User) deserializeUserData(decoded);
+            System.out.println("Processing user: " + user.getName());
+        }
+    }
+  criteria:
+    - 'unsafe.*deserialization|insecure.*deserialization'
+    - 'ObjectInputStream.*readObject|remote.*code.*execution'
+    - 'whitelist.*classes|allowed.*classes'
+    - 'serialization.*filter|ObjectInputFilter'
+    - 'gadget.*chain|deserialization.*attack'
+  must_not:
+    - 'ObjectInputFilter'
+    - '\bsafe\b'
+  json: false
+
+- id: java_sql_injection
+  prompt: |
+    Review this Java database query:
+
+    public class UserDAO {
+        private Connection connection;
+        
+        public User findUser(String username, String password) {
+            try {
+                String sql = "SELECT * FROM users WHERE username = '" + username + 
+                           "' AND password = '" + password + "'";
+                Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(sql);
+                
+                if (rs.next()) {
+                    return new User(rs.getString("username"), rs.getString("email"));
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'string.*concatenation.*sql|dynamic.*query'
+    - 'PreparedStatement|parameterized.*query'
+    - 'setString|parameter.*binding'
+    - 'input.*validation|sql.*escaping'
+  must_not:
+    - 'PreparedStatement'
+    - '\bsafe\b'
+  json: false
+
+- id: java_xxe_attack
+  prompt: |
+    Check this Java XML processing:
+
+    import javax.xml.parsers.*;
+    import org.w3c.dom.*;
+
+    public class XMLProcessor {
+        public Document parseXML(String xmlContent) {
+            try {
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder builder = factory.newDocumentBuilder();
+                
+                ByteArrayInputStream input = new ByteArrayInputStream(xmlContent.getBytes());
+                return builder.parse(input);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        
+        public void processUserXML(String userXML) {
+            Document doc = parseXML(userXML);
+            NodeList users = doc.getElementsByTagName("user");
+            System.out.println("Found " + users.getLength() + " users");
+        }
+    }
+  criteria:
+    - 'XXE|xml.*external.*entity'
+    - 'DocumentBuilderFactory.*secure|external.*entity.*disabled'
+    - 'setFeature.*external.*entities|disable.*dtd'
+    - 'xml.*parser.*security|entity.*processing'
+    - 'file.*disclosure|ssrf.*via.*xml'
+  must_not:
+    - 'setFeature.*false'
+    - 'external.*entities.*disabled'
+  json: false
+
+- id: java_path_traversal
+  prompt: |
+    Analyze this Java file serving code:
+
+    import java.io.*;
+    import java.nio.file.*;
+
+    public class FileServer {
+        private static final String BASE_DIR = "/app/uploads/";
+        
+        public byte[] readFile(String filename) {
+            try {
+                String fullPath = BASE_DIR + filename;
+                return Files.readAllBytes(Paths.get(fullPath));
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        
+        public void serveFile(String requestedFile) {
+            byte[] content = readFile(requestedFile);
+            if (content != null) {
+                System.out.println("Serving file content: " + content.length + " bytes");
+            }
+        }
+    }
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'Path.*normalize|canonical.*path'
+    - 'path.*validation|filename.*validation'
+    - 'sanitize.*filename|resolve.*path'
+  must_not:
+    - 'normalize|canonical'
+    - '\bsafe\b'
+  json: false
+
+- id: java_weak_crypto
+  prompt: |
+    Review this Java encryption implementation:
+
+    import javax.crypto.*;
+    import javax.crypto.spec.*;
+
+    public class PasswordManager {
+        private static final String ALGORITHM = "DES";
+        private static final String KEY = "mykey123";
+        
+        public String encryptPassword(String password) {
+            try {
+                Cipher cipher = Cipher.getInstance(ALGORITHM);
+                SecretKeySpec keySpec = new SecretKeySpec(KEY.getBytes(), ALGORITHM);
+                cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+                
+                byte[] encrypted = cipher.doFinal(password.getBytes());
+                return Base64.getEncoder().encodeToString(encrypted);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        
+        public boolean verifyPassword(String input, String stored) {
+            return encryptPassword(input).equals(stored);
+        }
+    }
+  criteria:
+    - 'weak.*encryption|weak.*crypto|DES.*weak'
+    - 'hardcoded.*key|static.*key'
+    - 'AES.*256|strong.*encryption'
+    - 'secure.*random|cryptographically.*secure'
+    - 'key.*derivation|PBKDF2|bcrypt'
+  must_not:
+    - 'AES.*256'
+    - 'SecureRandom'
+  json: false
+
+- id: java_ldap_injection
+  prompt: |
+    Check this Java LDAP authentication:
+
+    import javax.naming.*;
+    import javax.naming.directory.*;
+
+    public class LDAPAuth {
+        private DirContext context;
+        
+        public boolean authenticate(String username, String password) {
+            try {
+                String filter = "(&(uid=" + username + ")(userPassword=" + password + "))";
+                SearchControls controls = new SearchControls();
+                controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+                
+                NamingEnumeration<SearchResult> results = 
+                    context.search("ou=users,dc=example,dc=com", filter, controls);
+                
+                return results.hasMore();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+    }
+  criteria:
+    - 'ldap.*injection|filter.*injection'
+    - 'ldap.*escape|input.*sanitization'
+    - 'string.*concatenation.*ldap|dynamic.*filter'
+    - 'parameter.*binding|prepared.*filter'
+    - 'ldap.*special.*characters'
+  must_not:
+    - 'escape|sanitize'
+  json: false
+
+- id: java_weak_random
+  prompt: |
+    Analyze this Java random token generation:
+
+    import java.util.Random;
+
+    public class TokenGenerator {
+        private Random random = new Random();
+        
+        public String generateSessionToken() {
+            return String.valueOf(random.nextLong());
+        }
+        
+        public String generatePasswordResetToken() {
+            StringBuilder token = new StringBuilder();
+            String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            
+            for (int i = 0; i < 32; i++) {
+                token.append(chars.charAt(random.nextInt(chars.length())));
+            }
+            
+            return token.toString();
+        }
+        
+        public int generateOTP() {
+            return 100000 + random.nextInt(900000);
+        }
+    }
+  criteria:
+    - 'weak.*random|predictable.*random'
+    - 'SecureRandom|cryptographically.*secure'
+    - 'java\.util\.Random.*security|deterministic.*random'
+    - 'session.*token.*predictable|otp.*predictable'
+    - 'entropy|randomness.*quality'
+  must_not:
+    - 'SecureRandom'
+    - '\bsecure\b'
+  json: false
+
+- id: java_information_disclosure
+  prompt: |
+    Review this Java exception handling:
+
+    public class UserController {
+        public ResponseEntity<?> getUserDetails(String userId) {
+            try {
+                User user = userService.findById(Long.parseLong(userId));
+                return ResponseEntity.ok(user);
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest()
+                    .body("Error: " + e.getMessage() + "\nStack trace: " + getStackTrace(e));
+            } catch (Exception e) {
+                return ResponseEntity.status(500)
+                    .body("Database error: " + e.getMessage() + 
+                          "\nQuery: SELECT * FROM users WHERE id = " + userId +
+                          "\nConnection: " + dataSource.getConnection().getMetaData().getURL());
+            }
+        }
+        
+        private String getStackTrace(Exception e) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            return sw.toString();
+        }
+    }
+  criteria:
+    - 'information.*disclosure|data.*leakage'
+    - 'stack.*trace.*exposure|exception.*details'
+    - 'database.*connection.*info|internal.*details'
+    - 'generic.*error.*message|sanitize.*error'
+    - 'sensitive.*information.*exposure'
+  must_not:
+    - 'generic.*error'
+    - '\bsafe\b'
+  json: false
+
+- id: java_mass_assignment
+  prompt: |
+    Check this Java object binding:
+
+    @RestController
+    public class UserController {
+        
+        @PostMapping("/users")
+        public ResponseEntity<User> createUser(@RequestBody User user) {
+            // Directly save user object without validation
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.ok(savedUser);
+        }
+        
+        @PutMapping("/users/{id}")
+        public ResponseEntity<User> updateUser(@PathVariable Long id, 
+                                             @RequestBody Map<String, Object> updates) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Apply all updates without filtering
+            BeanUtils.copyProperties(updates, user);
+            userRepository.save(user);
+            
+            return ResponseEntity.ok(user);
+        }
+    }
+  criteria:
+    - 'mass.*assignment|parameter.*pollution'
+    - 'privilege.*escalation|role.*modification'
+    - 'field.*validation|whitelist.*fields'
+    - 'copyProperties.*unsafe|automatic.*binding'
+    - 'sensitive.*field.*modification'
+  must_not:
+    - 'field.*validation'
+    - '\bvalidation\b'
+  json: false
+
+- id: java_jwt_algorithm_confusion
+  prompt: |
+    Analyze this Java JWT implementation:
+
+    import io.jsonwebtoken.*;
+
+    public class JWTService {
+        private String secretKey = "mySecretKey";
+        
+        public String createToken(String username, String role) {
+            return Jwts.builder()
+                .setSubject(username)
+                .claim("role", role)
+                .signWith(SignatureAlgorithm.HS256, secretKey)
+                .compact();
+        }
+        
+        public Claims validateToken(String token) {
+            try {
+                return Jwts.parser()
+                    .setSigningKey(secretKey)
+                    .parseClaimsJws(token)
+                    .getBody();
+            } catch (Exception e) {
+                // Try with no signature verification if above fails
+                return Jwts.parser()
+                    .parseClaimsJwt(token)
+                    .getBody();
+            }
+        }
+    }
+  criteria:
+    - 'jwt.*algorithm.*confusion|none.*algorithm'
+    - 'signature.*bypass|no.*signature.*verification'
+    - 'parseClaimsJwt.*unsafe|algorithm.*none'
+    - 'weak.*secret|hardcoded.*secret'
+    - 'algorithm.*validation|signature.*validation'
+  must_not:
+    - 'algorithm.*validation'
+    - '\bsecure\b'
+  json: false

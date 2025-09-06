@@ -1,0 +1,354 @@
+# Python Security Test Suite
+# File: test_suites/security_python.yaml
+# Python specific security vulnerability tests
+
+- id: python_code_injection
+  prompt: |
+    Analyze this Python code execution:
+
+    def evaluate_expression(expr):
+        return eval(expr)
+
+    def execute_code(code_string):
+        exec(code_string)
+
+    def process_template(template, data):
+        # Using string formatting with user data
+        return template.format(**data)
+
+    # Usage in web endpoint
+    @app.route('/calc', methods=['POST'])
+    def calculator():
+        expression = request.json.get('expression')
+        result = evaluate_expression(expression)
+        return {'result': result}
+  criteria:
+    - 'code.*injection|eval.*user.*input|exec.*user.*input'
+    - 'template.*injection|format.*injection'
+    - 'ast\.literal_eval|safe.*eval'
+    - 'whitelist.*functions|restricted.*builtins'
+    - 'remote.*code.*execution|arbitrary.*code'
+  must_not:
+    - 'ast\.literal_eval'
+    - '\bsafe\b'
+  json: false
+
+- id: python_pickle_deserialization
+  prompt: |
+    Review this Python object serialization:
+
+    import pickle
+    import base64
+
+    def load_user_data(serialized_data):
+        return pickle.loads(serialized_data)
+
+    def process_session(session_cookie):
+        decoded = base64.b64decode(session_cookie)
+        return pickle.loads(decoded)
+
+    class UserPreferences:
+        def __reduce__(self):
+            # Dangerous: can execute arbitrary code
+            return (os.system, ('rm -rf /',))
+
+    @app.route('/upload', methods=['POST'])
+    def upload_data():
+        file_content = request.files['data'].read()
+        user_data = pickle.loads(file_content)
+        return jsonify({'status': 'processed'})
+  criteria:
+    - 'pickle.*loads.*unsafe|insecure.*deserialization'
+    - '__reduce__.*method|gadget.*chain'
+    - 'remote.*code.*execution|arbitrary.*code'
+    - 'json\.loads|safe.*deserialization'
+    - 'whitelist.*classes|restricted.*unpickler'
+  must_not:
+    - 'json\.loads'
+    - '\bsafe\b'
+  json: false
+
+- id: python_ssti
+  prompt: |
+    Check this template rendering:
+
+    from jinja2 import Template
+    from flask import render_template_string
+
+    def render_user_template(template_string, user_data):
+        template = Template(template_string)
+        return template.render(**user_data)
+
+    @app.route('/profile/<username>')
+    def user_profile(username):
+        template = f"<h1>Welcome {username}!</h1>"
+        return render_template_string(template)
+
+    def generate_email(template_content, user_info):
+        # User controls template content
+        return render_template_string(template_content, user=user_info)
+  criteria:
+    - 'SSTI|server.*side.*template.*injection'
+    - 'render_template_string.*user.*input'
+    - 'Template.*user.*input|jinja2.*injection'
+    - 'template.*validation|sanitize.*template'
+    - 'sandboxed.*environment|safe.*template'
+  must_not:
+    - 'sandboxed.*environment'
+    - '\bsafe\b'
+  json: false
+
+- id: python_path_traversal
+  prompt: |
+    Analyze this file handling code:
+
+    import os
+
+    def read_user_file(filename):
+        file_path = f"/app/uploads/{filename}"
+        with open(file_path, 'r') as f:
+            return f.read()
+
+    def serve_template(template_name):
+        template_path = os.path.join("templates", template_name + ".html")
+        return open(template_path).read()
+
+    @app.route('/download/<path:filepath>')
+    def download_file(filepath):
+        return send_file(filepath)
+
+    def load_config(config_name):
+        config_path = f"../config/{config_name}.json"
+        with open(config_path) as f:
+            return json.load(f)
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'os\.path\.abspath|os\.path\.realpath|pathlib'
+    - 'path.*validation|filename.*validation'
+    - 'secure_filename|sanitize.*path'
+  must_not:
+    - 'os\.path\.abspath|os\.path\.realpath'
+    - 'secure_filename'
+  json: false
+
+- id: python_weak_crypto
+  prompt: |
+    Review this cryptographic implementation:
+
+    import hashlib
+    import random
+    import string
+
+    def hash_password(password):
+        return hashlib.md5(password.encode()).hexdigest()
+
+    def generate_session_token():
+        return ''.join(random.choice(string.ascii_letters) for _ in range(32))
+
+    def encrypt_data(data, key):
+        # Simple XOR encryption
+        result = []
+        for i, char in enumerate(data):
+            result.append(chr(ord(char) ^ ord(key[i % len(key)])))
+        return ''.join(result)
+
+    def create_api_key():
+        import time
+        seed = int(time.time())
+        random.seed(seed)
+        return random.randint(100000, 999999)
+  criteria:
+    - 'weak.*hash|md5.*weak|sha1.*weak'
+    - 'random\.choice.*security|predictable.*random'
+    - 'XOR.*encryption|weak.*encryption'
+    - 'bcrypt|scrypt|argon2|PBKDF2'
+    - 'secrets\.token_hex|cryptographically.*secure'
+  must_not:
+    - 'bcrypt|scrypt|argon2'
+    - 'secrets\.'
+  json: false
+
+- id: python_xml_vulnerabilities
+  prompt: |
+    Check this XML processing:
+
+    import xml.etree.ElementTree as ET
+    from xml.dom import minidom
+    import defusedxml.ElementTree as safe_ET
+
+    def parse_user_xml(xml_content):
+        # Vulnerable to XXE attacks
+        root = ET.fromstring(xml_content)
+        return root
+
+    def process_xml_file(xml_data):
+        doc = minidom.parseString(xml_data)
+        return doc.getElementsByTagName('user')
+
+    @app.route('/upload-xml', methods=['POST'])
+    def upload_xml():
+        xml_content = request.files['xml'].read()
+        parsed = ET.fromstring(xml_content)
+        return jsonify({'status': 'parsed'})
+  criteria:
+    - 'XXE|xml.*external.*entity'
+    - 'xml\.etree\.ElementTree.*unsafe|minidom.*unsafe'
+    - 'defusedxml|safe.*xml.*parser'
+    - 'external.*entity.*disabled|resolve.*entities.*false'
+    - 'xml.*bomb|billion.*laughs'
+  must_not:
+    - 'defusedxml'
+    - 'resolve.*entities.*false'
+  json: false
+
+- id: python_ldap_injection
+  prompt: |
+    Analyze this LDAP query construction:
+
+    import ldap
+
+    def authenticate_user(username, password):
+        search_filter = f"(&(uid={username})(userPassword={password}))"
+        
+        conn = ldap.initialize("ldap://localhost")
+        result = conn.search_s(
+            "ou=users,dc=example,dc=com",
+            ldap.SCOPE_SUBTREE,
+            search_filter
+        )
+        return len(result) > 0
+
+    def find_users(search_term):
+        filter_string = f"(|(cn=*{search_term}*)(mail=*{search_term}*))"
+        conn = ldap.initialize("ldap://localhost")
+        return conn.search_s("ou=users,dc=example,dc=com", ldap.SCOPE_SUBTREE, filter_string)
+  criteria:
+    - 'ldap.*injection|filter.*injection'
+    - 'search.*filter.*user.*input|ldap.*query.*user.*input'
+    - 'ldap.*escape|input.*sanitization'
+    - 'ldap3.*escape|escape.*filter.*chars'
+    - 'special.*characters.*ldap'
+  must_not:
+    - 'ldap.*escape|escape.*filter'
+  json: false
+
+- id: python_timing_attacks
+  prompt: |
+    Review this authentication timing:
+
+    import time
+    import hmac
+    import hashlib
+
+    def verify_password(provided, stored):
+        return provided == stored
+
+    def check_api_key(provided_key, valid_key):
+        if len(provided_key) != len(valid_key):
+            return False
+        
+        for i, char in enumerate(provided_key):
+            if char != valid_key[i]:
+                return False
+        return True
+
+    def validate_token(token, secret):
+        expected = hashlib.sha256((secret + token).encode()).hexdigest()
+        return token == expected
+
+    def authenticate_hmac(message, signature, key):
+        expected = hmac.new(key.encode(), message.encode(), hashlib.sha256).hexdigest()
+        return signature == expected
+  criteria:
+    - 'timing.*attack|constant.*time.*comparison'
+    - 'side.*channel.*attack|character.*by.*character'
+    - 'hmac\.compare_digest|secrets\.compare_digest'
+    - 'early.*return|timing.*leak'
+    - 'cryptographic.*comparison'
+  must_not:
+    - 'compare_digest'
+    - 'constant.*time'
+  json: false
+
+- id: python_race_conditions
+  prompt: |
+    Check this concurrent access pattern:
+
+    import threading
+
+    class BankAccount:
+        def __init__(self, balance):
+            self.balance = balance
+        
+        def transfer(self, amount):
+            if self.balance >= amount:
+                # Race condition window
+                time.sleep(0.1)  # Simulating processing time
+                self.balance -= amount
+                return True
+            return False
+        
+        def get_balance(self):
+            return self.balance
+
+    # Global shared resource
+    user_sessions = {}
+
+    def create_session(user_id):
+        if user_id not in user_sessions:
+            user_sessions[user_id] = generate_session_token()
+        return user_sessions[user_id]
+
+    def update_user_score(user_id, points):
+        current_score = get_user_score(user_id)
+        new_score = current_score + points
+        save_user_score(user_id, new_score)
+  criteria:
+    - 'race.*condition|TOCTOU|time.*of.*check'
+    - 'threading\.Lock|threading\.RLock'
+    - 'concurrent.*access|shared.*resource'
+    - 'atomic.*operation|thread.*safe'
+    - 'synchronization.*primitive'
+  must_not:
+    - 'threading\.Lock'
+    - 'atomic.*operation'
+  json: false
+
+- id: python_open_redirect
+  prompt: |
+    Analyze this redirect implementation:
+
+    from urllib.parse import urlparse
+
+    @app.route('/login', methods=['POST'])
+    def login():
+        username = request.form['username']
+        password = request.form['password']
+        
+        if authenticate(username, password):
+            return_url = request.form.get('return_url', '/')
+            return redirect(return_url)
+        else:
+            return render_template('login.html', error='Invalid credentials')
+
+    @app.route('/external-link')
+    def external_link():
+        url = request.args.get('url')
+        return redirect(url)
+
+    def safe_redirect_attempt(target_url):
+        # Insufficient validation
+        if target_url.startswith('http://mysite.com') or target_url.startswith('https://mysite.com'):
+            return redirect(target_url)
+        return redirect('/')
+  criteria:
+    - 'open.*redirect|unvalidated.*redirect'
+    - 'redirect.*user.*input|external.*redirect'
+    - 'phishing.*attack|redirect.*validation'
+    - 'allowlist.*domains|whitelist.*urls'
+    - 'url.*validation|domain.*validation'
+  must_not:
+    - 'allowlist.*domain|whitelist'
+    - 'url.*validation'
+  json: false

@@ -1,0 +1,15 @@
+# LLM Security Benchmark Requirements
+# Built by the Rapticore Security Research Team
+
+# Core dependencies
+openai>=1.0.0
+anthropic>=0.8.0
+google-generativeai>=0.3.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# Optional dependencies for enhanced features
+requests>=2.31.0
+pathlib>=1.0.0
+dataclasses>=0.6.0
+typing-extensions>=4.0.0

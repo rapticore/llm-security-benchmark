@@ -1,0 +1,442 @@
+# C# / .NET Security Test Suite
+# File: test_suites/security_csharp.yaml
+# C# and .NET specific security vulnerability tests
+
+- id: csharp_sql_injection
+  prompt: |
+    Analyze this C# database query:
+
+    public class UserRepository
+    {
+        private string connectionString;
+        
+        public User GetUser(string username, string password)
+        {
+            using (var connection = new SqlConnection(connectionString))
+            {
+                string query = $"SELECT * FROM Users WHERE Username = '{username}' AND Password = '{password}'";
+                var command = new SqlCommand(query, connection);
+                connection.Open();
+                
+                using (var reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        return new User { Username = reader["Username"].ToString() };
+                    }
+                }
+            }
+            return null;
+        }
+    }
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'string.*interpolation.*sql|concatenation.*sql'
+    - 'SqlParameter|parameterized.*query'
+    - 'AddWithValue|Parameters\.Add'
+    - 'input.*validation|sql.*escaping'
+  must_not:
+    - 'SqlParameter'
+    - '\bsafe\b'
+  json: false
+
+- id: csharp_deserialization
+  prompt: |
+    Review this C# object deserialization:
+
+    using System.Web.Script.Serialization;
+    using Newtonsoft.Json;
+
+    public class DataProcessor
+    {
+        public object ProcessUserData(string jsonData)
+        {
+            // Unsafe deserialization with type information
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.All
+            };
+            return JsonConvert.DeserializeObject(jsonData, settings);
+        }
+        
+        public T DeserializeFromBytes<T>(byte[] data)
+        {
+            var formatter = new BinaryFormatter();
+            using (var stream = new MemoryStream(data))
+            {
+                return (T)formatter.Deserialize(stream);
+            }
+        }
+    }
+  criteria:
+    - 'unsafe.*deserialization|insecure.*deserialization'
+    - 'TypeNameHandling\.All|BinaryFormatter'
+    - 'remote.*code.*execution|gadget.*chain'
+    - 'whitelist.*types|safe.*deserialization'
+    - 'JsonSerializerSettings.*security'
+  must_not:
+    - 'TypeNameHandling\.None'
+    - '\bsafe\b'
+  json: false
+
+- id: csharp_path_traversal
+  prompt: |
+    Check this C# file handling:
+
+    public class FileController : Controller
+    {
+        private readonly string basePath = @"C:\App\UserFiles\";
+        
+        public ActionResult DownloadFile(string filename)
+        {
+            string fullPath = Path.Combine(basePath, filename);
+            
+            if (System.IO.File.Exists(fullPath))
+            {
+                byte[] fileBytes = System.IO.File.ReadAllBytes(fullPath);
+                return File(fileBytes, "application/octet-stream", filename);
+            }
+            
+            return NotFound();
+        }
+        
+        public ActionResult ReadTextFile(string path)
+        {
+            string content = System.IO.File.ReadAllText(basePath + path);
+            return Content(content);
+        }
+    }
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'Path\.GetFullPath|Path\.GetDirectoryName'
+    - 'path.*validation|filename.*validation'
+    - 'sanitize.*filename|normalize.*path'
+  must_not:
+    - 'GetFullPath|GetDirectoryName'
+    - '\bsafe\b'
+  json: false
+
+- id: csharp_xxe_attack
+  prompt: |
+    Analyze this C# XML processing:
+
+    using System.Xml;
+
+    public class XmlProcessor
+    {
+        public XmlDocument ParseUserXml(string xmlContent)
+        {
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(xmlContent);
+            return xmlDoc;
+        }
+        
+        public void ProcessXmlFile(string xmlFilePath)
+        {
+            var reader = XmlReader.Create(xmlFilePath);
+            while (reader.Read())
+            {
+                if (reader.NodeType == XmlNodeType.Element)
+                {
+                    Console.WriteLine($"Element: {reader.Name}");
+                }
+            }
+        }
+    }
+  criteria:
+    - 'XXE|xml.*external.*entity'
+    - 'XmlReaderSettings.*secure|external.*entity.*disabled'
+    - 'DtdProcessing\.Ignore|ProhibitDtd.*true'
+    - 'xml.*parser.*security|entity.*processing'
+    - 'file.*disclosure|ssrf.*via.*xml'
+  must_not:
+    - 'ProhibitDtd.*true'
+    - 'DtdProcessing\.Ignore'
+  json: false
+
+- id: csharp_weak_crypto
+  prompt: |
+    Review this C# encryption implementation:
+
+    using System.Security.Cryptography;
+
+    public class CryptoHelper
+    {
+        private static readonly byte[] Key = Encoding.UTF8.GetBytes("mysecretkey12345");
+        private static readonly byte[] IV = Encoding.UTF8.GetBytes("myiv567890123456");
+        
+        public string EncryptPassword(string password)
+        {
+            using (var des = DES.Create())
+            {
+                des.Key = Key.Take(8).ToArray();
+                des.IV = IV.Take(8).ToArray();
+                
+                using (var encryptor = des.CreateEncryptor())
+                using (var ms = new MemoryStream())
+                using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                {
+                    byte[] data = Encoding.UTF8.GetBytes(password);
+                    cs.Write(data, 0, data.Length);
+                    return Convert.ToBase64String(ms.ToArray());
+                }
+            }
+        }
+        
+        public string HashPassword(string password)
+        {
+            using (var md5 = MD5.Create())
+            {
+                byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(hash);
+            }
+        }
+    }
+  criteria:
+    - 'weak.*encryption|weak.*crypto|DES.*weak'
+    - 'MD5.*weak|hardcoded.*key|static.*iv'
+    - 'AES.*256|strong.*encryption'
+    - 'BCrypt|Pbkdf2|Argon2'
+    - 'secure.*random|cryptographically.*secure'
+  must_not:
+    - 'AES.*256'
+    - 'BCrypt|Pbkdf2'
+  json: false
+
+- id: csharp_ldap_injection
+  prompt: |
+    Check this C# LDAP authentication:
+
+    using System.DirectoryServices;
+
+    public class LdapAuthenticator
+    {
+        public bool AuthenticateUser(string username, string password, string domain)
+        {
+            string ldapPath = $"LDAP://{domain}";
+            string filter = $"(&(objectClass=user)(sAMAccountName={username})(userPassword={password}))";
+            
+            using (var entry = new DirectoryEntry(ldapPath))
+            using (var searcher = new DirectorySearcher(entry, filter))
+            {
+                var result = searcher.FindOne();
+                return result != null;
+            }
+        }
+        
+        public List<string> SearchUsers(string searchTerm)
+        {
+            string filter = $"(&(objectClass=user)(name=*{searchTerm}*))";
+            var users = new List<string>();
+            
+            using (var entry = new DirectoryEntry("LDAP://DC=company,DC=com"))
+            using (var searcher = new DirectorySearcher(entry, filter))
+            {
+                foreach (SearchResult result in searcher.FindAll())
+                {
+                    users.Add(result.Properties["name"][0].ToString());
+                }
+            }
+            
+            return users;
+        }
+    }
+  criteria:
+    - 'ldap.*injection|filter.*injection'
+    - 'ldap.*escape|input.*sanitization'
+    - 'string.*interpolation.*ldap|dynamic.*filter'
+    - 'parameter.*binding|prepared.*filter'
+    - 'ldap.*special.*characters'
+  must_not:
+    - 'escape|sanitize'
+  json: false
+
+- id: csharp_weak_random
+  prompt: |
+    Analyze this C# random generation:
+
+    public class TokenGenerator
+    {
+        private static readonly Random random = new Random();
+        
+        public string GenerateSessionToken()
+        {
+            return random.Next(100000, 999999).ToString();
+        }
+        
+        public string GenerateApiKey()
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var result = new char[32];
+            
+            for (int i = 0; i < result.Length; i++)
+            {
+                result[i] = chars[random.Next(chars.Length)];
+            }
+            
+            return new string(result);
+        }
+        
+        public string GeneratePasswordResetToken()
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+    }
+  criteria:
+    - 'weak.*random|predictable.*random'
+    - 'RNGCryptoServiceProvider|RandomNumberGenerator'
+    - 'System\.Random.*security|deterministic.*random'
+    - 'session.*token.*predictable|api.*key.*predictable'
+    - 'entropy|randomness.*quality'
+  must_not:
+    - 'RNGCryptoServiceProvider'
+    - 'RandomNumberGenerator'
+  json: false
+
+- id: csharp_mass_assignment
+  prompt: |
+    Review this C# model binding:
+
+    [ApiController]
+    public class UserController : ControllerBase
+    {
+        [HttpPost]
+        public IActionResult CreateUser([FromBody] User user)
+        {
+            // Direct model binding without validation
+            _context.Users.Add(user);
+            _context.SaveChanges();
+            
+            return Ok(user);
+        }
+        
+        [HttpPut("{id}")]
+        public IActionResult UpdateUser(int id, [FromBody] JObject updates)
+        {
+            var user = _context.Users.Find(id);
+            if (user == null) return NotFound();
+            
+            // Apply all JSON properties to user object
+            foreach (var property in updates.Properties())
+            {
+                var prop = typeof(User).GetProperty(property.Name, 
+                    BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+                if (prop != null && prop.CanWrite)
+                {
+                    prop.SetValue(user, property.Value.ToObject(prop.PropertyType));
+                }
+            }
+            
+            _context.SaveChanges();
+            return Ok(user);
+        }
+    }
+  criteria:
+    - 'mass.*assignment|over.*posting'
+    - 'privilege.*escalation|role.*modification'
+    - '[Bind].*attribute|[BindNever]'
+    - 'model.*validation|property.*validation'
+    - 'sensitive.*field.*modification'
+  must_not:
+    - '\[Bind\]|\[BindNever\]'
+    - 'model.*validation'
+  json: false
+
+- id: csharp_open_redirect
+  prompt: |
+    Check this C# redirect implementation:
+
+    public class AccountController : Controller
+    {
+        [HttpPost]
+        public ActionResult Login(string username, string password, string returnUrl)
+        {
+            if (ValidateUser(username, password))
+            {
+                if (!string.IsNullOrEmpty(returnUrl))
+                {
+                    return Redirect(returnUrl);
+                }
+                return RedirectToAction("Dashboard", "Home");
+            }
+            
+            return View();
+        }
+        
+        public ActionResult ExternalLink(string url)
+        {
+            // Redirect to any external URL
+            Response.Redirect(url);
+            return null;
+        }
+        
+        public ActionResult SafeRedirect(string target)
+        {
+            // Attempt to validate but insufficient
+            if (target.StartsWith("http://") || target.StartsWith("https://"))
+            {
+                return Redirect(target);
+            }
+            return RedirectToAction("Home");
+        }
+    }
+  criteria:
+    - 'open.*redirect|unvalidated.*redirect'
+    - 'phishing.*attack|redirect.*validation'
+    - 'whitelist.*domains|allowed.*urls'
+    - 'Uri\.IsWellFormedUriString|domain.*validation'
+    - 'external.*redirect.*risk'
+  must_not:
+    - 'domain.*validation'
+    - 'whitelist'
+  json: false
+
+- id: csharp_information_disclosure
+  prompt: |
+    Analyze this C# error handling:
+
+    public class ApiController : ControllerBase
+    {
+        [HttpGet("{id}")]
+        public IActionResult GetUser(int id)
+        {
+            try
+            {
+                var user = _userService.GetById(id);
+                return Ok(user);
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(new
+                {
+                    Error = "Database error occurred",
+                    Details = ex.Message,
+                    Query = ex.Procedure,
+                    ServerName = ex.Server,
+                    StackTrace = ex.StackTrace
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Error = ex.Message,
+                    InnerException = ex.InnerException?.Message,
+                    StackTrace = ex.StackTrace,
+                    Environment = Environment.MachineName,
+                    ConnectionString = _configuration.GetConnectionString("DefaultConnection")
+                });
+            }
+        }
+    }
+  criteria:
+    - 'information.*disclosure|data.*leakage'
+    - 'stack.*trace.*exposure|exception.*details'
+    - 'connection.*string.*exposure|server.*name'
+    - 'generic.*error.*message|sanitize.*error'
+    - 'sensitive.*information.*exposure'
+  must_not:
+    - 'generic.*error'
+    - '\bsafe\b'
+  json: false

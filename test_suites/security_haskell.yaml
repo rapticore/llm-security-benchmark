@@ -1,0 +1,515 @@
+# Haskell Security Test Suite
+# File: test_suites/security_haskell.yaml
+# Haskell specific security vulnerability tests
+
+- id: haskell_space_leak
+  prompt: |
+    Analyze this Haskell code for memory issues:
+
+    import Data.List
+
+    -- Potential space leak due to lazy evaluation
+    sumList :: [Integer] -> Integer
+    sumList = foldl (+) 0
+
+    processLargeData :: [Integer] -> Integer
+    processLargeData xs = sumList (map (*2) xs)
+
+    -- Another space leak example
+    averageList :: [Double] -> Double
+    averageList xs = sum xs / fromIntegral (length xs)
+
+    -- Lazy accumulation
+    fibonacci :: Int -> [Integer]
+    fibonacci n = take n fibs
+      where fibs = 0 : 1 : zipWith (+) fibs (tail fibs)
+
+    -- Inefficient string concatenation
+    concatenateStrings :: [String] -> String
+    concatenateStrings = foldl (++) ""
+
+    main :: IO ()
+    main = do
+      let largeList = [1..1000000]
+      print $ processLargeData largeList
+      print $ averageList (map fromIntegral largeList)
+      print $ concatenateStrings (map show [1..10000])
+  criteria:
+    - 'space.*leak|memory.*leak|lazy.*evaluation'
+    - 'foldl.*strict|foldl.*vs.*foldr'
+    - 'strict.*evaluation|seq|deepseq'
+    - 'string.*concatenation|Data\.Text'
+    - 'performance.*issue|stack.*overflow'
+  must_not:
+    - 'foldl.*strict'
+    - 'Data\.Text'
+  json: false
+
+- id: haskell_unsafe_operations
+  prompt: |
+    Review this Haskell code using unsafe operations:
+
+    {-# LANGUAGE Unsafe #-}
+    import System.IO.Unsafe
+    import Foreign.Ptr
+    import Foreign.Storable
+
+    -- Unsafe global state
+    globalCounter :: IORef Int
+    globalCounter = unsafePerformIO $ newIORef 0
+
+    incrementCounter :: Int -> Int
+    incrementCounter x = unsafePerformIO $ do
+      modifyIORef globalCounter (+1)
+      return (x + 1)
+
+    -- Unsafe pointer operations
+    unsafePeek :: Ptr a -> a
+    unsafePeek ptr = unsafePerformIO $ peek ptr
+
+    -- Unsafe string operations
+    unsafeStringToPtr :: String -> Ptr CChar
+    unsafeStringToPtr str = unsafePerformIO $ newCString str
+
+    -- Breaking referential transparency
+    randomValue :: Int -> Int
+    randomValue x = unsafePerformIO $ do
+      r <- randomIO
+      return (x + r)
+
+    processUserInput :: String -> String
+    processUserInput input = unsafePerformIO $ do
+      -- Unsafe file operations
+      writeFile "/tmp/debug.log" input
+      return ("Processed: " ++ input)
+  criteria:
+    - 'unsafePerformIO|unsafe.*operation'
+    - 'referential.*transparency|pure.*function'
+    - 'global.*state|IORef.*unsafe'
+    - 'memory.*safety|pointer.*safety'
+    - 'side.*effects|deterministic.*behavior'
+  must_not:
+    - 'safe.*wrapper'
+    - '\bsafe\b'
+  json: false
+
+- id: haskell_sql_injection
+  prompt: |
+    Check this Haskell database code:
+
+    {-# LANGUAGE OverloadedStrings #-}
+    import Database.PostgreSQL.Simple
+    import Data.Text (Text)
+    import qualified Data.Text as T
+
+    authenticateUser :: Connection -> String -> String -> IO Bool
+    authenticateUser conn username password = do
+      let queryStr = "SELECT id FROM users WHERE username = '" 
+                   ++ username ++ "' AND password = '" ++ password ++ "'"
+      result <- query_ conn (Query (T.pack queryStr))
+      return (not $ null (result :: [Only Int]))
+
+    searchUsers :: Connection -> String -> IO [String]
+    searchUsers conn searchTerm = do
+      let sql = "SELECT name FROM users WHERE name LIKE '%" 
+              ++ searchTerm ++ "%'"
+      rows <- query_ conn (Query (T.pack sql))
+      return $ map fromOnly rows
+
+    getUserData :: Connection -> String -> String -> IO [Text]
+    getUserData conn tableName userId = do
+      let dynamicQuery = "SELECT * FROM " ++ tableName 
+                       ++ " WHERE user_id = " ++ userId
+      rows <- query_ conn (Query (T.pack dynamicQuery))
+      return $ map fromOnly rows
+
+    updateUserEmail :: Connection -> String -> String -> IO ()
+    updateUserEmail conn userId newEmail = do
+      let updateSql = "UPDATE users SET email = '" ++ newEmail 
+                    ++ "' WHERE id = " ++ userId
+      _ <- execute_ conn (Query (T.pack updateSql))
+      return ()
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'string.*concatenation.*sql|dynamic.*sql'
+    - 'query.*parameters|prepared.*statement'
+    - 'postgresql-simple.*safe|parameterized.*query'
+    - 'input.*validation|sql.*escaping'
+  must_not:
+    - 'query.*with.*parameters'
+    - '\bsafe\b'
+  json: false
+
+- id: haskell_web_xss
+  prompt: |
+    Analyze this Haskell web application:
+
+    {-# LANGUAGE OverloadedStrings #-}
+    import Web.Scotty
+    import Data.Text.Lazy (Text)
+    import qualified Data.Text.Lazy as L
+    import Data.Monoid ((<>))
+
+    main :: IO ()
+    main = scotty 3000 $ do
+      get "/search" $ do
+        query <- param "q"
+        let resultHtml = "<h2>Search Results for: " <> query <> "</h2>"
+                      <> "<div>Found results...</div>"
+        html resultHtml
+
+      get "/user/:name" $ do
+        username <- param "name"
+        let profileHtml = "<h1>User Profile</h1>"
+                       <> "<p>Welcome " <> username <> "!</p>"
+                       <> "<div>Profile data goes here</div>"
+        html profileHtml
+
+      post "/comment" $ do
+        comment <- param "comment"
+        author <- param "author"
+        let commentHtml = "<div class='comment'>"
+                       <> "<strong>" <> author <> "</strong>: "
+                       <> comment
+                       <> "</div>"
+        html commentHtml
+
+      get "/template" $ do
+        userInput <- param "content"
+        let template = "<!DOCTYPE html><html><body>"
+                    <> userInput
+                    <> "</body></html>"
+        html template
+  criteria:
+    - 'XSS|cross.*site.*scripting'
+    - 'html.*injection|script.*injection'
+    - 'html.*escaping|text.*escaping'
+    - 'Blaze.*Html|safe.*html.*rendering'
+    - 'user.*input.*html|template.*injection'
+  must_not:
+    - 'html.*escape|escape.*html'
+    - 'Blaze.*Html'
+  json: false
+
+- id: haskell_path_traversal
+  prompt: |
+    Review this Haskell file serving code:
+
+    import System.FilePath
+    import System.Directory
+    import qualified Data.ByteString as BS
+
+    serveUserFile :: String -> IO (Maybe BS.ByteString)
+    serveUserFile filename = do
+      let filePath = "uploads" </> filename
+      exists <- doesFileExist filePath
+      if exists
+        then Just <$> BS.readFile filePath
+        else return Nothing
+
+    loadTemplate :: String -> IO String
+    loadTemplate templateName = do
+      let templatePath = "templates" </> templateName <.> "html"
+      readFile templatePath
+
+    serveStaticFile :: String -> String -> IO String
+    serveStaticFile basePath fileName = do
+      let fullPath = basePath ++ "/" ++ fileName
+      readFile fullPath
+
+    downloadUserFile :: String -> String -> IO BS.ByteString
+    downloadUserFile userPath fileName = do
+      let combinedPath = userPath </> fileName
+      BS.readFile combinedPath
+
+    -- Configuration loader
+    loadConfigFile :: String -> IO String
+    loadConfigFile configName = do
+      let configPath = "../config/" ++ configName ++ ".conf"
+      readFile configPath
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'System\.FilePath\.Posix|canonical.*path'
+    - 'path.*validation|filename.*validation'
+    - 'makeRelative|normalise|isValid'
+  must_not:
+    - 'makeRelative|normalise'
+    - 'path.*validation'
+  json: false
+
+- id: haskell_timing_attack
+  prompt: |
+    Check this Haskell authentication timing:
+
+    import Data.ByteString as BS
+    import Data.ByteString.Char8 as BC
+    import Crypto.Hash.SHA256 as SHA256
+
+    -- Vulnerable password comparison
+    verifyPassword :: String -> String -> Bool
+    verifyPassword input stored = input == stored
+
+    -- Vulnerable hash comparison  
+    verifyHash :: BS.ByteString -> BS.ByteString -> Bool
+    verifyHash computed stored = computed == stored
+
+    -- String-based token validation
+    validateToken :: String -> String -> Bool
+    validateToken provided expected = provided == expected
+
+    -- Early return authentication
+    authenticateAPI :: String -> String -> Bool
+    authenticateAPI apiKey providedKey
+      | length providedKey /= length apiKey = False
+      | apiKey == providedKey = True
+      | otherwise = False
+
+    -- Character-by-character comparison
+    compareSecrets :: String -> String -> Bool
+    compareSecrets [] [] = True
+    compareSecrets (x:xs) (y:ys)
+      | x == y = compareSecrets xs ys
+      | otherwise = False
+    compareSecrets _ _ = False
+
+    -- Hash verification with timing leak
+    verifyUserPassword :: String -> String -> IO Bool
+    verifyUserPassword input storedHash = do
+      let inputHash = BC.pack $ show $ SHA256.hash $ BC.pack input
+      return $ inputHash == BC.pack storedHash
+  criteria:
+    - 'timing.*attack|constant.*time.*comparison'
+    - 'side.*channel.*attack|timing.*side.*channel'
+    - 'constant.*time|secure.*compare'
+    - 'early.*return|character.*by.*character'
+    - 'cryptonite.*safe.*compare|secure.*equality'
+  must_not:
+    - 'constant.*time'
+    - 'secure.*compare'
+  json: false
+
+- id: haskell_weak_crypto
+  prompt: |
+    Analyze this Haskell cryptography code:
+
+    import Crypto.Hash.MD5 as MD5
+    import Crypto.Hash.SHA1 as SHA1
+    import Data.ByteString.Char8 as BC
+    import System.Random
+
+    -- Weak password hashing
+    hashPassword :: String -> String
+    hashPassword password = show $ MD5.hash $ BC.pack password
+
+    -- Predictable random generation
+    generateToken :: IO String
+    generateToken = do
+      g <- getStdGen
+      let randomNum = fst $ random g
+      return $ show (randomNum :: Int)
+
+    -- Simple XOR "encryption"
+    xorEncrypt :: String -> String -> String
+    xorEncrypt key plaintext = zipWith xor' (cycle key) plaintext
+      where xor' k p = toEnum $ fromEnum k `xor` fromEnum p
+
+    -- Weak session ID generation
+    generateSessionId :: IO String
+    generateSessionId = do
+      timestamp <- getCurrentTime
+      let timeString = show timestamp
+      return $ show $ SHA1.hash $ BC.pack timeString
+
+    -- Insecure random number generation
+    randomChoice :: [a] -> IO a
+    randomChoice xs = do
+      index <- randomRIO (0, length xs - 1)
+      return $ xs !! index
+
+    -- Hardcoded cryptographic constants
+    encryptionKey :: String
+    encryptionKey = "mySecretKey123"
+
+    defaultSalt :: String
+    defaultSalt = "defaultSalt"
+  criteria:
+    - 'weak.*hash|MD5.*weak|SHA1.*weak'
+    - 'predictable.*random|weak.*random'
+    - 'XOR.*encryption|simple.*encryption'
+    - 'hardcoded.*key|hardcoded.*salt'
+    - 'cryptonite|strong.*crypto|bcrypt'
+  must_not:
+    - 'cryptonite|bcrypt'
+    - 'strong.*crypto'
+  json: false
+
+- id: haskell_logic_vulnerability
+  prompt: |
+    Review this Haskell business logic:
+
+    data User = User
+      { userId :: Int
+      , username :: String
+      , isAdmin :: Bool
+      , accountBalance :: Double
+      } deriving (Show)
+
+    -- Privilege escalation vulnerability
+    checkAdminAccess :: String -> Bool
+    checkAdminAccess username = "admin" `isInfixOf` username
+
+    -- Race condition in balance update
+    transferMoney :: User -> User -> Double -> (User, User)
+    transferMoney sender recipient amount
+      | accountBalance sender >= amount = 
+          ( sender { accountBalance = accountBalance sender - amount }
+          , recipient { accountBalance = accountBalance recipient + amount }
+          )
+      | otherwise = (sender, recipient)
+
+    -- Integer overflow in calculation
+    calculateTotal :: [Int] -> Int
+    calculateTotal = sum
+
+    -- Validation bypass
+    validateAge :: String -> Bool
+    validateAge ageStr = case reads ageStr of
+      [(age, "")] -> age >= 18
+      _ -> True  -- Default to true for invalid input
+
+    -- Insecure authorization
+    authorizeAction :: User -> String -> Bool
+    authorizeAction user action = not (null (username user))
+
+    -- Price manipulation vulnerability
+    calculateOrderTotal :: [(String, Double, Int)] -> Double
+    calculateOrderTotal items = sum [price * fromIntegral quantity | (_, price, quantity) <- items]
+
+    processOrder :: [(String, Double, Int)] -> Double -> Bool
+    processOrder items clientTotal = 
+      clientTotal > 0 && clientTotal == calculateOrderTotal items
+  criteria:
+    - 'privilege.*escalation|admin.*check.*flaw'
+    - 'race.*condition|concurrent.*access'
+    - 'integer.*overflow|arithmetic.*overflow'
+    - 'validation.*bypass|logic.*flaw'
+    - 'price.*manipulation|business.*logic.*flaw'
+  must_not:
+    - 'proper.*validation'
+    - 'atomic.*operation'
+  json: false
+
+- id: haskell_dos_vulnerability
+  prompt: |
+    Check this Haskell code for DoS vulnerabilities:
+
+    import Data.List
+
+    -- Exponential time complexity
+    fibonacci :: Int -> Integer
+    fibonacci 0 = 0
+    fibonacci 1 = 1
+    fibonacci n = fibonacci (n-1) + fibonacci (n-2)
+
+    -- Inefficient list operations
+    processLargeList :: [Int] -> [Int]
+    processLargeList xs = reverse $ sort $ reverse $ sort xs
+
+    -- Regex-like pattern matching (catastrophic backtracking)
+    matchPattern :: String -> String -> Bool
+    matchPattern pattern text = pattern `isInfixOf` text && 
+                               all (\c -> c `elem` text) pattern
+
+    -- Memory exhaustion via lazy evaluation
+    generateInfiniteList :: [Integer]
+    generateInfiniteList = [1..]
+
+    consumeInfiniteList :: Int -> [Integer]
+    consumeInfiniteList n = take n generateInfiniteList
+
+    -- Stack overflow via recursion
+    sumNumbers :: [Integer] -> Integer
+    sumNumbers [] = 0
+    sumNumbers (x:xs) = x + sumNumbers xs
+
+    -- Algorithmic complexity attack
+    uniqueElements :: Eq a => [a] -> [a]
+    uniqueElements [] = []
+    uniqueElements (x:xs) = x : uniqueElements (filter (/= x) xs)
+
+    -- String processing DoS
+    processUserInput :: String -> String
+    processUserInput input = 
+      let repeated = concat $ replicate (length input) input
+      in take (length input * 1000) repeated
+  criteria:
+    - 'exponential.*time|catastrophic.*backtracking'
+    - 'algorithmic.*complexity|complexity.*attack'
+    - 'stack.*overflow|infinite.*recursion'
+    - 'memory.*exhaustion|space.*complexity'
+    - 'denial.*of.*service|DoS.*attack'
+  must_not:
+    - 'bounded.*recursion'
+    - 'input.*size.*limit'
+  json: false
+
+- id: haskell_deserialization
+  prompt: |
+    Analyze this Haskell serialization code:
+
+    {-# LANGUAGE DeriveGeneric #-}
+    import GHC.Generics
+    import Data.Binary
+    import qualified Data.ByteString.Lazy as L
+
+    data UserData = UserData
+      { name :: String
+      , isAdmin :: Bool
+      , commands :: [String]
+      } deriving (Generic, Show)
+
+    instance Binary UserData
+
+    -- Unsafe deserialization
+    deserializeUserData :: L.ByteString -> UserData
+    deserializeUserData = decode
+
+    -- Process deserialized data without validation
+    processUserData :: L.ByteString -> IO ()
+    processUserData serializedData = do
+      let userData = deserializeUserData serializedData
+      putStrLn $ "Processing user: " ++ name userData
+      
+      when (isAdmin userData) $ do
+        putStrLn "Admin access granted"
+        
+      -- Dangerous: executing commands from deserialized data
+      mapM_ executeCommand (commands userData)
+
+    executeCommand :: String -> IO ()
+    executeCommand cmd = do
+      putStrLn $ "Executing: " ++ cmd
+      system cmd
+      return ()
+
+    -- Load configuration from untrusted source
+    loadConfig :: FilePath -> IO UserData
+    loadConfig configFile = do
+      content <- L.readFile configFile
+      return $ deserializeUserData content
+
+    -- Network deserialization
+    processNetworkData :: L.ByteString -> IO UserData
+    processNetworkData networkData = do
+      return $ decode networkData
+  criteria:
+    - 'unsafe.*deserialization|untrusted.*deserialization'
+    - 'privilege.*escalation|isAdmin.*field'
+    - 'command.*execution|system.*call'
+    - 'validation.*missing|input.*validation'
+    - 'Binary.*decode.*unsafe|deserialize.*unsafe'
+  must_not:
+    - 'validation.*present'
+    - '\bsafe\b'
+  json: false

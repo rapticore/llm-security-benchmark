@@ -1,0 +1,516 @@
+# Rust Security Test Suite
+# File: test_suites/security_rust.yaml
+# Rust specific security vulnerability tests
+
+- id: rust_unsafe_block
+  prompt: |
+    Analyze this Rust code with unsafe blocks:
+
+    use std::slice;
+
+    fn process_buffer(data: *const u8, len: usize) -> Vec<u8> {
+        unsafe {
+            let slice = slice::from_raw_parts(data, len);
+            slice.to_vec()
+        }
+    }
+
+    fn modify_memory(ptr: *mut i32, value: i32) {
+        unsafe {
+            *ptr = value;
+        }
+    }
+
+    fn create_string_from_ptr(ptr: *const u8, len: usize) -> String {
+        unsafe {
+            let slice = slice::from_raw_parts(ptr, len);
+            String::from_utf8_unchecked(slice.to_vec())
+        }
+    }
+
+    // Usage with user input
+    fn handle_user_data(user_ptr: usize, user_len: usize) {
+        let data = process_buffer(user_ptr as *const u8, user_len);
+        println!("Data: {:?}", data);
+    }
+  criteria:
+    - 'unsafe.*block|memory.*safety|raw.*pointer'
+    - 'from_raw_parts.*unsafe|unchecked.*conversion'
+    - 'null.*pointer|dangling.*pointer|use.*after.*free'
+    - 'bounds.*check|length.*validation'
+    - 'unsafe.*rust|memory.*corruption'
+  must_not:
+    - 'bounds.*check'
+    - '\bsafe\b'
+  json: false
+
+- id: rust_logic_vulnerability
+  prompt: |
+    Review this Rust authentication logic:
+
+    use std::collections::HashMap;
+
+    struct AuthService {
+        users: HashMap<String, String>,
+        session_timeout: u64,
+    }
+
+    impl AuthService {
+        fn authenticate(&self, username: &str, password: &str) -> bool {
+            if let Some(stored_password) = self.users.get(username) {
+                // Vulnerable to timing attacks
+                return password == stored_password;
+            }
+            false
+        }
+        
+        fn check_admin(&self, username: &str) -> bool {
+            // Logic flaw - string comparison
+            username.contains("admin")
+        }
+        
+        fn validate_session(&self, session_id: u64) -> bool {
+            // Predictable session IDs
+            session_id > 0 && session_id < 1000000
+        }
+        
+        fn authorize_action(&self, user: &str, action: &str) -> bool {
+            // Missing authorization logic
+            !user.is_empty() && !action.is_empty()
+        }
+    }
+
+    fn generate_session_id() -> u64 {
+        use std::time::SystemTime;
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    }
+  criteria:
+    - 'timing.*attack|constant.*time.*comparison'
+    - 'logic.*flaw|authorization.*bypass'
+    - 'predictable.*session|weak.*session.*id'
+    - 'string.*contains.*admin|privilege.*escalation'
+    - 'cryptographically.*secure.*random'
+  must_not:
+    - 'constant.*time'
+    - 'cryptographically.*secure'
+  json: false
+
+- id: rust_sql_injection
+  prompt: |
+    Check this Rust database query:
+
+    use rusqlite::{Connection, Result};
+
+    fn find_user_by_credentials(conn: &Connection, username: &str, password: &str) -> Result<bool> {
+        let query = format!(
+            "SELECT id FROM users WHERE username = '{}' AND password = '{}'",
+            username, password
+        );
+        
+        let mut stmt = conn.prepare(&query)?;
+        let user_iter = stmt.query_map([], |row| {
+            Ok(row.get::<_, i32>(0)?)
+        })?;
+        
+        Ok(user_iter.count() > 0)
+    }
+
+    fn search_users(conn: &Connection, search_term: &str) -> Result<Vec<String>> {
+        let sql = format!(
+            "SELECT name FROM users WHERE name LIKE '%{}%' OR email LIKE '%{}%'",
+            search_term, search_term
+        );
+        
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map([], |row| {
+            Ok(row.get::<_, String>(0)?)
+        })?;
+        
+        let mut names = Vec::new();
+        for name in rows {
+            names.push(name?);
+        }
+        Ok(names)
+    }
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'format.*macro.*sql|string.*formatting.*sql'
+    - 'prepared.*statement|parameter.*binding'
+    - 'query_map.*parameters|rusqlite.*params'
+    - 'input.*validation|sql.*escaping'
+  must_not:
+    - 'params!|named_params!'
+    - '\bsafe\b'
+  json: false
+
+- id: rust_deserialization
+  prompt: |
+    Analyze this Rust deserialization code:
+
+    use serde::{Deserialize, Serialize};
+    use serde_json;
+
+    #[derive(Serialize, Deserialize)]
+    struct User {
+        username: String,
+        is_admin: bool,
+        execute_command: Option<String>,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct Config {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dangerous_setting: Option<String>,
+    }
+
+    fn deserialize_user_data(json_data: &str) -> Result<User, serde_json::Error> {
+        serde_json::from_str(json_data)
+    }
+
+    fn process_user_config(config_data: &[u8]) -> Result<Config, Box<dyn std::error::Error>> {
+        // Deserialize without validation
+        let config: Config = bincode::deserialize(config_data)?;
+        Ok(config)
+    }
+
+    fn handle_user_input(user_json: &str) {
+        if let Ok(user) = deserialize_user_data(user_json) {
+            if user.is_admin {
+                println!("Admin user detected");
+            }
+            
+            if let Some(cmd) = user.execute_command {
+                // Dangerous: executing user-provided commands
+                std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(&cmd)
+                    .spawn()
+                    .expect("Failed to execute command");
+            }
+        }
+    }
+  criteria:
+    - 'unsafe.*deserialization|untrusted.*deserialization'
+    - 'privilege.*escalation|is_admin.*field'
+    - 'command.*execution|execute_command'
+    - 'input.*validation|field.*validation'
+    - 'bincode.*deserialize.*unsafe'
+  must_not:
+    - 'input.*validation'
+    - '\bsafe\b'
+  json: false
+
+- id: rust_path_traversal
+  prompt: |
+    Review this Rust file handling:
+
+    use std::fs;
+    use std::path::Path;
+
+    fn read_user_file(filename: &str) -> Result<String, std::io::Error> {
+        let file_path = format!("/app/uploads/{}", filename);
+        fs::read_to_string(file_path)
+    }
+
+    fn serve_template(template_name: &str) -> Result<String, std::io::Error> {
+        let template_path = format!("templates/{}.html", template_name);
+        fs::read_to_string(template_path)
+    }
+
+    fn load_config(config_file: &str) -> Result<String, std::io::Error> {
+        let config_path = Path::new("config").join(config_file);
+        fs::read_to_string(config_path)
+    }
+
+    fn download_file(user_path: &str, filename: &str) -> Result<Vec<u8>, std::io::Error> {
+        let full_path = format!("{}/{}", user_path, filename);
+        fs::read(full_path)
+    }
+
+    // Usage with user input
+    fn handle_file_request(user_filename: &str) {
+        match read_user_file(user_filename) {
+            Ok(content) => println!("File content: {}", content),
+            Err(e) => println!("Error: {}", e),
+        }
+    }
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'canonicalize|path.*validation'
+    - 'filename.*validation|sanitize.*path'
+    - 'Path::new.*join|safe.*path.*construction'
+  must_not:
+    - 'canonicalize'
+    - 'path.*validation'
+  json: false
+
+- id: rust_weak_crypto
+  prompt: |
+    Check this Rust cryptography implementation:
+
+    use md5;
+    use rand::Rng;
+
+    fn hash_password(password: &str) -> String {
+        format!("{:x}", md5::compute(password.as_bytes()))
+    }
+
+    fn generate_token() -> String {
+        let mut rng = rand::thread_rng();
+        format!("{}", rng.gen::<u64>())
+    }
+
+    fn encrypt_data(data: &[u8], key: &[u8]) -> Vec<u8> {
+        // Simple XOR "encryption"
+        data.iter()
+            .zip(key.iter().cycle())
+            .map(|(a, b)| a ^ b)
+            .collect()
+    }
+
+    fn create_session_id() -> String {
+        use std::time::SystemTime;
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        format!("{}", timestamp)
+    }
+
+    fn verify_password(input: &str, stored_hash: &str) -> bool {
+        let input_hash = hash_password(input);
+        input_hash == stored_hash
+    }
+  criteria:
+    - 'weak.*hash|MD5.*weak|XOR.*encryption'
+    - 'predictable.*token|weak.*session.*id'
+    - 'argon2|bcrypt|scrypt|strong.*hash'
+    - 'rand::rngs::OsRng|cryptographically.*secure'
+    - 'AES|ChaCha20|strong.*encryption'
+  must_not:
+    - 'argon2|bcrypt|scrypt'
+    - 'OsRng'
+  json: false
+
+- id: rust_race_condition
+  prompt: |
+    Analyze this Rust concurrent code:
+
+    use std::sync::Arc;
+    use std::thread;
+
+    struct BankAccount {
+        balance: i64,
+    }
+
+    impl BankAccount {
+        fn transfer(&mut self, amount: i64) -> bool {
+            if self.balance >= amount {
+                // Race condition window here
+                thread::sleep(std::time::Duration::from_millis(1));
+                self.balance -= amount;
+                true
+            } else {
+                false
+            }
+        }
+        
+        fn get_balance(&self) -> i64 {
+            self.balance
+        }
+    }
+
+    fn perform_transfers() {
+        let account = Arc::new(std::sync::Mutex::new(BankAccount { balance: 1000 }));
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let acc = Arc::clone(&account);
+            let handle = thread::spawn(move || {
+                // Potential deadlock and race conditions
+                let mut account = acc.lock().unwrap();
+                account.transfer(100);
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+  criteria:
+    - 'race.*condition|TOCTOU|time.*of.*check'
+    - 'atomic.*operation|RwLock|Mutex'
+    - 'thread.*safety|concurrent.*access'
+    - 'deadlock|lock.*ordering'
+    - 'data.*race|shared.*state'
+  must_not:
+    - 'Mutex.*properly'
+    - '\batomic\b'
+  json: false
+
+- id: rust_integer_overflow
+  prompt: |
+    Review this Rust arithmetic code:
+
+    fn allocate_buffer(count: usize, item_size: usize) -> Vec<u8> {
+        let total_size = count * item_size;
+        vec![0; total_size]
+    }
+
+    fn process_array(length: u32, multiplier: u32) -> Vec<u32> {
+        let size = (length * multiplier) as usize;
+        let mut result = Vec::with_capacity(size);
+        
+        for i in 0..length {
+            result.push(i * multiplier);
+        }
+        
+        result
+    }
+
+    fn calculate_offset(base: usize, index: usize, element_size: usize) -> usize {
+        base + (index * element_size)
+    }
+
+    // Usage with user input
+    fn handle_allocation_request(user_count: usize, user_size: usize) {
+        let buffer = allocate_buffer(user_count, user_size);
+        println!("Allocated buffer of size: {}", buffer.len());
+    }
+  criteria:
+    - 'integer.*overflow|arithmetic.*overflow'
+    - 'multiplication.*overflow|addition.*overflow'
+    - 'checked_mul|checked_add|saturating_mul'
+    - 'overflow.*check|bounds.*check'
+    - 'panic.*on.*overflow|wrapping.*overflow'
+  must_not:
+    - 'checked_mul|checked_add'
+    - 'saturating_mul'
+  json: false
+
+- id: rust_command_injection
+  prompt: |
+    Check this Rust command execution:
+
+    use std::process::Command;
+
+    fn compress_file(filename: &str) -> Result<String, std::io::Error> {
+        let output = Command::new("tar")
+            .arg("-czf")
+            .arg("archive.tar.gz")
+            .arg(filename)
+            .output()?;
+        
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+
+    fn run_shell_command(user_command: &str) -> Result<String, std::io::Error> {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(user_command)
+            .output()?;
+        
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+
+    fn backup_database(db_name: &str, output_path: &str) -> Result<(), std::io::Error> {
+        Command::new("mysqldump")
+            .arg(db_name)
+            .arg("-r")
+            .arg(output_path)
+            .spawn()?
+            .wait()?;
+        
+        Ok(())
+    }
+
+    // Usage
+    fn handle_user_request(user_input: &str) {
+        match run_shell_command(user_input) {
+            Ok(result) => println!("Command output: {}", result),
+            Err(e) => println!("Error: {}", e),
+        }
+    }
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'Command.*new.*sh.*-c|shell.*command.*user'
+    - 'input.*validation|command.*sanitization'
+    - 'whitelist.*commands|allowed.*commands'
+    - 'shell.*escape|argument.*validation'
+  must_not:
+    - 'input.*validation'
+    - 'whitelist.*command'
+  json: false
+
+- id: rust_tls_config
+  prompt: |
+    Analyze this Rust TLS configuration:
+
+    use rustls::{ClientConfig, ServerConfig};
+    use std::sync::Arc;
+
+    fn create_insecure_client_config() -> Arc<ClientConfig> {
+        let mut config = ClientConfig::builder()
+            .with_safe_defaults()
+            .with_root_certificates(rustls::RootCertStore::empty())
+            .with_no_client_auth();
+        
+        // Disable certificate verification
+        config.dangerous()
+            .set_certificate_verifier(Arc::new(AcceptAllVerifier));
+        
+        Arc::new(config)
+    }
+
+    struct AcceptAllVerifier;
+
+    impl rustls::client::ServerCertVerifier for AcceptAllVerifier {
+        fn verify_server_cert(
+            &self,
+            _end_entity: &rustls::Certificate,
+            _intermediates: &[rustls::Certificate],
+            _server_name: &rustls::ServerName,
+            _scts: &mut dyn Iterator<Item = &[u8]>,
+            _ocsp_response: &[u8],
+            _now: std::time::SystemTime,
+        ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+            // Accept all certificates without verification
+            Ok(rustls::client::ServerCertVerified::assertion())
+        }
+    }
+
+    fn create_weak_server_config() -> Result<Arc<ServerConfig>, Box<dyn std::error::Error>> {
+        let cert_chain = load_certificates()?;
+        let private_key = load_private_key()?;
+        
+        let config = ServerConfig::builder()
+            .with_cipher_suites(&[
+                rustls::cipher_suite::TLS13_AES_128_GCM_SHA256,
+                // Adding weak cipher suites
+                rustls::cipher_suite::TLS12_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+            ])
+            .with_safe_default_kx_groups()
+            .with_protocol_versions(&[
+                &rustls::version::TLS12,  // Allowing older TLS version
+                &rustls::version::TLS13,
+            ])?
+            .with_no_client_auth()
+            .with_single_cert(cert_chain, private_key)?;
+        
+        Ok(Arc::new(config))
+    }
+  criteria:
+    - 'certificate.*verification.*disabled|accept.*all.*certificates'
+    - 'weak.*cipher.*suite|CBC.*mode|insecure.*tls'
+    - 'TLS.*1\.2|older.*tls.*version'
+    - 'dangerous.*tls.*config|insecure.*ssl'
+    - 'proper.*certificate.*validation'
+  must_not:
+    - 'proper.*certificate.*validation'
+    - '\bsecure\b'
+  json: false

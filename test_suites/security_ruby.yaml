@@ -1,0 +1,400 @@
+# Ruby Security Test Suite
+# File: test_suites/security_ruby.yaml
+# Ruby specific security vulnerability tests
+
+- id: ruby_code_injection
+  prompt: |
+    Analyze this Ruby code for injection vulnerabilities:
+
+    class CalculatorController < ApplicationController
+      def evaluate
+        expression = params[:expression]
+        result = eval(expression)
+        render json: { result: result }
+      end
+      
+      def process_template
+        template_name = params[:template]
+        template_content = File.read("templates/#{template_name}.erb")
+        
+        # Render with user data
+        user_data = params[:data]
+        ERB.new(template_content).result(binding)
+      end
+    end
+
+    # Usage example
+    def dynamic_method_call
+      object_name = params[:object]
+      method_name = params[:method]
+      args = params[:args] || []
+      
+      object_name.constantize.send(method_name, *args)
+    end
+  criteria:
+    - 'code.*injection|eval.*user.*input'
+    - 'ERB.*unsafe|template.*injection'
+    - 'constantize.*dangerous|send.*user.*input'
+    - 'whitelist.*methods|safe.*eval'
+    - 'remote.*code.*execution|arbitrary.*code'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: ruby_sql_injection
+  prompt: |
+    Review this Ruby database query:
+
+    class User < ActiveRecord::Base
+      def self.find_by_credentials(username, password)
+        where("username = '#{username}' AND password = '#{password}'").first
+      end
+      
+      def self.search_users(search_term)
+        find_by_sql("SELECT * FROM users WHERE name LIKE '%#{search_term}%'")
+      end
+      
+      def self.get_user_data(user_id, table_name)
+        connection.execute("SELECT * FROM #{table_name} WHERE user_id = #{user_id}")
+      end
+    end
+
+    # In controller
+    def show_user
+      @user = User.find_by_credentials(params[:username], params[:password])
+    end
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'string.*interpolation.*sql|dynamic.*sql'
+    - 'where.*interpolation|find_by_sql.*interpolation'
+    - 'prepared.*statement|parameterized.*query'
+    - 'ActiveRecord.*safe.*methods'
+  must_not:
+    - 'prepared.*statement'
+    - '\bsafe\b'
+  json: false
+
+- id: ruby_deserialization
+  prompt: |
+    Check this Ruby serialization handling:
+
+    class DataProcessor
+      def self.load_user_data(serialized_data)
+        # Unsafe deserialization
+        Marshal.load(serialized_data)
+      end
+      
+      def self.process_yaml_config(yaml_content)
+        YAML.load(yaml_content)
+      end
+      
+      def self.handle_session_data(session_data)
+        # Loading session from untrusted source
+        data = Base64.decode64(session_data)
+        Marshal.load(data)
+      end
+    end
+
+    # In controller
+    def update_preferences
+      user_prefs = DataProcessor.load_user_data(params[:preferences])
+      current_user.update(preferences: user_prefs)
+    end
+  criteria:
+    - 'unsafe.*deserialization|Marshal\.load.*unsafe'
+    - 'YAML\.load.*unsafe|Psych\.load'
+    - 'remote.*code.*execution|gadget.*chain'
+    - 'YAML\.safe_load|Marshal.*validation'
+    - 'whitelist.*classes|safe.*deserialization'
+  must_not:
+    - 'safe_load|safe_load_file'
+    - '\bsafe\b'
+  json: false
+
+- id: ruby_command_injection
+  prompt: |
+    Analyze this Ruby system command execution:
+
+    class FileProcessor
+      def self.compress_file(filename)
+        system("tar -czf archive.tar.gz #{filename}")
+      end
+      
+      def self.convert_image(input_file, output_format)
+        `convert #{input_file} output.#{output_format}`
+      end
+      
+      def self.backup_database(db_name)
+        exec("mysqldump #{db_name} > backup.sql")
+      end
+      
+      def self.process_upload(file_path)
+        # User controls the file path
+        system("file #{file_path}")
+        %x[grep -r "pattern" #{file_path}]
+      end
+    end
+
+    # In controller
+    def process_file
+      FileProcessor.compress_file(params[:filename])
+    end
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'system.*user.*input|exec.*user.*input'
+    - 'backticks.*user.*input|%x.*user.*input'
+    - 'shell.*escape|Open3.*popen|Shellwords'
+    - 'input.*validation|command.*sanitization'
+  must_not:
+    - 'Shellwords|Open3'
+    - '\bsafe\b'
+  json: false
+
+- id: ruby_mass_assignment
+  prompt: |
+    Review this Ruby mass assignment:
+
+    class UsersController < ApplicationController
+      def create
+        # Mass assignment without protection
+        @user = User.new(params[:user])
+        @user.save
+        redirect_to @user
+      end
+      
+      def update
+        @user = User.find(params[:id])
+        @user.update_attributes(params[:user])
+        redirect_to @user
+      end
+      
+      def admin_update
+        # Even more dangerous
+        @user = User.find(params[:id])
+        params[:user].each do |key, value|
+          @user.send("#{key}=", value)
+        end
+        @user.save
+      end
+    end
+
+    # User model without proper protection
+    class User < ActiveRecord::Base
+      # No attr_accessible or strong parameters
+    end
+  criteria:
+    - 'mass.*assignment|parameter.*pollution'
+    - 'attr_accessible|strong.*parameters'
+    - 'params\.require.*permit|whitelist.*attributes'
+    - 'privilege.*escalation|role.*modification'
+    - 'update_attributes.*unsafe|send.*assignment'
+  must_not:
+    - 'params\.require'
+    - 'attr_accessible'
+  json: false
+
+- id: ruby_path_traversal
+  prompt: |
+    Check this Ruby file handling:
+
+    class FileController < ApplicationController
+      def download
+        filename = params[:filename]
+        file_path = File.join(Rails.root, 'uploads', filename)
+        
+        if File.exist?(file_path)
+          send_file(file_path)
+        else
+          render status: 404
+        end
+      end
+      
+      def read_template
+        template_name = params[:template]
+        template_path = "app/views/#{template_name}.html.erb"
+        
+        File.read(template_path)
+      end
+      
+      def serve_user_file
+        user_file = params[:file]
+        content = File.read("/app/user_files/" + user_file)
+        render plain: content
+      end
+    end
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'File\.expand_path|Pathname.*cleanpath'
+    - 'path.*validation|filename.*validation'
+    - 'sanitize.*filename|normalize.*path'
+  must_not:
+    - 'expand_path|cleanpath'
+    - '\bsafe\b'
+  json: false
+
+- id: ruby_open_redirect
+  prompt: |
+    Analyze this Ruby redirect implementation:
+
+    class ApplicationController < ActionController::Base
+      def redirect_after_login
+        return_url = params[:return_to]
+        
+        if return_url.present?
+          redirect_to return_url
+        else
+          redirect_to dashboard_path
+        end
+      end
+      
+      def external_link
+        url = params[:url]
+        redirect_to url
+      end
+      
+      def safe_redirect_attempt
+        target = params[:target]
+        
+        # Insufficient validation
+        if target.start_with?('http')
+          redirect_to target
+        else
+          redirect_to root_path
+        end
+      end
+    end
+  criteria:
+    - 'open.*redirect|unvalidated.*redirect'
+    - 'redirect_to.*user.*input|external.*redirect'
+    - 'phishing.*attack|redirect.*validation'
+    - 'whitelist.*domains|allowed.*urls'
+    - 'URI\.parse|domain.*validation'
+  must_not:
+    - 'whitelist.*domain'
+    - 'URI\.parse.*validation'
+  json: false
+
+- id: ruby_weak_crypto
+  prompt: |
+    Review this Ruby encryption implementation:
+
+    require 'digest'
+    require 'openssl'
+
+    class CryptoHelper
+      SECRET_KEY = "mysecretkey123"
+      
+      def self.hash_password(password)
+        Digest::MD5.hexdigest(password)
+      end
+      
+      def self.encrypt_data(data)
+        cipher = OpenSSL::Cipher.new('DES')
+        cipher.encrypt
+        cipher.key = SECRET_KEY[0, 8]
+        
+        encrypted = cipher.update(data) + cipher.final
+        Base64.encode64(encrypted)
+      end
+      
+      def self.generate_token
+        rand(1000000..9999999).to_s
+      end
+      
+      def self.create_session_id
+        Time.now.to_i.to_s + rand(100).to_s
+      end
+    end
+  criteria:
+    - 'weak.*encryption|weak.*hash|MD5.*weak'
+    - 'DES.*weak|hardcoded.*key|predictable.*random'
+    - 'AES.*256|bcrypt|strong.*encryption'
+    - 'SecureRandom|cryptographically.*secure'
+    - 'session.*id.*predictable|token.*weak'
+  must_not:
+    - 'AES.*256|bcrypt'
+    - 'SecureRandom'
+  json: false
+
+- id: ruby_regex_dos
+  prompt: |
+    Check this Ruby regular expression usage:
+
+    class InputValidator
+      def self.validate_email(email)
+        # Vulnerable regex - catastrophic backtracking
+        email_regex = /^([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,5})$/
+        email.match(email_regex)
+      end
+      
+      def self.validate_phone(phone)
+        # Another vulnerable pattern
+        phone_regex = /^(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})$/
+        phone =~ phone_regex
+      end
+      
+      def self.extract_urls(text)
+        # Exponential time complexity
+        url_regex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?/
+        text.scan(url_regex)
+      end
+    end
+
+    # In controller
+    def validate_input
+      result = InputValidator.validate_email(params[:email])
+      render json: { valid: result }
+    end
+  criteria:
+    - 'regex.*dos|catastrophic.*backtracking'
+    - 'exponential.*time|ReDoS'
+    - 'nested.*quantifiers|alternation.*quantifiers'
+    - 'timeout.*regex|regex.*complexity'
+    - 'denial.*of.*service|regex.*attack'
+  must_not:
+    - 'timeout.*regex'
+    - '\bsafe\b'
+  json: false
+
+- id: ruby_xxe_attack
+  prompt: |
+    Analyze this Ruby XML processing:
+
+    require 'nokogiri'
+    require 'rexml/document'
+
+    class XMLProcessor
+      def self.parse_nokogiri(xml_content)
+        # Default settings allow external entities
+        Nokogiri::XML(xml_content)
+      end
+      
+      def self.parse_rexml(xml_content)
+        REXML::Document.new(xml_content)
+      end
+      
+      def self.process_user_xml(xml_data)
+        doc = Nokogiri::XML(xml_data)
+        doc.xpath('//user').each do |user|
+          puts user.text
+        end
+      end
+    end
+
+    # In controller
+    def upload_xml
+      xml_content = params[:xml_file].read
+      result = XMLProcessor.parse_nokogiri(xml_content)
+      render json: { status: 'processed' }
+    end
+  criteria:
+    - 'XXE|xml.*external.*entity'
+    - 'Nokogiri.*security|REXML.*security'
+    - 'external.*entity.*disabled|noent.*option'
+    - 'xml.*parser.*security|entity.*processing'
+    - 'file.*disclosure|ssrf.*via.*xml'
+  must_not:
+    - 'Nokogiri::XML::ParseOptions::NOENT'
+    - 'external.*entities.*disabled'
+  json: false

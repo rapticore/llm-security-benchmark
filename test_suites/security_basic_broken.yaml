@@ -1,0 +1,234 @@
+# Basic Security Test Suite
+# File: test_suites/security_basic.yaml
+# Core security tests for common vulnerabilities
+
+- id: sql_injection_simple
+  prompt: "Analyze this code for security issues: SELECT * FROM users WHERE id = 123'"
+  criteria:
+    - 'sql\s*injection'
+    - 'parameter|prepared'
+    - 'select\s*\*'
+    - 'sanitize|validation'
+    - 'least\s*privilege|privilege'
+  must_not:
+    - '\bno\s+issues\b'
+  json: false
+
+- id: sql_injection_complex
+  prompt: |
+    Analyze this Python Flask code for vulnerabilities:
+
+    @app.route('/search')
+    def search():
+        query = request.args.get('q')
+        sql = f"SELECT * FROM products WHERE name LIKE '%{query}%' AND active = 1"
+        results = db.execute(sql).fetchall()
+        return jsonify(results)
+  criteria:
+    - 'sql\s*injection'
+    - 'parameterized|prepared\s*statement'
+    - 'f-string|string\s*formatting'
+    - 'escape|sanitize|validate'
+    - 'LIKE.*%.*%'
+  must_not:
+    - '\bsafe\b'
+    - '\bno\s+vulnerabilities\b'
+  json: false
+
+- id:
+  command_injection
+  prompt: |
+    Analyze this code for security vulnerabilities:
+
+    import subprocess
+    import os
+
+    def backup_file(filename):
+        # User provides filename via web form
+        command = f"tar -czf backup.tar.gz {filename}"
+        result = subprocess.run(command, shell=True, capture_output=True)
+        return result.stdout
+  criteria:
+    - 'command\s*injection'
+    - 'shell=True'
+    - 'subprocess|os\.system|exec'
+    - 'sanitize|validate|escape'
+    - 'shell\s*escape|shlex'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id:
+  broken_access_control
+  prompt: |
+    Review this user profile endpoint:
+
+    @app.route('/user/<int:user_id>')
+    @login_required
+    def get_user_profile(user_id):
+        user = User.query.get(user_id)
+        if user:
+            return jsonify({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'ssn': user.ssn,
+                'salary': user.salary
+            })
+        return 404
+  criteria:
+    - 'access\s*control|authorization'
+    - 'vertical\s*privilege|horizontal\s*privilege'
+    - 'ownership\s*check|permission\s*check'
+    - 'ssn|salary|sensitive'
+    - 'current_user|session'
+  must_not:
+    - '\bauthorized\b'
+    - '\baccess\s*controlled\b'
+  json: false
+
+- id:
+  hardcoded_secrets
+  prompt: |
+    Analyze this database connection code:
+
+    import psycopg2
+
+    def connect_to_db():
+        conn = psycopg2.connect(
+            host="prod-db.example.com",
+            database="userdata",
+            user="admin",
+            password="SuperSecret123!",
+            sslmode="disable"
+        )
+        return conn
+
+    API_KEY = "sk_live_51234567890abcdef"
+    JWT_SECRET = "my_super_secret_key_2023"
+  criteria:
+    - 'hardcoded|hard.*coded'
+    - 'secret|password|key'
+    - 'environment\s*variable|env\s*var|vault'
+    - 'rotate|revoke'
+    - 'sslmode.*disable|ssl.*false'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id:
+  ssrf_basic
+  prompt: "Explain SSRF and provide two mitigations in bullet points."
+  criteria:
+    - '\bSSRF\b|server[-\s]*side request forgery'
+    - 'allowlist|denylist|egress|outbound'
+    - 'metadata|169\.254\.169\.254|imds'
+  must_not: []
+  json: false
+
+- id:
+  reflected_xss
+  prompt: |
+    Check this search results page:
+
+    @app.route('/search')
+    def search():
+        query = request.args.get('q', '')
+        results = search_database(query)
+
+        html = f'''
+        <h2>Search Results for: {query}</h2>
+        <div class="results">
+            {generate_results_html(results)}
+        </div>
+        '''
+        return html
+  criteria:
+    - 'XSS|cross.*site.*scripting'
+    - 'reflected.*xss|stored.*xss'
+    - 'escape|sanitize|encode'
+    - 'html.*injection|script.*injection'
+    - 'CSP|content.*security.*policy'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id:
+  owasp_top3
+  prompt: "Return the top 3 OWASP Top 10 (2021) items with id,name,risk as a JSON array."
+  criteria:
+    - 'A0?1|Broken Access Control'
+    - 'A0?2|Cryptographic Failures'
+    - 'A0?3|Injection'
+    - 'High'
+  must_not: []
+  json: true
+
+- id:
+  csrf_vulnerability
+  prompt: |
+    Analyze this password change endpoint:
+
+    @app.route('/change-password', methods=['POST'])
+    @login_required
+    def change_password():
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+
+        user = get_current_user()
+        if verify_password(current_password, user.password_hash):
+            user.password_hash = hash_password(new_password)
+            db.session.commit()
+            return "Password changed successfully"
+
+        return "Invalid current password", 400
+  criteria:
+    - 'CSRF|cross.*site.*request.*forgery'
+    - 'csrf.*token|anti.*csrf'
+    - 'referer.*check|origin.*check'
+    - 'state.*changing|sensitive.*operation'
+    - 'same.*site.*cookie'
+  must_not:
+    - '\bprotected\b'
+  json: false
+
+# Additional basic security tests
+- id: insecure_deserialization_basic
+  prompt: |
+    Review this Python object handling:
+
+    import pickle
+    
+    def load_user_session(session_data):
+        return pickle.loads(session_data)
+    
+    def process_upload(file_content):
+        user_obj = pickle.loads(file_content)
+        return user_obj.username
+  criteria:
+    - 'insecure.*deserialization|pickle.*loads'
+    - 'code.*execution|remote.*code'
+    - 'safe.*deserialization|json.*loads'
+    - 'untrusted.*data|user.*input'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: weak_authentication
+  prompt: |
+    Analyze this login implementation:
+
+    def login(username, password):
+        if username and password:
+            if username == "admin" and password == "password":
+                return True
+        return False
+  criteria:
+    - 'weak.*password|default.*password|hardcoded.*password'
+    - 'brute.*force|rate.*limiting'
+    - 'password.*policy|strong.*password'
+    - 'multi.*factor|2fa|mfa'
+  must_not:
+    - '\bstrong\b'
+    - '\bsecure\b'
+  json: false

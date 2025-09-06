@@ -1,0 +1,385 @@
+# C++ Security Test Suite
+# File: test_suites/security_cpp.yaml
+# C++ specific security vulnerability tests
+
+- id: cpp_buffer_overflow
+  prompt: |
+    Analyze this C++ code for memory safety issues:
+
+    #include <iostream>
+    #include <cstring>
+
+    void processUserInput(char* input) {
+        char buffer[256];
+        strcpy(buffer, input);
+        std::cout << "Processed: " << buffer << std::endl;
+    }
+
+    int main() {
+        char userInput[1024];
+        std::cin >> userInput;
+        processUserInput(userInput);
+        return 0;
+    }
+  criteria:
+    - 'buffer.*overflow|buffer.*overrun'
+    - 'strcpy.*unsafe|unbounded.*copy'
+    - 'strncpy|strlcpy|safer.*alternative'
+    - 'bounds.*check|length.*validation'
+    - 'stack.*smashing|memory.*corruption'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: cpp_use_after_free
+  prompt: |
+    Review this C++ memory management:
+
+    class DataProcessor {
+    private:
+        char* data;
+    public:
+        DataProcessor(const char* input) {
+            data = new char[strlen(input) + 1];
+            strcpy(data, input);
+        }
+        
+        ~DataProcessor() {
+            delete[] data;
+        }
+        
+        void process() {
+            // Processing logic
+            std::cout << "Processing: " << data << std::endl;
+        }
+    };
+
+    void handleRequest() {
+        DataProcessor* processor = new DataProcessor("test data");
+        delete processor;
+        
+        // Later in code...
+        processor->process(); // Oops!
+    }
+  criteria:
+    - 'use.*after.*free|dangling.*pointer'
+    - 'double.*free|memory.*leak'
+    - 'smart.*pointer|unique_ptr|shared_ptr'
+    - 'RAII|resource.*management'
+    - 'memory.*safety|undefined.*behavior'
+  must_not:
+    - 'smart.*pointer'
+    - 'unique_ptr|shared_ptr'
+  json: false
+
+- id: cpp_integer_overflow
+  prompt: |
+    Check this C++ arithmetic operation:
+
+    bool allocateMemory(unsigned int count, unsigned int size) {
+        unsigned int totalSize = count * size;
+        
+        if (totalSize > MAX_ALLOCATION) {
+            return false;
+        }
+        
+        char* buffer = new char[totalSize];
+        // Use buffer...
+        delete[] buffer;
+        return true;
+    }
+
+    void processArray(unsigned int numElements) {
+        // Each element is 1024 bytes
+        if (allocateMemory(numElements, 1024)) {
+            std::cout << "Memory allocated successfully" << std::endl;
+        }
+    }
+  criteria:
+    - 'integer.*overflow|arithmetic.*overflow'
+    - 'multiplication.*overflow|wraparound'
+    - 'checked.*arithmetic|overflow.*check'
+    - 'SIZE_MAX|numeric_limits'
+    - 'memory.*allocation.*size'
+  must_not:
+    - 'overflow.*check'
+    - 'numeric_limits'
+  json: false
+
+- id: cpp_format_string
+  prompt: |
+    Analyze this C++ logging function:
+
+    void logMessage(const char* userMessage) {
+        printf(userMessage);
+        fprintf(stderr, userMessage);
+    }
+
+    void handleUserInput() {
+        char input[512];
+        std::cin.getline(input, sizeof(input));
+        logMessage(input);
+    }
+  criteria:
+    - 'format.*string.*vulnerability|format.*string.*bug'
+    - 'printf.*user.*input|fprintf.*user.*input'
+    - 'printf.*format.*specifier|%.*specifier'
+    - 'snprintf|safe.*printf|format.*validation'
+    - 'arbitrary.*memory.*read|stack.*leak'
+  must_not:
+    - 'format.*string.*safe'
+  json: false
+
+- id: cpp_double_free
+  prompt: |
+    Review this C++ resource cleanup:
+
+    class ResourceManager {
+    private:
+        FILE* file;
+        char* buffer;
+        
+    public:
+        ResourceManager(const char* filename) {
+            file = fopen(filename, "r");
+            buffer = new char[1024];
+        }
+        
+        void cleanup() {
+            if (file) {
+                fclose(file);
+                file = nullptr;
+            }
+            if (buffer) {
+                delete[] buffer;
+                buffer = nullptr;
+            }
+        }
+        
+        ~ResourceManager() {
+            cleanup();
+        }
+    };
+
+    void processFile() {
+        ResourceManager rm("data.txt");
+        rm.cleanup();
+        // Destructor will be called when rm goes out of scope
+    }
+  criteria:
+    - 'double.*free|double.*delete'
+    - 'destructor.*cleanup|RAII.*violation'
+    - 'nullptr.*check|null.*pointer.*check'
+    - 'resource.*leak|memory.*management'
+    - 'exception.*safety|resource.*cleanup'
+  must_not:
+    - 'exception.*safe'
+  json: false
+
+- id: cpp_unchecked_cast
+  prompt: |
+    Check this C++ type casting:
+
+    void processData(void* data, size_t size) {
+        // Assume it's always a UserData structure
+        UserData* userData = static_cast<UserData*>(data);
+        
+        std::cout << "User ID: " << userData->id << std::endl;
+        std::cout << "Username: " << userData->username << std::endl;
+        
+        // Process array without bounds checking
+        int* numbers = reinterpret_cast<int*>(data);
+        for (int i = 0; i < 100; i++) {
+            std::cout << numbers[i] << " ";
+        }
+    }
+
+    void handleInput(char* input, size_t len) {
+        processData(input, len);
+    }
+  criteria:
+    - 'unsafe.*cast|unchecked.*cast'
+    - 'static_cast.*dangerous|reinterpret_cast'
+    - 'type.*safety|cast.*validation'
+    - 'bounds.*check|array.*bounds'
+    - 'memory.*layout|alignment.*issue'
+  must_not:
+    - 'dynamic_cast'
+    - 'bounds.*check'
+  json: false
+
+- id: cpp_race_condition
+  prompt: |
+    Analyze this C++ threading code:
+
+    class Counter {
+    private:
+        int value;
+        
+    public:
+        Counter() : value(0) {}
+        
+        void increment() {
+            value++;
+        }
+        
+        void decrement() {
+            value--;
+        }
+        
+        int getValue() {
+            return value;
+        }
+    };
+
+    Counter globalCounter;
+
+    void workerThread() {
+        for (int i = 0; i < 1000; i++) {
+            globalCounter.increment();
+        }
+    }
+
+    int main() {
+        std::thread t1(workerThread);
+        std::thread t2(workerThread);
+        
+        t1.join();
+        t2.join();
+        
+        std::cout << "Final value: " << globalCounter.getValue() << std::endl;
+        return 0;
+    }
+  criteria:
+    - 'race.*condition|data.*race'
+    - 'thread.*safety|concurrent.*access'
+    - 'mutex|std::mutex|lock'
+    - 'atomic.*operation|std::atomic'
+    - 'synchronization|thread.*synchronization'
+  must_not:
+    - 'mutex|std::mutex'
+    - 'atomic|std::atomic'
+  json: false
+
+- id: cpp_sql_injection
+  prompt: |
+    Review this C++ database query:
+
+    #include <iostream>
+    #include <string>
+    #include <sqlite3.h>
+
+    bool authenticateUser(sqlite3* db, const std::string& username, const std::string& password) {
+        std::string query = "SELECT * FROM users WHERE username = '" + username + 
+                           "' AND password = '" + password + "'";
+        
+        sqlite3_stmt* stmt;
+        int result = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
+        
+        if (result == SQLITE_OK) {
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                sqlite3_finalize(stmt);
+                return true;
+            }
+        }
+        sqlite3_finalize(stmt);
+        return false;
+    }
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'string.*concatenation.*sql|query.*concatenation'
+    - 'prepared.*statement|parameterized.*query'
+    - 'sqlite3_bind|parameter.*binding'
+    - 'input.*validation|sql.*escaping'
+  must_not:
+    - 'sqlite3_bind'
+    - '\bsafe\b'
+  json: false
+
+- id: cpp_path_traversal
+  prompt: |
+    Check this C++ file operation:
+
+    #include <fstream>
+    #include <iostream>
+    #include <string>
+
+    bool readUserFile(const std::string& filename) {
+        std::string basePath = "/app/userfiles/";
+        std::string fullPath = basePath + filename;
+        
+        std::ifstream file(fullPath);
+        if (!file.is_open()) {
+            std::cout << "Failed to open file: " << fullPath << std::endl;
+            return false;
+        }
+        
+        std::string line;
+        while (std::getline(file, line)) {
+            std::cout << line << std::endl;
+        }
+        
+        file.close();
+        return true;
+    }
+
+    int main() {
+        std::string userInput;
+        std::cout << "Enter filename: ";
+        std::cin >> userInput;
+        readUserFile(userInput);
+        return 0;
+    }
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'path.*validation|filename.*validation'
+    - 'canonical.*path|realpath|absolute.*path'
+    - 'sanitize.*filename|normalize.*path'
+  must_not:
+    - 'realpath|canonical'
+    - '\bsafe\b'
+  json: false
+
+- id: cpp_memory_leak
+  prompt: |
+    Analyze this C++ resource management:
+
+    class DataHandler {
+    public:
+        char* processFile(const char* filename) {
+            FILE* file = fopen(filename, "r");
+            if (!file) {
+                return nullptr;
+            }
+            
+            fseek(file, 0, SEEK_END);
+            long size = ftell(file);
+            fseek(file, 0, SEEK_SET);
+            
+            char* buffer = new char[size + 1];
+            fread(buffer, 1, size, file);
+            buffer[size] = '\0';
+            
+            fclose(file);
+            return buffer; // Caller must delete!
+        }
+        
+        void handleRequest(const char* filename) {
+            char* data = processFile(filename);
+            if (data) {
+                std::cout << "File content: " << data << std::endl;
+                // Forgot to delete data!
+            }
+        }
+    };
+  criteria:
+    - 'memory.*leak|resource.*leak'
+    - 'delete.*missing|free.*missing'
+    - 'RAII|smart.*pointer|unique_ptr'
+    - 'automatic.*cleanup|scope.*cleanup'
+    - 'exception.*safety|resource.*management'
+  must_not:
+    - 'delete\[\]|delete |free\('
+    - 'smart.*pointer'
+  json: false

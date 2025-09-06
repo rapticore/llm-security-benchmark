@@ -1,0 +1,478 @@
+# PHP Security Test Suite
+# File: test_suites/security_php.yaml
+# PHP specific security vulnerability tests
+
+- id: php_sql_injection
+  prompt: |
+    Analyze this PHP database query:
+
+    <?php
+    function authenticateUser($username, $password) {
+        $conn = new mysqli("localhost", "user", "pass", "database");
+        
+        $query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
+        $result = $conn->query($query);
+        
+        if ($result->num_rows > 0) {
+            return $result->fetch_assoc();
+        }
+        return false;
+    }
+
+    function searchUsers($searchTerm) {
+        global $pdo;
+        $sql = "SELECT * FROM users WHERE name LIKE '%$searchTerm%' OR email LIKE '%$searchTerm%'";
+        return $pdo->query($sql)->fetchAll();
+    }
+
+    // Usage
+    $user = authenticateUser($_POST['username'], $_POST['password']);
+    ?>
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'string.*concatenation.*sql|dynamic.*sql'
+    - 'prepared.*statement|bindParam|bindValue'
+    - 'PDO.*prepare|mysqli.*prepare'
+    - 'input.*validation|sql.*escaping'
+  must_not:
+    - 'prepare.*statement'
+    - 'bindParam|bindValue'
+  json: false
+
+- id: php_code_injection
+  prompt: |
+    Review this PHP dynamic code execution:
+
+    <?php
+    function evaluateExpression($expression) {
+        return eval($expression);
+    }
+
+    function includeTemplate($template) {
+        include($_GET['template'] . '.php');
+    }
+
+    function processData($data) {
+        $code = "return " . $data . ";";
+        return eval($code);
+    }
+
+    function dynamicFunction($func, $args) {
+        return call_user_func($func, $args);
+    }
+
+    // Usage examples
+    $result = evaluateExpression($_POST['math']);
+    includeTemplate($_GET['page']);
+    $value = processData($_POST['expression']);
+    $output = dynamicFunction($_POST['function'], $_POST['arguments']);
+    ?>
+  criteria:
+    - 'code.*injection|eval.*user.*input'
+    - 'include.*user.*input|require.*user.*input'
+    - 'call_user_func.*user.*input|remote.*code.*execution'
+    - 'whitelist.*functions|input.*validation'
+    - 'arbitrary.*code.*execution|php.*injection'
+  must_not:
+    - 'whitelist.*function'
+    - '\bsafe\b'
+  json: false
+
+- id: php_file_inclusion
+  prompt: |
+    Check this PHP file inclusion:
+
+    <?php
+    function loadPage($page) {
+        include("pages/" . $page . ".php");
+    }
+
+    function getTemplate($template) {
+        require($_GET['template']);
+    }
+
+    function loadConfig($config) {
+        $configFile = "/app/config/" . $config . ".conf";
+        if (file_exists($configFile)) {
+            include($configFile);
+        }
+    }
+
+    function serveFile($file) {
+        readfile("/uploads/" . $_GET['file']);
+    }
+
+    // Usage
+    loadPage($_GET['page']);
+    getTemplate($_GET['tpl']);
+    loadConfig($_POST['config']);
+    serveFile($_GET['download']);
+    ?>
+  criteria:
+    - 'file.*inclusion|local.*file.*inclusion|LFI'
+    - 'remote.*file.*inclusion|RFI'
+    - 'include.*user.*input|require.*user.*input'
+    - 'path.*traversal|directory.*traversal'
+    - 'whitelist.*files|allowed.*files'
+  must_not:
+    - 'whitelist.*file'
+    - 'allowed.*files'
+  json: false
+
+- id: php_command_injection
+  prompt: |
+    Analyze this PHP system command execution:
+
+    <?php
+    function compressFile($filename) {
+        system("tar -czf archive.tar.gz " . $filename);
+    }
+
+    function convertImage($input, $format) {
+        $command = "convert $input output.$format";
+        exec($command, $output);
+        return $output;
+    }
+
+    function pingHost($host) {
+        return shell_exec("ping -c 4 " . $host);
+    }
+
+    function backupDatabase($dbname) {
+        passthru("mysqldump $dbname > backup.sql");
+    }
+
+    // Usage
+    compressFile($_POST['file']);
+    convertImage($_GET['image'], $_GET['format']);
+    $result = pingHost($_POST['hostname']);
+    backupDatabase($_GET['database']);
+    ?>
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'system.*user.*input|exec.*user.*input'
+    - 'shell_exec.*user.*input|passthru.*user.*input'
+    - 'escapeshellarg|escapeshellcmd'
+    - 'input.*validation|command.*sanitization'
+  must_not:
+    - 'escapeshellarg|escapeshellcmd'
+    - '\bsafe\b'
+  json: false
+
+- id: php_xxe_attack
+  prompt: |
+    Review this PHP XML processing:
+
+    <?php
+    function parseXMLData($xmlContent) {
+        $doc = new DOMDocument();
+        $doc->loadXML($xmlContent);
+        return $doc;
+    }
+
+    function processSimpleXML($xml) {
+        return simplexml_load_string($xml);
+    }
+
+    function parseXMLFile($filename) {
+        $reader = new XMLReader();
+        $reader->open($filename);
+        
+        while ($reader->read()) {
+            if ($reader->nodeType == XMLReader::ELEMENT) {
+                echo $reader->name . "\n";
+            }
+        }
+    }
+
+    // Usage
+    $userXML = file_get_contents($_FILES['xml']['tmp_name']);
+    $doc = parseXMLData($userXML);
+    $simple = processSimpleXML($_POST['xml_data']);
+    ?>
+  criteria:
+    - 'XXE|xml.*external.*entity'
+    - 'DOMDocument.*security|SimpleXML.*security'
+    - 'loadXML.*user.*input|simplexml_load_string'
+    - 'external.*entity.*disabled|libxml.*disable'
+    - 'LIBXML_NOENT|entity.*processing'
+  must_not:
+    - 'LIBXML_NOENT.*false'
+    - 'libxml_disable_entity_loader'
+  json: false
+
+- id: php_deserialization
+  prompt: |
+    Check this PHP object serialization:
+
+    <?php
+    class User {
+        public $username;
+        public $isAdmin = false;
+        
+        public function __wakeup() {
+            if ($this->isAdmin) {
+                include('/admin/config.php');
+            }
+        }
+    }
+
+    function loadUserSession($sessionData) {
+        return unserialize($sessionData);
+    }
+
+    function processUserData($data) {
+        $userData = unserialize(base64_decode($data));
+        return $userData;
+    }
+
+    function restoreObject($serializedObject) {
+        return unserialize($serializedObject);
+    }
+
+    // Usage
+    $user = loadUserSession($_COOKIE['session']);
+    $data = processUserData($_POST['user_data']);
+    $obj = restoreObject($_GET['object']);
+    ?>
+  criteria:
+    - 'unsafe.*deserialization|unserialize.*user.*input'
+    - 'object.*injection|php.*object.*injection'
+    - 'magic.*method|__wakeup|__destruct'
+    - 'gadget.*chain|phar.*deserialization'
+    - 'whitelist.*classes|allowed.*classes'
+  must_not:
+    - 'allowed_classes'
+    - '\bsafe\b'
+  json: false
+
+- id: php_type_juggling
+  prompt: |
+    Analyze this PHP comparison logic:
+
+    <?php
+    function authenticateAPI($providedToken, $validToken) {
+        if ($providedToken == $validToken) {
+            return true;
+        }
+        return false;
+    }
+
+    function verifyHash($password, $hash) {
+        return md5($password) == $hash;
+    }
+
+    function checkSecret($userSecret) {
+        $secret = "0e462097431906509019562988736854";
+        if ($userSecret == $secret) {
+            return true;
+        }
+        return false;
+    }
+
+    function validateInput($input) {
+        if ($input == 0) {
+            return "Invalid input";
+        }
+        return "Processing: " . $input;
+    }
+
+    // Usage
+    $auth = authenticateAPI($_GET['token'], "secret123");
+    $valid = verifyHash($_POST['pass'], "0e123456789");
+    $check = checkSecret($_POST['secret']);
+    ?>
+  criteria:
+    - 'type.*juggling|loose.*comparison'
+    - 'strict.*comparison|===.*operator'
+    - 'hash.*collision|magic.*hash'
+    - '0e.*hash|md5.*collision'
+    - 'comparison.*bypass|authentication.*bypass'
+  must_not:
+    - 'strict.*comparison|==='
+  json: false
+
+- id: php_session_fixation
+  prompt: |
+    Review this PHP session management:
+
+    <?php
+    function loginUser($username, $password) {
+        if (validateCredentials($username, $password)) {
+            $_SESSION['logged_in'] = true;
+            $_SESSION['username'] = $username;
+            $_SESSION['user_id'] = getUserId($username);
+            return true;
+        }
+        return false;
+    }
+
+    function startUserSession() {
+        session_start();
+        // No session regeneration
+    }
+
+    function handleLogin() {
+        session_start();
+        
+        if (loginUser($_POST['username'], $_POST['password'])) {
+            header('Location: dashboard.php');
+        } else {
+            echo "Login failed";
+        }
+    }
+
+    // Session configuration
+    ini_set('session.cookie_httponly', 0);
+    ini_set('session.cookie_secure', 0);
+    ini_set('session.use_strict_mode', 0);
+    ?>
+  criteria:
+    - 'session.*fixation|session.*hijacking'
+    - 'session_regenerate_id|new.*session.*id'
+    - 'session.*security|secure.*cookie'
+    - 'httponly.*cookie|strict.*mode'
+    - 'session.*configuration|cookie.*security'
+  must_not:
+    - 'session_regenerate_id'
+    - 'httponly.*1|secure.*1'
+  json: false
+
+- id: php_csrf_vulnerability
+  prompt: |
+    Check this PHP form handling:
+
+    <?php
+    function updateUserProfile() {
+        if ($_POST) {
+            $userId = $_SESSION['user_id'];
+            updateUser($userId, $_POST['email'], $_POST['password']);
+            echo "Profile updated successfully";
+        }
+    }
+
+    function deleteUser() {
+        if ($_GET['action'] == 'delete') {
+            $userId = $_GET['user_id'];
+            deleteUserFromDatabase($userId);
+            echo "User deleted";
+        }
+    }
+
+    function transferMoney() {
+        if ($_POST['amount'] && $_POST['to_account']) {
+            $from = $_SESSION['account_id'];
+            $to = $_POST['to_account'];
+            $amount = $_POST['amount'];
+            
+            transferFunds($from, $to, $amount);
+            echo "Transfer completed";
+        }
+    }
+
+    // No CSRF protection implemented
+    updateUserProfile();
+    deleteUser();
+    transferMoney();
+    ?>
+  criteria:
+    - 'CSRF|cross.*site.*request.*forgery'
+    - 'csrf.*token|anti.*csrf'
+    - 'state.*changing.*operation|sensitive.*action'
+    - 'referer.*check|origin.*check'
+    - 'token.*validation|nonce'
+  must_not:
+    - 'csrf.*token'
+    - 'token.*validation'
+  json: false
+
+- id: php_weak_crypto
+  prompt: |
+    Analyze this PHP cryptography implementation:
+
+    <?php
+    function hashPassword($password) {
+        return md5($password);
+    }
+
+    function encryptData($data) {
+        $key = "mysecretkey123";
+        return base64_encode(mcrypt_encrypt(MCRYPT_DES, $key, $data, MCRYPT_MODE_ECB));
+    }
+
+    function generateToken() {
+        return md5(time() . rand());
+    }
+
+    function createSessionId() {
+        return substr(md5(uniqid()), 0, 16);
+    }
+
+    function verifyPassword($input, $stored) {
+        return md5($input) == $stored;
+    }
+
+    function encryptSensitiveData($data, $password) {
+        $key = substr(md5($password), 0, 8);
+        return mcrypt_encrypt(MCRYPT_DES, $key, $data, MCRYPT_MODE_ECB);
+    }
+    ?>
+  criteria:
+    - 'weak.*hash|MD5.*weak|mcrypt.*deprecated'
+    - 'DES.*weak|ECB.*mode.*weak'
+    - 'password_hash|bcrypt|Argon2'
+    - 'random_bytes|openssl_random_pseudo_bytes'
+    - 'AES.*256|strong.*encryption'
+  must_not:
+    - 'password_hash|bcrypt'
+    - 'random_bytes'
+  json: false
+
+- id: php_path_traversal
+  prompt: |
+    Review this PHP file operations:
+
+    <?php
+    function serveUserFile($filename) {
+        $filePath = "/app/uploads/" . $filename;
+        
+        if (file_exists($filePath)) {
+            header('Content-Type: application/octet-stream');
+            readfile($filePath);
+        } else {
+            echo "File not found";
+        }
+    }
+
+    function loadTemplate($template) {
+        $templatePath = "templates/" . $template . ".php";
+        include($templatePath);
+    }
+
+    function readConfigFile($config) {
+        $configPath = "../config/" . $config . ".ini";
+        return file_get_contents($configPath);
+    }
+
+    function downloadFile($file) {
+        $path = $_GET['path'] . "/" . $file;
+        header('Content-Disposition: attachment; filename="' . $file . '"');
+        readfile($path);
+    }
+
+    // Usage
+    serveUserFile($_GET['file']);
+    loadTemplate($_POST['template']);
+    $config = readConfigFile($_GET['config']);
+    downloadFile($_GET['filename']);
+    ?>
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'realpath|basename|pathinfo'
+    - 'path.*validation|filename.*validation'
+    - 'sanitize.*filename|normalize.*path'
+  must_not:
+    - 'realpath|basename'
+    - '\bsafe\b'
+  json: false
