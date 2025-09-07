@@ -4,6 +4,27 @@ A comprehensive security testing framework for evaluating Large Language Models 
 
 **Built by the Rapticore Security Research Team**
 
+## ⚠️ IMPORTANT COST NOTICE
+
+**This benchmark uses paid API services and WILL incur costs to your accounts:**
+
+- **OpenAI**: GPT-5, GPT-4o, and GPT-4o-mini require OpenAI API credits
+- **Anthropic**: Claude Opus 4 and Claude Sonnet 4 require Anthropic API credits  
+- **Google**: Gemini models require Google Cloud AI API credits
+
+**Typical costs:**
+- **Full benchmark (all models, all tests)**: $50-200+ depending on models selected
+- **Premium models** (Claude Opus 4, GPT-5): $0.01-0.10 per test
+- **Budget models** (Gemini Flash, GPT-4o-mini): $0.0001-0.001 per test  
+- **162 tests × 10 models**: ~$10-100 total cost range
+
+**Cost-saving tips:**
+- Start with `--suite basic` (11 tests) to estimate costs
+- Use budget models first: `--models "gpt-4o-mini,gemini-2.5-flash-lite"`
+- Monitor costs in real-time through the benchmark output
+
+**The benchmark will display total costs at the end of each run.**
+
 ## 🎯 Overview
 
 This tool evaluates LLMs' ability to:
@@ -30,6 +51,34 @@ This tool evaluates LLMs' ability to:
 - Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite`)
 - Gemini 2.0 Flash Lite (`gemini-2.0-flash-lite`)
 
+### 🎯 Enhanced Features (Enabled by Default)
+
+Every benchmark run now includes:
+
+**📊 Rich Data Collection & Analysis:**
+- Comprehensive raw data capture for future analysis
+- Advanced cost-effectiveness calculations with partial correctness
+- Token usage analysis and pricing optimization recommendations
+- System performance monitoring during tests
+
+**📈 Professional Reporting:**
+- Executive summary reports for business stakeholders
+- Multi-format exports: CSV, JSON, Markdown, Compressed archives
+- Performance visualization charts and graphs
+- Language-specific and OWASP category effectiveness analysis
+
+**🎯 Advanced Metrics:**
+- Quality-weighted cost effectiveness (not just pass/fail)
+- Penalty-adjusted scoring for wrong answers
+- Response quality assessment (excellent/good/fair/poor)
+- Business impact quantification and ROI calculations
+
+**💾 Future-Proof Data Capture:**
+- Complete API request/response logging
+- System environment and performance data
+- Reproducible results with full audit trail
+- Ready for integration with BI tools (Tableau, PowerBI)
+
 ## 🚀 Quick Start
 
 ### 1. Prerequisites
@@ -49,8 +98,15 @@ cd llm-security-benchmark
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
+# Install all dependencies (includes enhanced data analysis & visualization)
 pip install -r requirements.txt
+
+# This installs:
+# - Core LLM APIs (OpenAI, Anthropic, Google)
+# - Data analysis libraries (pandas, numpy)
+# - Visualization tools (matplotlib, seaborn) 
+# - System monitoring (psutil)
+# - All enhanced reporting capabilities
 ```
 
 ### 3. API Key Configuration
@@ -101,16 +157,26 @@ GEMINI_API_KEY=AIyour_gemini_key_here
 
 ### 4. Run Basic Benchmark
 
+⚠️ **Start small to estimate costs before running full benchmarks**
+
 ```bash
-# Test all models on all test suites (most comprehensive)
+# RECOMMENDED: Start with basic suite to estimate costs (~$0.01-1.00)
+python enhanced_multi_llm_benchmark.py --suite basic
+
+# Test budget models first (~$0.05-2.00)
+python enhanced_multi_llm_benchmark.py --models "gpt-4o-mini,gemini-2.5-flash-lite" --suite basic
+
+# Test single premium model (~$2.00-10.00)  
+python enhanced_multi_llm_benchmark.py --models "claude-sonnet-4" --suite comprehensive
+
+# EXPENSIVE: Full comprehensive benchmark (~$50-200+)
 python enhanced_multi_llm_benchmark.py --models all --suite all
-
-# Test premium models with OWASP Top 10  
-python enhanced_multi_llm_benchmark.py --models premium --suite owasp
-
-# Test balanced models with automatic reporting
-python enhanced_multi_llm_benchmark.py --models balanced --suite comprehensive
 ```
+
+**Cost estimation by suite:**
+- `basic` (11 tests): $0.01 - $1.00 per model
+- `comprehensive` (~50 tests): $0.50 - $15.00 per model
+- `all` (162 tests): $1.50 - $50.00+ per model
 
 ## 📊 Features
 
@@ -180,7 +246,9 @@ python enhanced_multi_llm_benchmark.py --models fast --suite basic
 python enhanced_multi_llm_benchmark.py --models "gpt-4o,claude-sonnet-4" --suite python --timeout 60
 ```
 
-### Advanced Analysis (Executive Summary & Performance Analysis Always Generated)
+### 📊 Enhanced Analysis & Reporting (Enabled By Default)
+
+The benchmark now includes comprehensive data collection and visualization as core features:
 ```bash
 # Complete benchmark with JSON export
 python enhanced_multi_llm_benchmark.py --models all --suite all --output comprehensive_results.json
@@ -193,6 +261,44 @@ python enhanced_multi_llm_benchmark.py --models balanced --suite enterprise --ou
 
 # Web development security comparison
 python enhanced_multi_llm_benchmark.py --models all --suite web_dev --output web_security_results.json
+```
+
+### 📈 Example Enhanced Output
+
+Every run now generates comprehensive analysis automatically:
+
+```
+🔍 Enhanced Multi-LLM Security Benchmark
+Built by the Rapticore Security Research Team
+================================================================================
+Models: gpt-4o, claude-sonnet-4, gemini-2.0-flash
+Suite: comprehensive (47 test cases)
+Output: ./benchmark_results/enhanced_20240101_123456
+
+🎯 Feature Status:
+   ✓ Executive reporting: Always enabled
+   ✓ Performance analysis: Always enabled
+   ✓ Visualization charts: Enabled
+   📊 Enhanced data capture: ENABLED
+   📈 Enhanced reporting: ENABLED
+
+... [benchmark execution] ...
+
+📊 Generated Reports & Analysis:
+   📋 Executive summary: ./benchmark_results/executive_summary.md
+   📈 Performance analysis: ./benchmark_results/performance_analysis.json
+   🎯 Visualization charts: 6 files
+      - performance_comparison.png
+      - cost_effectiveness.png
+      - language_effectiveness.png
+      - owasp_effectiveness.png
+   💾 Raw data exports: Multiple formats for advanced analysis
+   📊 Enhanced CSV/JSON reports with cost-effectiveness analysis
+   📈 Language and OWASP category breakdowns
+
+🎉 Comprehensive benchmark complete!
+📁 All results saved to: ./benchmark_results/enhanced_20240101_123456
+💡 For advanced analysis, see the raw data exports and CSV files
 ```
 
 ### Suite Categories
@@ -211,6 +317,45 @@ python enhanced_multi_llm_benchmark.py --models all --suite systems     # C/C++/
 python enhanced_multi_llm_benchmark.py --models all --suite web_dev     # Web development stack
 python enhanced_multi_llm_benchmark.py --models all --suite enterprise  # Enterprise languages
 ```
+
+## 💰 Cost Monitoring
+
+The benchmark provides comprehensive cost tracking:
+
+### Real-Time Cost Display
+```
+💰 TOTAL COST THIS RUN: $12.4567
+📊 Total Tests Executed: 162
+📈 Average Cost per Test: $0.076879
+⚠️  NOTE: This benchmark uses paid API services
+```
+
+### Cost Breakdown by Model  
+```
+Model                Tests    Success   Avg Score  Time(s)  Total Cost   
+--------------------------------------------------------------------------------------------------------------
+claude-opus-4        162/162 100.0%     0.641     10.22 $  6.5861      
+gpt-5               162/162  100.0%     0.577      8.49 $  1.2192
+gpt-4o-mini         162/162  100.0%     0.592      8.40 $  0.0525
+```
+
+### Quality-Aware Cost-Effectiveness Analysis  
+
+Our cost-effectiveness calculation prioritizes **accuracy and usability** over raw speed/cost:
+
+```
+💰 Best Value (Quality-Aware): claude-sonnet-4 (245.3 quality-weighted points per dollar)
+🏆 Best Accuracy: claude-opus-4 (64.1% average score, $6.59 total cost)  
+⚡ Fastest: gemini-2.5-flash (0.78s average, $0.0002 total cost)
+```
+
+**How Quality-Aware Cost-Effectiveness Works:**
+- **Quality Multiplier**: Models scoring <40% are heavily penalized (nearly worthless for security)
+- **Reliability Multiplier**: Failed API calls waste money and provide no value  
+- **Consistency Multiplier**: Unpredictable results reduce practical utility
+- **Result**: Cheap but inaccurate models are correctly identified as poor value
+
+This prevents the common mistake of choosing models that are cheap but produce unusable security analysis.
 
 ## 📈 Output and Reporting
 
@@ -242,20 +387,36 @@ python enhanced_multi_llm_benchmark.py --models all --suite enterprise  # Enterp
 
 ### Executive Summary Features
 - **Strategic Recommendations**: Model selection guidance
-- **Cost-Effectiveness Analysis**: Price-performance ratios with "security points per dollar" metric
-- **Security Coverage Assessment**: Vulnerability detection rates
+- **Enhanced Cost-Effectiveness Analysis**: Multiple calculation methods considering partial correctness
+- **Security Coverage Assessment**: Vulnerability detection rates by language and OWASP category
 - **Business Impact Metrics**: Risk reduction quantification
+- **Quality Distribution Analysis**: Perfect, excellent, good, fair, and poor score breakdown
 
-#### Value Score Calculation
-The **"security points per dollar"** metric measures cost-effectiveness:
-```
-Value Score = average_score ÷ cost_per_test
-```
-Where:
-- `average_score`: Security detection accuracy (0.0 to 1.0)
-- `cost_per_test`: API cost per individual test in USD
+#### Enhanced Cost-Effectiveness Calculations
+The benchmark now provides **three cost-effectiveness metrics**:
 
-Higher values indicate better cost-effectiveness for security analysis.
+```
+1. Traditional Effectiveness = average_score ÷ cost_per_test
+2. Quality-Weighted Effectiveness = weighted_average_score ÷ cost_per_test  
+3. Penalty-Adjusted Effectiveness = (positive_scores - penalties) ÷ total_cost
+```
+
+**Quality Weighting:**
+- Perfect (1.0): Weight = 1.0
+- Excellent (0.8-0.99): Weight = 0.9
+- Good (0.6-0.79): Weight = 0.7  
+- Fair (0.4-0.59): Weight = 0.5
+- Poor (0.0-0.39): Weight = 0.2
+
+**Penalties Applied:**
+- Failed tests: -0.5 points each
+- Poor performance: -0.3 points each
+
+This provides a more accurate assessment of cost-effectiveness that considers:
+- **Partial correctness** vs treating all scores equally
+- **Quality levels** of responses  
+- **Penalties for wrong/missed answers**
+- **Cost per perfect answer** vs cost per attempt
 
 ## ⚙️ Configuration
 
@@ -411,7 +572,7 @@ Install with: `pip install -r requirements.txt`
 
 ## 📄 License
 
-[Add your license information here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🐛 Issues and Support
 
