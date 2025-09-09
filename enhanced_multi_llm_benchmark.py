@@ -77,7 +77,7 @@ except ImportError as e:
 try:
     from improved_chart_generation_consolidated import (
         integrate_improved_charts,
-        generate_language_effectiveness_chart,
+        generate_language_effectiveness_chart_from_dict,
         generate_owasp_effectiveness_chart
     )
     IMPROVED_CHARTS_AVAILABLE = True
@@ -1813,7 +1813,8 @@ def generate_executive_summary(
                     f.write(aggressive_analysis_data["pareto_explanation"])
                 print(f"✓ Saved Pareto chart explanation: {pareto_path.name}")
                 
-            print(f"🚨 Aggressive fixes applied - {aggressive_analysis_data['summary']['disqualified_models']} models disqualified for gaming")
+            disqualified_models = aggressive_analysis_data.get('total_models', 0) - aggressive_analysis_data.get('qualified_models', 0)
+            print(f"🚨 Aggressive fixes applied - {disqualified_models} models disqualified for gaming")
             
         except Exception as e:
             print(f"⚠️ Aggressive anti-gaming fixes failed: {e}")
@@ -3128,13 +3129,63 @@ def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: 
         data['successes'].append(1 if result.ok else 0)
         data['suite_ids'].append(result.suite_id)
     
+    # Ensure all models are represented in analysis structure
+    # This handles models that had zero results (complete failures)
+    all_languages = set()
+    all_test_types = set()
+    
+    # First pass: collect all languages and test types that exist
+    for language in analysis:
+        all_languages.add(language)
+        for test_type in analysis[language]:
+            all_test_types.add(test_type)
+    
+    # If no results exist at all, create minimal structure
+    if not all_languages:
+        all_languages = {'Other'}
+        all_test_types = {'Quality'}
+    
+    # Second pass: ensure all models exist in all language/test_type combinations
+    for language in all_languages:
+        if language not in analysis:
+            analysis[language] = {}
+        for test_type in all_test_types:
+            if test_type not in analysis[language]:
+                analysis[language][test_type] = {}
+            for model in models:
+                if model not in analysis[language][test_type]:
+                    analysis[language][test_type][model] = {
+                        'scores': [], 'times': [], 'costs': [], 'successes': [], 'suite_ids': []
+                    }
+    
     # Calculate enhanced metrics
     for language in analysis:
         for test_type in analysis[language]:
             for model in analysis[language][test_type]:
                 data = analysis[language][test_type][model]
                 
+                # Handle completely failed models (no successful results)
                 if not data['scores']:
+                    # Set default values for failed models to ensure they appear in heatmaps
+                    analysis[language][test_type][model] = {
+                        'mean_score': 0.0,
+                        'score_std': 0.0,
+                        'score_ci_95': 0.0,
+                        'mean_time': 0.0,
+                        'time_p95': 0.0,
+                        'n': 0,
+                        'success_rate': 0.0,
+                        'completeness': 0.0,
+                        'reliability': 0.0,
+                        'cost_per_test': 0.0,
+                        'qfs': 0.0,
+                        'accuracy_rank_score': 0.0,
+                        'accuracy_completeness_score': 0.0,
+                        'empty_rate': 1.0,
+                        'timeout_rate': 0.0,
+                        'raw_scores': [],
+                        'raw_times': []
+                    }
                     continue
                 
                 # Calculate robust statistics
@@ -3300,10 +3351,11 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
                 if language in analysis_data and test_type in analysis_data[language]:
                     if model in analysis_data[language][test_type]:
                         data = analysis_data[language][test_type][model]
-                        accuracy_matrix[i, j] = data['mean_score'] * 100
-                        completeness_matrix[i, j] = data['completeness'] * 100
-                        qfs_matrix[i, j] = data['qfs'] * 100
-                        reliability_matrix[i, j] = data['reliability'] * 100
+                        # Defensive programming for missing fields
+                        accuracy_matrix[i, j] = data.get('mean_score', 0.0) * 100
+                        completeness_matrix[i, j] = data.get('completeness', 0.0) * 100
+                        qfs_matrix[i, j] = data.get('qfs', 0.0) * 100
+                        reliability_matrix[i, j] = data.get('reliability', 0.0) * 100
         
         # Accuracy heatmap
         im1 = ax1.imshow(accuracy_matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
@@ -3322,8 +3374,9 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
                     if (language in analysis_data and test_type in analysis_data[language] and 
                         model in analysis_data[language][test_type]):
                         data = analysis_data[language][test_type][model]
-                        n = data['n']
-                        ci = data['score_ci_95'] * 100
+                        # Defensive programming for missing fields
+                        n = data.get('n', 0)
+                        ci = data.get('score_ci_95', 0.0) * 100
                         text = f"{accuracy_matrix[i, j]:.0f}%\n(n={n})\n±{ci:.1f}"
                         ax1.text(j, i, text, ha='center', va='center', 
                                 fontsize=8, color='black' if accuracy_matrix[i, j] < 50 else 'white')
@@ -4619,7 +4672,7 @@ Examples:
         lang_chart = None
         owasp_chart = None
         if VISUALIZATION_AVAILABLE and charts is not None:
-            lang_chart = generate_language_effectiveness_chart(language_results, outdir)
+            lang_chart = generate_language_effectiveness_chart_from_dict(language_results, outdir)
             owasp_chart = generate_owasp_effectiveness_chart(owasp_results, outdir)
         if lang_chart:
             charts['language_effectiveness'] = lang_chart
