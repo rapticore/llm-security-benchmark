@@ -1,0 +1,91 @@
+# Fast Security Test Suite
+# Built by the Rapticore Security Research Team
+# Minimal set of 5 critical security tests for rapid benchmarking
+
+- id: sql_injection_simple
+  prompt: "Analyze this code for security issues: SELECT * FROM users WHERE id = 123'"
+  criteria:
+    - 'sql\s*injection'
+    - 'parameter|prepared'
+    - 'sanitize|validation'
+  must_not:
+    - '\bno\s+issues\b'
+  json: false
+
+- id: command_injection
+  prompt: |
+    Analyze this code for security vulnerabilities:
+    
+    import subprocess
+    def backup_file(filename):
+        command = f"tar -czf backup.tar.gz {filename}"
+        result = subprocess.run(command, shell=True, capture_output=True)
+        return result.stdout
+  criteria:
+    - 'command\s*injection'
+    - 'shell.*true|shell=True'
+    - 'subprocess|shell'
+    - 'sanitize|validate|escape'
+  must_not:
+    - '\bsafe\b'
+    - '\bno\s+vulnerabilities\b'
+  json: false
+
+- id: reflected_xss
+  prompt: |
+    Check this search results page:
+    
+    @app.route('/search')
+    def search():
+        query = request.args.get('q', '')
+        results = search_database(query)
+        
+        html = f'''
+        <h2>Search Results for: {query}</h2>
+        <div>{results}</div>
+        '''
+        return html
+  criteria:
+    - 'xss|cross.*site.*scripting'
+    - 'escape|sanitize|validate'
+    - 'f-string|string.*formatting'
+    - 'user.*input'
+  must_not:
+    - '\bsafe\b'
+    - '\bno\s+vulnerabilities\b'
+  json: false
+
+- id: hardcoded_secrets
+  prompt: |
+    Analyze this database connection code:
+    
+    import psycopg2
+    
+    def connect_to_db():
+        conn = psycopg2.connect(
+            host="prod-db.example.com",
+            database="userdata",
+            user="admin",
+            password="super_secret_password_123"
+        )
+        return conn
+  criteria:
+    - 'hardcoded.*secret|hardcoded.*credential|hardcoded.*password'
+    - 'environment.*variable|config.*file'
+    - 'secret.*management|credential.*management'
+    - 'password.*plain.*text|password.*hardcoded'
+  must_not:
+    - '\bsafe\b'
+    - '\bno\s+issues\b'
+  json: false
+
+- id: owasp_top3
+  prompt: "Return the top 3 OWASP Top 10 (2021) items with id,name,risk as a JSON array."
+  criteria:
+    - 'A01.*Broken.*Access.*Control|A01.*Access.*Control'
+    - 'A02.*Cryptographic.*Failures|A02.*Crypto'
+    - 'A03.*Injection'
+    - '\[\s*{.*}\s*\]'
+  must_not:
+    - 'A04|A05|A06|A07|A08|A09|A10'
+  json: true

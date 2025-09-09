@@ -1,5 +1,5 @@
 # Basic Security Test Suite
-# File: test_suites/security_basic.yaml
+# Built by the Rapticore Security Research Team
 # Core security tests for common vulnerabilities
 
 - id: sql_injection_simple

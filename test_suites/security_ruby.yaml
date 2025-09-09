@@ -1,5 +1,5 @@
 # Ruby Security Test Suite
-# File: test_suites/security_ruby.yaml
+# Built by the Rapticore Security Research Team
 # Ruby specific security vulnerability tests
 
 - id: ruby_code_injection

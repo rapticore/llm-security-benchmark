@@ -1,0 +1,694 @@
+# TypeScript/Node.js Comprehensive Security Test Suite
+# Built by the Rapticore Security Research Team
+# Covers TypeScript and Node.js specific vulnerabilities
+
+- id: typescript_prototype_pollution
+  prompt: |
+    Analyze this TypeScript prototype pollution vulnerability:
+
+    interface UserPreferences {
+      theme: string;
+      language: string;
+    }
+
+    function mergeUserSettings(target: any, source: any): UserPreferences {
+      for (let key in source) {
+        if (typeof source[key] === 'object' && source[key] !== null) {
+          target[key] = target[key] || {};
+          mergeUserSettings(target[key], source[key]);
+        } else {
+          target[key] = source[key];
+        }
+      }
+      return target;
+    }
+
+    // Express.js usage
+    app.post('/settings', (req, res) => {
+      const userSettings = mergeUserSettings({}, req.body);
+      res.json(userSettings);
+    });
+
+    // Lodash-style merge
+    function deepMerge(target: Record<string, any>, ...sources: any[]): any {
+      return sources.reduce((acc, source) => {
+        Object.keys(source).forEach(key => {
+          acc[key] = source[key];
+        });
+        return acc;
+      }, target);
+    }
+  criteria:
+    - 'prototype.*pollution|__proto__.*assignment'
+    - 'object.*freeze|preventExtensions'
+    - 'hasOwnProperty.*check|propertyIsEnumerable'
+    - 'whitelist.*keys|allowed.*properties'
+    - 'constructor.*prototype.*pollution'
+  must_not:
+    - 'prototype.*pollution.*impossible'
+    - 'safe.*by.*default'
+  json: false
+
+- id: nodejs_command_injection
+  prompt: |
+    Review this Node.js command injection vulnerability:
+
+    import { exec, spawn } from 'child_process';
+    import * as fs from 'fs';
+
+    function convertImage(inputFile: string, outputFormat: string): Promise<string> {
+      return new Promise((resolve, reject) => {
+        exec(`convert ${inputFile} output.${outputFormat}`, (error, stdout, stderr) => {
+          if (error) reject(error);
+          else resolve(stdout);
+        });
+      });
+    }
+
+    function gitClone(repoUrl: string, destination: string): void {
+      const command = `git clone ${repoUrl} ${destination}`;
+      exec(command, (error, stdout, stderr) => {
+        console.log(stdout);
+      });
+    }
+
+    // Express route
+    app.get('/ping/:host', (req, res) => {
+      const host = req.params.host;
+      exec(`ping -c 4 ${host}`, (error, stdout, stderr) => {
+        res.send(stdout);
+      });
+    });
+
+    function processFile(filename: string, operation: string): void {
+      spawn('sh', ['-c', `${operation} ${filename}`]);
+    }
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'spawn.*array.*args|execFile.*safer'
+    - 'shell.*false|avoid.*shell.*execution'
+    - 'input.*validation|sanitize.*commands'
+    - 'whitelist.*commands|allowed.*operations'
+  must_not:
+    - 'exec.*shell.*safe'
+    - 'user.*input.*shell.*safe'
+  json: false
+
+- id: nodejs_path_traversal
+  prompt: |
+    Analyze this Node.js path traversal vulnerability:
+
+    import * as path from 'path';
+    import * as fs from 'fs';
+    import express from 'express';
+
+    const app = express();
+
+    app.get('/files/:filename', (req, res) => {
+      const filename = req.params.filename;
+      const filePath = `./uploads/${filename}`;
+      res.sendFile(filePath);
+    });
+
+    function readUserFile(relativePath: string): string {
+      const fullPath = path.join(__dirname, 'data', relativePath);
+      return fs.readFileSync(fullPath, 'utf8');
+    }
+
+    app.get('/download', (req, res) => {
+      const file = req.query.file as string;
+      const downloadPath = path.resolve('./downloads/' + file);
+      res.download(downloadPath);
+    });
+
+    function serveStaticContent(requestPath: string): Buffer {
+      const contentPath = './static' + requestPath;
+      return fs.readFileSync(contentPath);
+    }
+
+    // Archive extraction
+    function extractFile(archivePath: string, extractTo: string): void {
+      const tar = require('tar');
+      tar.extract({
+        file: archivePath,
+        cwd: extractTo
+      });
+    }
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - 'path\.normalize|path\.resolve.*validate'
+    - 'path\.join.*safe|basename.*extraction'
+    - 'whitelist.*directories|allowed.*paths'
+    - '\.\./|\.\.\\\\|parent.*directory'
+  must_not:
+    - 'path.*traversal.*impossible'
+    - 'path\.join.*always.*safe'
+  json: false
+
+- id: typescript_nosql_injection
+  prompt: |
+    Review this TypeScript NoSQL injection in MongoDB:
+
+    import { MongoClient, Db } from 'mongodb';
+
+    interface User {
+      _id?: string;
+      username: string;
+      email: string;
+    }
+
+    class UserService {
+      constructor(private db: Db) {}
+
+      async findUser(username: string, password: string): Promise<User | null> {
+        // Direct object injection
+        const query = { username: username, password: password };
+        return await this.db.collection('users').findOne(query);
+      }
+
+      async searchUsers(filters: any): Promise<User[]> {
+        // Raw filter object from request
+        return await this.db.collection('users').find(filters).toArray();
+      }
+
+      async deleteUserPosts(userId: string, conditions: any): Promise<void> {
+        await this.db.collection('posts').deleteMany({
+          userId: userId,
+          ...conditions  // Spread operator vulnerability
+        });
+      }
+
+      async updateUser(id: string, updateData: any): Promise<void> {
+        // Direct update object
+        await this.db.collection('users').updateOne(
+          { _id: id },
+          { $set: updateData }
+        );
+      }
+    }
+
+    // Express route
+    app.post('/users/search', async (req, res) => {
+      const userService = new UserService(db);
+      const results = await userService.searchUsers(req.body);
+      res.json(results);
+    });
+  criteria:
+    - 'nosql.*injection|mongodb.*injection'
+    - 'query.*validation|input.*sanitization'
+    - '\$where.*javascript|eval.*injection'
+    - 'type.*checking|schema.*validation'
+    - 'mongo.*escape|parameterized.*queries'
+  must_not:
+    - 'nosql.*injection.*impossible'
+    - 'mongodb.*always.*safe'
+  json: false
+
+- id: nodejs_xxe_xml_processing
+  prompt: |
+    Analyze this Node.js XML External Entity vulnerability:
+
+    import * as xml2js from 'xml2js';
+    import * as libxmljs from 'libxmljs';
+    import * as fast_xml_parser from 'fast-xml-parser';
+
+    function parseUserXML(xmlContent: string): Promise<any> {
+      const parser = new xml2js.Parser();
+      return parser.parseStringPromise(xmlContent);
+    }
+
+    function processXMLWithLibxml(xmlString: string): any {
+      const doc = libxmljs.parseXml(xmlString);
+      return doc.root();
+    }
+
+    function fastXMLParse(xmlData: string): any {
+      const options = {
+        ignoreAttributes: false,
+        parseNodeValue: true,
+        parseAttributeValue: true
+      };
+      return fast_xml_parser.parse(xmlData, options);
+    }
+
+    // SOAP service handling
+    app.post('/soap', (req, res) => {
+      const soapXML = req.body;
+      const parsedSOAP = parseUserXML(soapXML);
+      res.json(parsedSOAP);
+    });
+
+    function processConfigFile(configPath: string): any {
+      const xmlContent = fs.readFileSync(configPath, 'utf8');
+      return libxmljs.parseXml(xmlContent, {
+        noblanks: true,
+        noent: true,  // Dangerous: enables entity processing
+        nocdata: true
+      });
+    }
+  criteria:
+    - 'xml.*external.*entity|xxe.*vulnerability'
+    - 'disable.*entities|noent.*false'
+    - 'resolve_entities.*false|external.*dtd'
+    - 'entity.*expansion|billion.*laughs'
+    - 'xml.*parser.*secure.*configuration'
+  must_not:
+    - 'xml.*parsing.*always.*safe'
+    - 'no.*xxe.*risk.*nodejs'
+  json: false
+
+- id: typescript_jwt_vulnerabilities
+  prompt: |
+    Review these TypeScript JWT implementation vulnerabilities:
+
+    import * as jwt from 'jsonwebtoken';
+    import * as crypto from 'crypto';
+
+    interface JWTPayload {
+      userId: string;
+      role: string;
+      exp?: number;
+    }
+
+    function generateToken(payload: JWTPayload): string {
+      // Weak secret
+      return jwt.sign(payload, 'secret123');
+    }
+
+    function verifyTokenUnsafe(token: string): JWTPayload | null {
+      try {
+        // Algorithm confusion vulnerability
+        return jwt.verify(token, 'secret123') as JWTPayload;
+      } catch {
+        return null;
+      }
+    }
+
+    function createUnsignedToken(payload: JWTPayload): string {
+      // None algorithm vulnerability
+      return jwt.sign(payload, '', { algorithm: 'none' as any });
+    }
+
+    // Express middleware
+    function authenticateToken(req: any, res: any, next: any): void {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return res.status(401).json({ error: 'No token' });
+      }
+
+      // Vulnerable verification
+      const decoded = jwt.decode(token) as JWTPayload;
+      req.user = decoded;
+      next();
+    }
+
+    function refreshToken(oldToken: string): string {
+      // No verification of old token
+      const payload = jwt.decode(oldToken) as JWTPayload;
+      return jwt.sign(payload, process.env.JWT_SECRET || 'fallback_secret');
+    }
+  criteria:
+    - 'jwt.*vulnerability|algorithm.*confusion'
+    - 'strong.*secret|crypto.*random.*secret'
+    - 'algorithm.*whitelist|verify.*signature'
+    - 'none.*algorithm.*dangerous|unsigned.*token'
+    - 'token.*expiration|secure.*storage'
+  must_not:
+    - 'jwt.*always.*secure'
+    - 'algorithm.*none.*safe'
+  json: false
+
+- id: nodejs_regex_dos
+  prompt: |
+    Analyze this Node.js Regular Expression Denial of Service:
+
+    function validateEmail(email: string): boolean {
+      // Catastrophic backtracking
+      const emailRegex = /^([a-zA-Z0-9_\.-])+@([\da-z\.-])+\.([a-z\.]{2,6})$/;
+      return emailRegex.test(email);
+    }
+
+    function parseNestedGroups(input: string): RegExpMatchArray | null {
+      // Exponential backtracking
+      const regex = /^(a+)+$/;
+      return input.match(regex);
+    }
+
+    app.post('/validate', (req, res) => {
+      const userInput = req.body.data;
+      // User-controlled regex
+      const pattern = req.body.pattern;
+      try {
+        const regex = new RegExp(pattern);
+        const isValid = regex.test(userInput);
+        res.json({ valid: isValid });
+      } catch (error) {
+        res.status(400).json({ error: 'Invalid pattern' });
+      }
+    });
+
+    function extractNumbers(text: string): string[] {
+      // Nested quantifiers
+      const numberRegex = /(\d+(\.\d+)?)+/g;
+      return text.match(numberRegex) || [];
+    }
+
+    function validateComplexInput(input: string): boolean {
+      // Multiple vulnerable patterns
+      const patterns = [
+        /^(a|a)*$/,
+        /^(a+)+$/,
+        /^(a|b)*c$/,
+        /^((a+)+)+$/
+      ];
+      
+      return patterns.every(pattern => pattern.test(input));
+    }
+  criteria:
+    - 'regex.*dos|catastrophic.*backtracking'
+    - 'regex.*timeout|safe.*regex.*library'
+    - 'nested.*quantifiers|exponential.*complexity'
+    - 'user.*input.*regex|dynamic.*patterns'
+    - 'regex.*validation|performance.*testing'
+  must_not:
+    - 'regex.*dos.*impossible'
+    - 'all.*regex.*safe.*nodejs'
+  json: false
+
+- id: nodejs_insecure_dependencies
+  prompt: |
+    Review these Node.js insecure dependency usage patterns:
+
+    // Outdated vulnerable packages
+    const express = require('express');  // Potentially outdated
+    const mongoose = require('mongoose'); // Old version with vulnerabilities
+    const jwt = require('jsonwebtoken');
+    const bcrypt = require('bcrypt');
+    const _ = require('lodash');  // Prototype pollution in old versions
+
+    // Dangerous package usage
+    const eval2 = require('eval');  // Code execution package
+    const vm2 = require('vm2');     // Sandbox escape vulnerabilities
+
+    function executeUserCode(code: string): any {
+      // Using eval package
+      return eval2(code);
+    }
+
+    function sandboxExecution(userScript: string): any {
+      // VM2 sandbox (has known escapes)
+      const {VM} = require('vm2');
+      const vm = new VM();
+      return vm.run(userScript);
+    }
+
+    // Lodash prototype pollution
+    function mergeSettings(target: any, source: any): any {
+      return _.merge(target, source);  // Vulnerable in old versions
+    }
+
+    // Package.json example issues
+    /*
+    {
+      "dependencies": {
+        "express": "4.16.0",  // Old version
+        "jsonwebtoken": "8.0.0",  // Vulnerable version
+        "lodash": "4.17.4",  // Prototype pollution
+        "mongoose": "5.0.0",  // Query injection vulnerabilities
+        "bcrypt": "1.0.0"   // Timing attack vulnerabilities
+      }
+    }
+    */
+
+    // npm audit ignore patterns
+    function setupAuditIgnores(): void {
+      // .npmrc with audit disabled
+      // audit=false
+      // Creating security debt
+    }
+  criteria:
+    - 'dependency.*vulnerabilities|npm.*audit'
+    - 'package.*update|security.*patches'
+    - 'prototype.*pollution.*lodash|vm2.*escape'
+    - 'eval.*package.*dangerous|code.*execution'
+    - 'regular.*security.*updates|dependency.*scanning'
+  must_not:
+    - 'old.*packages.*safe'
+    - 'npm.*audit.*unnecessary'
+  json: false
+
+- id: nodejs_server_side_template_injection
+  prompt: |
+    Analyze this Node.js Server-Side Template Injection:
+
+    import * as handlebars from 'handlebars';
+    import * as mustache from 'mustache';
+    import * as pug from 'pug';
+    import * as ejs from 'ejs';
+
+    function renderHandlebars(template: string, data: any): string {
+      // Direct template compilation
+      const compiledTemplate = handlebars.compile(template);
+      return compiledTemplate(data);
+    }
+
+    function renderMustache(templateString: string, view: any): string {
+      return mustache.render(templateString, view);
+    }
+
+    app.post('/render', (req, res) => {
+      const template = req.body.template;
+      const data = req.body.data;
+      
+      // SSTI vulnerability
+      const result = pug.render(template, data);
+      res.send(result);
+    });
+
+    function renderEJS(userTemplate: string, variables: any): string {
+      return ejs.render(userTemplate, variables);
+    }
+
+    // Email template rendering
+    function sendCustomEmail(to: string, templateCode: string, params: any): void {
+      const htmlContent = handlebars.compile(templateCode)(params);
+      sendEmail({
+        to: to,
+        html: htmlContent
+      });
+    }
+
+    function dynamicPageGeneration(pageTemplate: string, context: any): string {
+      // Nunjucks template injection
+      const nunjucks = require('nunjucks');
+      return nunjucks.renderString(pageTemplate, context);
+    }
+  criteria:
+    - 'template.*injection|ssti|server.*side.*template'
+    - 'template.*sandbox|restricted.*context'
+    - 'precompiled.*templates|static.*templates'
+    - 'input.*validation|template.*whitelist'
+    - 'escape.*user.*input|xss.*protection'
+  must_not:
+    - 'user.*templates.*always.*safe'
+    - 'template.*injection.*impossible'
+  json: false
+
+- id: typescript_type_confusion
+  prompt: |
+    Review these TypeScript type safety bypass vulnerabilities:
+
+    // Type assertion bypassing validation
+    function processUserInput(input: unknown): string {
+      return input as string;  // Dangerous type assertion
+    }
+
+    function handleAPIResponse(response: any): User {
+      // Direct casting without validation
+      return response as User;
+    }
+
+    // Any type usage
+    function dangerousAnyUsage(data: any): void {
+      data.someMethod();  // Runtime error if method doesn't exist
+      const value = data.dangerousProperty.nested.value;
+    }
+
+    // Interface pollution
+    interface User {
+      id: string;
+      name: string;
+    }
+
+    function updateUser(user: User, updates: any): User {
+      // Object spread with any type
+      return { ...user, ...updates };
+    }
+
+    // JSON parsing without validation
+    function parseJSONUnsafe<T>(jsonString: string): T {
+      return JSON.parse(jsonString) as T;
+    }
+
+    // Type guards bypassed
+    function isString(value: unknown): value is string {
+      return true;  // Always returns true - bypassing type guard
+    }
+
+    function processValue(input: unknown): string {
+      if (isString(input)) {
+        return input.toUpperCase();  // Runtime error possible
+      }
+      return '';
+    }
+
+    // Prototype manipulation affecting types
+    function pollute(): void {
+      (Object.prototype as any).isAdmin = true;
+      const user = {} as User;
+      console.log((user as any).isAdmin);  // True due to pollution
+    }
+  criteria:
+    - 'type.*assertion.*dangerous|runtime.*type.*checking'
+    - 'json.*schema.*validation|input.*validation'
+    - 'avoid.*any.*type|strict.*typing'
+    - 'type.*guards.*proper|runtime.*validation'
+    - 'prototype.*pollution.*types|interface.*validation'
+  must_not:
+    - 'typescript.*prevents.*all.*runtime.*errors'
+    - 'type.*assertions.*always.*safe'
+  json: false
+
+- id: nodejs_async_vulnerabilities
+  prompt: |
+    Analyze these Node.js asynchronous operation vulnerabilities:
+
+    import * as fs from 'fs/promises';
+    import { EventEmitter } from 'events';
+
+    // Race condition in async operations
+    let userBalance = 1000;
+    async function transferFunds(amount: number): Promise<boolean> {
+      if (userBalance >= amount) {
+        // Simulating async operation delay
+        await new Promise(resolve => setTimeout(resolve, 100));
+        userBalance -= amount;
+        return true;
+      }
+      return false;
+    }
+
+    // Unhandled promise rejection
+    async function processUserData(userId: string): Promise<void> {
+      // No error handling
+      const userData = await fetchUserFromDB(userId);
+      await processData(userData);
+      // If any async operation fails, unhandled rejection
+    }
+
+    // Memory leak with event emitters
+    class DataProcessor extends EventEmitter {
+      processFile(filename: string): void {
+        fs.readFile(filename).then(data => {
+          this.emit('data', data);
+          // Event listeners not cleaned up
+        });
+      }
+    }
+
+    // Callback hell leading to errors
+    function nestedCallbacks(callback: Function): void {
+      setTimeout(() => {
+        fs.readFile('file1.txt', (err1, data1) => {
+          if (err1) throw err1;
+          fs.readFile('file2.txt', (err2, data2) => {
+            if (err2) throw err2;
+            // Deep nesting, error handling issues
+            callback(data1, data2);
+          });
+        });
+      }, 1000);
+    }
+
+    // Promise chain vulnerabilities
+    function promiseChainIssues(): Promise<any> {
+      return fetch('/api/data')
+        .then(response => response.json())
+        .then(data => processData(data))
+        // Missing error handling in chain
+        .then(result => saveResult(result));
+    }
+  criteria:
+    - 'async.*race.*condition|promise.*rejection.*handling'
+    - 'event.*emitter.*cleanup|memory.*leak.*prevention'
+    - 'error.*handling.*async|try.*catch.*async'
+    - 'promise.*all.*error.*handling|concurrent.*safety'
+    - 'callback.*hell|async.*await.*preferred'
+  must_not:
+    - 'async.*operations.*always.*safe'
+    - 'promises.*prevent.*all.*errors'
+  json: false
+
+- id: nodejs_crypto_implementation_flaws
+  prompt: |
+    Review these Node.js cryptographic implementation vulnerabilities:
+
+    import * as crypto from 'crypto';
+
+    function hashPasswordWeak(password: string): string {
+      // Weak hashing algorithm
+      return crypto.createHash('md5').update(password).digest('hex');
+    }
+
+    function encryptDataInsecure(data: string): string {
+      // Hard-coded key and weak algorithm
+      const key = 'my-secret-key-123';  // Weak key
+      const cipher = crypto.createCipher('des', key);  // Deprecated algorithm
+      let encrypted = cipher.update(data, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      return encrypted;
+    }
+
+    function generateWeakToken(): string {
+      // Predictable random
+      return Math.random().toString(36).substring(2);
+    }
+
+    function compareHashesInsecure(hash1: string, hash2: string): boolean {
+      // Timing attack vulnerability
+      return hash1 === hash2;
+    }
+
+    function createJWTUnsafe(payload: any): string {
+      // Weak secret from environment or default
+      const secret = process.env.JWT_SECRET || 'default-secret';
+      const header = Buffer.from(JSON.stringify({alg: 'HS256', typ: 'JWT'})).toString('base64');
+      const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64');
+      const signature = crypto.createHmac('sha256', secret)
+                            .update(`${header}.${payloadB64}`)
+                            .digest('base64');
+      return `${header}.${payloadB64}.${signature}`;
+    }
+
+    function encryptWithECB(data: string, key: string): string {
+      // ECB mode vulnerability (patterns visible)
+      const cipher = crypto.createCipher('aes-128-ecb', key);
+      let encrypted = cipher.update(data, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      return encrypted;
+    }
+
+    function generateSalt(): string {
+      // Insufficient entropy
+      return crypto.randomBytes(8).toString('hex');  // Too short salt
+    }
+  criteria:
+    - 'weak.*hash.*algorithm|bcrypt.*scrypt.*argon2'
+    - 'crypto.*secure.*random|crypto\.randomBytes'
+    - 'timing.*attack.*prevention|crypto\.timingSafeEqual'
+    - 'strong.*encryption|aes.*cbc.*gcm'
+    - 'salt.*length|key.*derivation.*function'
+  must_not:
+    - 'md5.*sha1.*secure'
+    - 'math\.random.*cryptographic'
+  json: false

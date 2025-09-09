@@ -1,0 +1,841 @@
+# Kotlin/Android Comprehensive Security Test Suite
+# Built by the Rapticore Security Research Team
+# Covers Kotlin and Android-specific security vulnerabilities
+
+- id: kotlin_sql_injection_android
+  prompt: |
+    Analyze this Kotlin SQL injection vulnerability in Android:
+
+    class UserRepository(private val database: SQLiteDatabase) {
+        
+        fun findUserByCredentials(username: String, password: String): User? {
+            val query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'"
+            val cursor = database.rawQuery(query, null)
+            return if (cursor.moveToFirst()) {
+                User(cursor.getString("username"), cursor.getString("email"))
+            } else null
+        }
+        
+        fun searchUsers(searchTerm: String): List<User> {
+            val sql = "SELECT * FROM users WHERE name LIKE '%$searchTerm%'"
+            val cursor = database.rawQuery(sql, null)
+            val users = mutableListOf<User>()
+            while (cursor.moveToNext()) {
+                users.add(User(cursor.getString("name"), cursor.getString("email")))
+            }
+            return users
+        }
+        
+        fun deleteUserPosts(userId: String, category: String) {
+            val deleteQuery = "DELETE FROM posts WHERE user_id = $userId AND category = '$category'"
+            database.execSQL(deleteQuery)
+        }
+        
+        fun getUsersByRole(role: String): List<User> {
+            val query = "SELECT * FROM users WHERE role IN ($role)"
+            return database.rawQuery(query, null).use { cursor ->
+                generateSequence { if (cursor.moveToNext()) cursor else null }
+                    .map { User(it.getString("name"), it.getString("email")) }
+                    .toList()
+            }
+        }
+    }
+  criteria:
+    - 'sql.*injection|parameterized.*queries'
+    - 'prepared.*statements|selectionArgs'
+    - 'database\.query\(|rawQuery.*args'
+    - 'input.*validation|escape.*sql'
+    - 'string.*concatenation.*dangerous'
+  must_not:
+    - 'sql.*concatenation.*safe'
+    - 'user.*input.*sql.*safe'
+  json: false
+
+- id: kotlin_intent_injection_android
+  prompt: |
+    Review this Kotlin Intent injection vulnerability:
+
+    class IntentHandler : Activity() {
+        
+        fun launchActivity(userInput: String) {
+            val intent = Intent()
+            intent.setClassName(this, userInput)
+            startActivity(intent)
+        }
+        
+        fun openWebPage(url: String) {
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(browserIntent)
+        }
+        
+        fun sendMessage(phoneNumber: String, message: String) {
+            val smsIntent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("smsto:$phoneNumber")
+                putExtra("sms_body", message)
+            }
+            startActivity(smsIntent)
+        }
+        
+        fun handleDeepLink(data: Uri?) {
+            data?.let { uri ->
+                val action = uri.getQueryParameter("action")
+                val className = uri.getQueryParameter("class")
+                
+                when (action) {
+                    "launch" -> {
+                        val intent = Intent()
+                        intent.setClassName(this, className ?: "")
+                        startActivity(intent)
+                    }
+                    "call" -> {
+                        val phoneNumber = uri.getQueryParameter("phone")
+                        val callIntent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phoneNumber"))
+                        startActivity(callIntent)
+                    }
+                }
+            }
+        }
+        
+        fun forwardIntent(originalIntent: Intent) {
+            // Directly forwarding user-controlled intent
+            startActivity(originalIntent)
+        }
+    }
+  criteria:
+    - 'intent.*injection|intent.*validation'
+    - 'component.*validation|package.*verification'
+    - 'deep.*link.*validation|uri.*sanitization'
+    - 'intent.*filter.*security|exported.*false'
+    - 'permission.*checks|security.*context'
+  must_not:
+    - 'intent.*always.*safe'
+    - 'deep.*links.*secure.*by.*default'
+  json: false
+
+- id: kotlin_insecure_data_storage
+  prompt: |
+    Analyze this Kotlin insecure data storage:
+
+    class DataManager(private val context: Context) {
+        
+        fun saveUserCredentials(username: String, password: String) {
+            // Storing in plain text SharedPreferences
+            val prefs = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                putString("username", username)
+                putString("password", password)
+                apply()
+            }
+        }
+        
+        fun saveAPIKey(apiKey: String) {
+            // Storing sensitive data in external storage
+            val file = File(Environment.getExternalStorageDirectory(), "api_key.txt")
+            file.writeText(apiKey)
+        }
+        
+        fun cacheUserSession(sessionToken: String) {
+            // Internal storage but unencrypted
+            val file = File(context.filesDir, "session.dat")
+            file.writeText(sessionToken)
+        }
+        
+        fun savePaymentInfo(cardNumber: String, cvv: String) {
+            // SQLite database without encryption
+            val db = context.openOrCreateDatabase("payments.db", Context.MODE_PRIVATE, null)
+            db.execSQL("CREATE TABLE IF NOT EXISTS cards (number TEXT, cvv TEXT)")
+            val values = ContentValues().apply {
+                put("number", cardNumber)
+                put("cvv", cvv)
+            }
+            db.insert("cards", null, values)
+        }
+        
+        fun logSensitiveData(userInfo: String) {
+            // Logging sensitive information
+            Log.d("UserInfo", "Processing data: $userInfo")
+            println("Debug: User data - $userInfo")
+        }
+        
+        fun backupUserData(userData: String) {
+            // World-readable backup
+            val prefs = context.getSharedPreferences("backup", Context.MODE_WORLD_READABLE)
+            prefs.edit().putString("data", userData).apply()
+        }
+    }
+  criteria:
+    - 'encrypted.*storage|android.*keystore'
+    - 'MODE_PRIVATE|internal.*storage.*security'
+    - 'avoid.*external.*storage|sensitive.*data.*encryption'
+    - 'log.*sensitive.*data|debug.*information.*leak'
+    - 'room.*encryption|sqlite.*cipher'
+  must_not:
+    - 'plain.*text.*storage.*safe'
+    - 'external.*storage.*always.*secure'
+  json: false
+
+- id: kotlin_network_security_config
+  prompt: |
+    Review this Kotlin network security implementation:
+
+    class NetworkManager {
+        
+        fun createInsecureOkHttp(): OkHttpClient {
+            val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+                override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+            })
+            
+            val sslContext = SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, SecureRandom())
+            
+            return OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+                .hostnameVerifier { _, _ -> true }  // Accept all hostnames
+                .build()
+        }
+        
+        fun makeHttpRequest(url: String) {
+            // HTTP instead of HTTPS
+            val httpUrl = url.replace("https://", "http://")
+            val request = Request.Builder().url(httpUrl).build()
+            createInsecureOkHttp().newCall(request).execute()
+        }
+        
+        fun allowAllSSL(): HttpsURLConnection {
+            // Disable SSL verification
+            HttpsURLConnection.setDefaultHostnameVerifier { _, _ -> true }
+            
+            val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+                override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+                override fun getAcceptedIssuers() = null
+            })
+            
+            val sc = SSLContext.getInstance("SSL")
+            sc.init(null, trustAll, SecureRandom())
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.socketFactory)
+            
+            return URL("https://example.com").openConnection() as HttpsURLConnection
+        }
+        
+        suspend fun fetchUserData(userId: String): String {
+            // Vulnerable to MITM attacks
+            return withContext(Dispatchers.IO) {
+                val url = "http://api.example.com/users/$userId"
+                URL(url).readText()
+            }
+        }
+    }
+  criteria:
+    - 'certificate.*pinning|ssl.*context.*secure'
+    - 'https.*only|network.*security.*config'
+    - 'hostname.*verification|certificate.*validation'
+    - 'trust.*manager.*validation|x509.*verification'
+    - 'cleartext.*traffic.*disabled|http.*upgrade'
+  must_not:
+    - 'ssl.*verification.*disable.*safe'
+    - 'http.*secure.*enough'
+  json: false
+
+- id: kotlin_webview_vulnerabilities
+  prompt: |
+    Analyze this Kotlin WebView security vulnerability:
+
+    class WebViewActivity : Activity() {
+        
+        private lateinit var webView: WebView
+        
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            webView = WebView(this)
+            
+            // Dangerous WebView settings
+            webView.settings.apply {
+                javaScriptEnabled = true
+                allowFileAccess = true
+                allowContentAccess = true
+                allowFileAccessFromFileURLs = true
+                allowUniversalAccessFromFileURLs = true
+                setAppCacheEnabled(true)
+                databaseEnabled = true
+                domStorageEnabled = true
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            }
+            
+            // Adding JavaScript interface without validation
+            webView.addJavascriptInterface(JavaScriptInterface(), "Android")
+            
+            // Loading user-controlled URLs
+            val userUrl = intent.getStringExtra("url") ?: "about:blank"
+            webView.loadUrl(userUrl)
+            
+            setContentView(webView)
+        }
+        
+        inner class JavaScriptInterface {
+            @JavascriptInterface
+            fun executeCommand(command: String): String {
+                // Direct command execution from JavaScript
+                return Runtime.getRuntime().exec(command).inputStream.bufferedReader().readText()
+            }
+            
+            @JavascriptInterface
+            fun readFile(filename: String): String {
+                // File access from JavaScript
+                return File(filename).readText()
+            }
+            
+            @JavascriptInterface
+            fun saveData(data: String) {
+                // Save sensitive data from JavaScript
+                getSharedPreferences("webview_data", MODE_PRIVATE)
+                    .edit()
+                    .putString("user_data", data)
+                    .apply()
+            }
+        }
+        
+        fun loadHTMLContent(htmlContent: String) {
+            // Loading user-provided HTML
+            webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+        }
+    }
+  criteria:
+    - 'webview.*security|javascript.*interface.*validation'
+    - 'allowFileAccess.*false|file.*url.*access.*disable'
+    - 'mixed.*content.*never_allow|https.*only'
+    - 'url.*validation|whitelist.*domains'
+    - 'removeJavascriptInterface|api.*level.*security'
+  must_not:
+    - 'javascript.*interface.*always.*safe'
+    - 'file.*access.*webview.*secure'
+  json: false
+
+- id: kotlin_broadcast_receiver_vulnerabilities
+  prompt: |
+    Review this Kotlin BroadcastReceiver security issue:
+
+    class DataReceiver : BroadcastReceiver() {
+        
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                "com.example.USER_DATA" -> {
+                    // Processing sensitive data from broadcast
+                    val userData = intent.getStringExtra("user_data")
+                    val password = intent.getStringExtra("password")
+                    
+                    // Storing without validation
+                    saveUserData(context, userData, password)
+                }
+                
+                "com.example.EXECUTE_COMMAND" -> {
+                    // Command execution from broadcast
+                    val command = intent.getStringExtra("command")
+                    Runtime.getRuntime().exec(command)
+                }
+                
+                "com.example.SEND_SMS" -> {
+                    // SMS sending without permission check
+                    val number = intent.getStringExtra("phone")
+                    val message = intent.getStringExtra("message")
+                    sendSMS(number, message)
+                }
+            }
+        }
+        
+        private fun saveUserData(context: Context, userData: String?, password: String?) {
+            val prefs = context.getSharedPreferences("user_data", Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                putString("data", userData)
+                putString("pass", password)
+                apply()
+            }
+        }
+        
+        private fun sendSMS(number: String?, message: String?) {
+            val smsManager = SmsManager.getDefault()
+            smsManager.sendTextMessage(number, null, message, null, null)
+        }
+    }
+    
+    // Manifest registration - exported receiver
+    /*
+    <receiver android:name=".DataReceiver" 
+              android:exported="true">
+        <intent-filter>
+            <action android:name="com.example.USER_DATA" />
+            <action android:name="com.example.EXECUTE_COMMAND" />
+        </intent-filter>
+    </receiver>
+    */
+    
+    class SecureBroadcastSender {
+        fun sendUserData(context: Context, userData: String) {
+            // Sending sensitive data via broadcast
+            val intent = Intent("com.example.USER_DATA").apply {
+                putExtra("user_data", userData)
+                putExtra("password", "secret123")
+            }
+            context.sendBroadcast(intent)  // Public broadcast
+        }
+    }
+  criteria:
+    - 'broadcast.*receiver.*security|exported.*false'
+    - 'permission.*protection|signature.*protection'
+    - 'local.*broadcast.*manager|ordered.*broadcast'
+    - 'intent.*validation|sender.*verification'
+    - 'sensitive.*data.*broadcast|secure.*communication'
+  must_not:
+    - 'exported.*receiver.*always.*safe'
+    - 'broadcast.*data.*secure.*by.*default'
+  json: false
+
+- id: kotlin_content_provider_vulnerabilities
+  prompt: |
+    Analyze this Kotlin ContentProvider security vulnerability:
+
+    class UserContentProvider : ContentProvider() {
+        
+        private lateinit var database: SQLiteDatabase
+        
+        override fun onCreate(): Boolean {
+            val dbHelper = UserDBHelper(context)
+            database = dbHelper.writableDatabase
+            return true
+        }
+        
+        override fun query(
+            uri: Uri,
+            projection: Array<String>?,
+            selection: String?,
+            selectionArgs: Array<String>?,
+            sortOrder: String?
+        ): Cursor? {
+            // Direct SQL injection vulnerability
+            val tableName = uri.lastPathSegment
+            val query = "SELECT * FROM $tableName WHERE $selection"
+            return database.rawQuery(query, selectionArgs)
+        }
+        
+        override fun insert(uri: Uri, values: ContentValues?): Uri? {
+            // No permission checking
+            val tableName = uri.lastPathSegment ?: "users"
+            val id = database.insert(tableName, null, values)
+            return ContentUris.withAppendedId(uri, id)
+        }
+        
+        override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String>?): Int {
+            // Unrestricted deletion
+            val tableName = uri.lastPathSegment ?: "users"
+            return database.delete(tableName, selection, selectionArgs)
+        }
+        
+        override fun update(
+            uri: Uri,
+            values: ContentValues?,
+            selection: String?,
+            selectionArgs: Array<String>?
+        ): Int {
+            val tableName = uri.lastPathSegment ?: "users"
+            return database.update(tableName, values, selection, selectionArgs)
+        }
+        
+        override fun getType(uri: Uri): String? = null
+        
+        // Utility methods exposing sensitive operations
+        fun exportAllData(): String {
+            val cursor = database.rawQuery("SELECT * FROM users", null)
+            val jsonBuilder = StringBuilder()
+            // Export all user data without access control
+            return jsonBuilder.toString()
+        }
+        
+        fun executeAdminCommand(command: String): Boolean {
+            // Administrative functions without authentication
+            return when (command) {
+                "reset_passwords" -> {
+                    database.execSQL("UPDATE users SET password = 'default'")
+                    true
+                }
+                "delete_all" -> {
+                    database.execSQL("DELETE FROM users")
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+  criteria:
+    - 'content.*provider.*security|permission.*enforcement'
+    - 'sql.*injection.*prevention|parameterized.*queries'
+    - 'access.*control|uri.*permission'
+    - 'exported.*false|signature.*permission'
+    - 'input.*validation|uri.*validation'
+  must_not:
+    - 'content.*provider.*secure.*by.*default'
+    - 'uri.*sql.*injection.*impossible'
+  json: false
+
+- id: kotlin_insecure_serialization
+  prompt: |
+    Review this Kotlin insecure serialization:
+
+    import java.io.*
+    import kotlinx.serialization.*
+    import kotlinx.serialization.json.*
+    import com.google.gson.Gson
+    
+    @Serializable
+    data class User(val name: String, val email: String)
+    
+    class SerializationManager {
+        
+        fun serializeWithJava(obj: Any): ByteArray {
+            val byteStream = ByteArrayOutputStream()
+            val objectStream = ObjectOutputStream(byteStream)
+            objectStream.writeObject(obj)
+            return byteStream.toByteArray()
+        }
+        
+        fun deserializeWithJava(data: ByteArray): Any? {
+            // Java deserialization vulnerability
+            val byteStream = ByteArrayInputStream(data)
+            val objectStream = ObjectInputStream(byteStream)
+            return objectStream.readObject()
+        }
+        
+        fun saveUserSession(user: User, sessionData: Map<String, Any>) {
+            // Serializing complex objects with potential code execution
+            val combinedData = mapOf(
+                "user" to user,
+                "session" to sessionData,
+                "runtime" to Runtime.getRuntime()  // Dangerous object
+            )
+            
+            val serialized = serializeWithJava(combinedData)
+            File("session.dat").writeBytes(serialized)
+        }
+        
+        fun loadUserSession(): Any? {
+            val sessionData = File("session.dat").readBytes()
+            return deserializeWithJava(sessionData)
+        }
+        
+        // Gson deserialization with user-controlled type
+        fun deserializeUserControlledType(json: String, className: String): Any? {
+            val gson = Gson()
+            val clazz = Class.forName(className)
+            return gson.fromJson(json, clazz)
+        }
+        
+        // Kotlin serialization with unsafe features
+        fun deserializeWithKotlinX(jsonString: String): Any {
+            val json = Json {
+                ignoreUnknownKeys = true
+                allowSpecialFloatingPointValues = true
+                allowStructuredMapKeys = true
+            }
+            
+            // Deserializing to Any type (unsafe)
+            return json.decodeFromString<Any>(jsonString)
+        }
+    }
+  criteria:
+    - 'java.*serialization.*dangerous|deserialization.*attack'
+    - 'whitelist.*classes|allowed.*types'
+    - 'json.*serialization.*safer|avoid.*objectinputstream'
+    - 'type.*validation|class.*name.*validation'
+    - 'sandbox.*deserialization|restricted.*classpath'
+  must_not:
+    - 'java.*deserialization.*safe'
+    - 'user.*controlled.*types.*safe'
+  json: false
+
+- id: kotlin_crypto_vulnerabilities
+  prompt: |
+    Analyze this Kotlin cryptographic implementation vulnerability:
+
+    import javax.crypto.*
+    import javax.crypto.spec.*
+    import java.security.*
+    import java.security.spec.*
+    
+    class CryptoManager {
+        
+        fun hashPasswordWeak(password: String): String {
+            // Weak hashing algorithm
+            val md = MessageDigest.getInstance("MD5")
+            val hashBytes = md.digest(password.toByteArray())
+            return hashBytes.joinToString("") { "%02x".format(it) }
+        }
+        
+        fun encryptWithWeakKey(data: String): ByteArray {
+            // Hard-coded weak key
+            val key = "1234567890123456".toByteArray()
+            val secretKey = SecretKeySpec(key, "AES")
+            
+            // ECB mode (patterns visible)
+            val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+            
+            return cipher.doFinal(data.toByteArray())
+        }
+        
+        fun generateWeakRandom(): String {
+            // Predictable random number generation
+            val random = Random()
+            return random.nextInt(1000000).toString()
+        }
+        
+        fun createInsecureSSL(): SSLContext {
+            // Accepting all certificates
+            val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+                override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate>? = null
+            })
+            
+            val sslContext = SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, SecureRandom())
+            return sslContext
+        }
+        
+        fun verifySignatureInsecure(data: ByteArray, signature: ByteArray, publicKey: String): Boolean {
+            // Vulnerable signature verification
+            return signature.contentEquals(data.sliceArray(0..signature.size-1))
+        }
+        
+        fun deriveKeyWeak(password: String, salt: ByteArray): SecretKey {
+            // Weak key derivation
+            val spec = PBEKeySpec(password.toCharArray(), salt, 100, 128)  // Low iteration count
+            val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")  // Weak algorithm
+            val key = factory.generateSecret(spec)
+            return SecretKeySpec(key.encoded, "AES")
+        }
+        
+        fun constantTimeComparison(a: String, b: String): Boolean {
+            // Timing attack vulnerability - not constant time
+            return a == b
+        }
+    }
+  criteria:
+    - 'weak.*hash.*md5.*sha1|bcrypt.*scrypt.*argon2'
+    - 'secure.*random|securerandom.*cryptographic'
+    - 'aes.*cbc.*gcm|avoid.*ecb.*mode'
+    - 'key.*derivation.*pbkdf2|high.*iteration.*count'
+    - 'constant.*time.*comparison|timing.*attack.*prevention'
+  must_not:
+    - 'md5.*secure.*hashing'
+    - 'ecb.*mode.*acceptable'
+  json: false
+
+- id: kotlin_input_validation_bypass
+  prompt: |
+    Review this Kotlin input validation bypass vulnerability:
+
+    class InputValidator {
+        
+        fun validateEmail(email: String): Boolean {
+            // Weak email validation
+            return email.contains("@")
+        }
+        
+        fun sanitizeInput(userInput: String): String {
+            // Insufficient sanitization
+            return userInput.replace("<script>", "")
+                           .replace("javascript:", "")
+        }
+        
+        fun validateFileUpload(filename: String): Boolean {
+            // Bypassable file extension check
+            return !filename.endsWith(".exe") && !filename.endsWith(".bat")
+        }
+        
+        fun processUserURL(url: String): String {
+            // URL validation bypass
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                return url
+            }
+            return "https://example.com"
+        }
+        
+        fun validatePhoneNumber(phone: String): Boolean {
+            // Regex that can be bypassed
+            val phoneRegex = Regex("""\d{3}-\d{3}-\d{4}""")
+            return phoneRegex.matches(phone)
+        }
+        
+        fun checkPermissions(userId: String, resource: String): Boolean {
+            // Logic flaw in permission checking
+            val adminUsers = listOf("admin", "root")
+            val userRoles = getUserRoles(userId)
+            
+            // Incorrect logic - should be &&
+            return adminUsers.contains(userId) || userRoles.contains("admin")
+        }
+        
+        fun parseUserAge(ageString: String): Int {
+            // No bounds checking
+            return ageString.toIntOrNull() ?: 0
+        }
+        
+        fun validateSQLInput(input: String): String {
+            // Incomplete SQL injection prevention
+            return input.replace("'", "''")
+                       .replace("--", "")
+        }
+        
+        private fun getUserRoles(userId: String): List<String> {
+            // Mock implementation
+            return when (userId) {
+                "user1" -> listOf("user")
+                "admin" -> listOf("admin", "user")
+                else -> listOf("guest")
+            }
+        }
+    }
+    
+    class FileProcessor {
+        
+        fun processUploadedFile(file: MultipartFile) {
+            val filename = file.originalFilename ?: "unknown"
+            
+            // Path traversal vulnerability
+            val targetPath = "/uploads/$filename"
+            File(targetPath).writeBytes(file.bytes)
+            
+            // Execute based on file extension
+            when (filename.substringAfterLast('.').lowercase()) {
+                "sh", "py", "js" -> executeScript(targetPath)
+                "zip", "tar" -> extractArchive(targetPath)
+            }
+        }
+        
+        private fun executeScript(scriptPath: String) {
+            Runtime.getRuntime().exec("bash $scriptPath")
+        }
+        
+        private fun extractArchive(archivePath: String) {
+            Runtime.getRuntime().exec("tar -xzf $archivePath -C /tmp/")
+        }
+    }
+  criteria:
+    - 'input.*validation|whitelist.*validation'
+    - 'path.*traversal.*prevention|filename.*sanitization'
+    - 'regex.*validation.*proper|boundary.*checking'
+    - 'file.*type.*validation|mime.*type.*checking'
+    - 'permission.*logic|access.*control.*flaws'
+  must_not:
+    - 'simple.*string.*replacement.*sufficient'
+    - 'client.*side.*validation.*enough'
+  json: false
+
+- id: kotlin_android_permission_bypass
+  prompt: |
+    Analyze this Kotlin Android permission bypass vulnerability:
+
+    class PermissionBypassActivity : Activity() {
+        
+        fun accessLocationWithoutPermission() {
+            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            
+            // Attempting to access location without checking permissions
+            try {
+                val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                processLocation(location)
+            } catch (e: SecurityException) {
+                // Ignoring security exception
+                Log.e("Location", "Permission denied, but continuing...")
+            }
+        }
+        
+        fun readContactsUnsafe() {
+            // No permission check before accessing contacts
+            val cursor = contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                null, null, null, null
+            )
+            
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val name = it.getString(it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))
+                    val number = it.getString(it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER))
+                    // Process contact data without permission
+                }
+            }
+        }
+        
+        fun takePictureBypass() {
+            // Trying to access camera without permission
+            val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            try {
+                val cameraId = cameraManager.cameraIdList[0]
+                cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
+                    override fun onOpened(camera: CameraDevice) {
+                        // Camera opened without permission check
+                    }
+                    override fun onDisconnected(camera: CameraDevice) {}
+                    override fun onError(camera: CameraDevice, error: Int) {}
+                }, null)
+            } catch (e: SecurityException) {
+                // Permission bypass attempt using different API
+                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                startActivity(intent)
+            }
+        }
+        
+        fun sendSMSWithoutPermission(number: String, message: String) {
+            try {
+                val smsManager = SmsManager.getDefault()
+                smsManager.sendTextMessage(number, null, message, null, null)
+            } catch (e: SecurityException) {
+                // Attempting alternative SMS sending method
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("smsto:$number")
+                    putExtra("sms_body", message)
+                }
+                startActivity(intent)
+            }
+        }
+        
+        fun recordAudioBypass() {
+            // MediaRecorder without permission
+            val mediaRecorder = MediaRecorder().apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile("/sdcard/recording.aac")
+            }
+            
+            try {
+                mediaRecorder.prepare()
+                mediaRecorder.start()
+            } catch (e: Exception) {
+                Log.e("Record", "Failed to record: ${e.message}")
+            }
+        }
+        
+        private fun processLocation(location: Location?) {
+            location?.let {
+                Log.d("Location", "Lat: ${it.latitude}, Lon: ${it.longitude}")
+                // Send location to server without user consent
+                sendLocationToServer(it.latitude, it.longitude)
+            }
+        }
+        
+        private fun sendLocationToServer(lat: Double, lon: Double) {
+            // Network call to send location data
+        }
+    }
+  criteria:
+    - 'permission.*check|checkSelfPermission'
+    - 'runtime.*permission|requestPermissions'
+    - 'security.*exception.*handling|permission.*denied'
+    - 'manifest.*permission|uses.*permission'
+    - 'user.*consent|privacy.*policy'
+  must_not:
+    - 'permission.*bypass.*acceptable'
+    - 'security.*exception.*ignore.*safe'
+  json: false

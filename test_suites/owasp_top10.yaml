@@ -1,5 +1,5 @@
 # OWASP Top 10 2021 Test Suite
-# File: test_suites/owasp_top10.yaml
+# Built by the Rapticore Security Research Team
 # Focused tests for each OWASP Top 10 vulnerability category
 
 - id: owasp_a01_broken_access_control

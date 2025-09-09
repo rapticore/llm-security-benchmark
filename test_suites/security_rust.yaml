@@ -1,5 +1,5 @@
 # Rust Security Test Suite
-# File: test_suites/security_rust.yaml
+# Built by the Rapticore Security Research Team
 # Rust specific security vulnerability tests
 
 - id: rust_unsafe_block

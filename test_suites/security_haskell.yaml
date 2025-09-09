@@ -1,5 +1,5 @@
 # Haskell Security Test Suite
-# File: test_suites/security_haskell.yaml
+# Built by the Rapticore Security Research Team
 # Haskell specific security vulnerability tests
 
 - id: haskell_space_leak

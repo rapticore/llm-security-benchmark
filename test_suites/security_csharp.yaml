@@ -1,5 +1,5 @@
 # C# / .NET Security Test Suite
-# File: test_suites/security_csharp.yaml
+# Built by the Rapticore Security Research Team
 # C# and .NET specific security vulnerability tests
 
 - id: csharp_sql_injection

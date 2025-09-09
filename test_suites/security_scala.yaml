@@ -1,0 +1,844 @@
+# Scala Comprehensive Security Test Suite
+# Built by the Rapticore Security Research Team
+# Covers Scala-specific security vulnerabilities including Play Framework
+
+- id: scala_sql_injection_slick
+  prompt: |
+    Analyze this Scala SQL injection vulnerability using Slick:
+
+    import slick.jdbc.H2Profile.api._
+    import slick.lifted.{ProvenShape, Tag}
+    import scala.concurrent.Future
+
+    case class User(id: Long, username: String, email: String, password: String)
+
+    class Users(tag: Tag) extends Table[User](tag, "USERS") {
+      def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
+      def username = column[String]("USERNAME")
+      def email = column[String]("EMAIL")
+      def password = column[String]("PASSWORD")
+      def * : ProvenShape[User] = (id, username, email, password) <> (User.tupled, User.unapply)
+    }
+
+    class UserRepository(db: Database) {
+      val users = TableQuery[Users]
+
+      def findByCredentials(username: String, password: String): Future[Option[User]] = {
+        // SQL injection via string interpolation in raw SQL
+        val query = sql"SELECT * FROM users WHERE username = '#$username' AND password = '#$password'".as[User]
+        db.run(query.headOption)
+      }
+
+      def searchUsers(searchTerm: String): Future[Seq[User]] = {
+        // Vulnerable raw SQL construction
+        val rawQuery = s"SELECT * FROM users WHERE username LIKE '%$searchTerm%'"
+        db.run(sql"#$rawQuery".as[User])
+      }
+
+      def deleteUsersByCondition(condition: String): Future[Int] = {
+        // Dynamic SQL with user input
+        val deleteQuery = s"DELETE FROM users WHERE $condition"
+        db.run(sqlu"#$deleteQuery")
+      }
+
+      def getUsersByRole(role: String): Future[Seq[User]] = {
+        // String concatenation in SQL
+        val query = sql"SELECT * FROM users WHERE role IN (#$role)".as[User]
+        db.run(query)
+      }
+
+      def updateUserData(userId: Long, updates: String): Future[Int] = {
+        // Dynamic UPDATE query
+        val updateQuery = s"UPDATE users SET $updates WHERE id = $userId"
+        db.run(sqlu"#$updateQuery")
+      }
+    }
+
+    // Anorm usage with vulnerabilities
+    import anorm._
+
+    class AnormUserDAO {
+      def authenticateUser(username: String, password: String): Option[User] = {
+        // String interpolation in Anorm
+        SQL(s"SELECT * FROM users WHERE username = '$username' AND password = '$password'")
+          .as(userParser.singleOpt)
+      }
+
+      def searchByName(name: String): List[User] = {
+        // Concatenation vulnerability
+        SQL("SELECT * FROM users WHERE name LIKE '%" + name + "%'")
+          .as(userParser.*)
+      }
+
+      val userParser: RowParser[User] = {
+        get[Long]("id") ~
+        get[String]("username") ~
+        get[String]("email") ~
+        get[String]("password") map {
+          case id ~ username ~ email ~ password => User(id, username, email, password)
+        }
+      }
+    }
+  criteria:
+    - 'sql.*injection|parameterized.*queries'
+    - 'slick.*safe.*queries|prepared.*statements'
+    - 'anorm.*parameter.*binding|sql.*interpolation'
+    - 'string.*concatenation.*dangerous|input.*validation'
+    - 'raw.*sql.*user.*input|query.*building'
+  must_not:
+    - 'string.*interpolation.*sql.*safe'
+    - 'slick.*prevents.*all.*sql.*injection'
+  json: false
+
+- id: scala_play_framework_vulnerabilities
+  prompt: |
+    Review this Scala Play Framework security vulnerability:
+
+    import play.api.mvc._
+    import play.api.libs.json._
+    import play.api.data._
+    import play.api.data.Forms._
+    import javax.inject._
+
+    @Singleton
+    class UserController @Inject()(cc: ControllerComponents) extends AbstractController(cc) {
+
+      def login(): Action[AnyContent] = Action { implicit request =>
+        val username = request.body.asFormUrlEncoded.get("username").head
+        val password = request.body.asFormUrlEncoded.get("password").head
+        
+        // Vulnerable authentication
+        if (authenticateUser(username, password)) {
+          // Session without CSRF protection
+          Ok(views.html.dashboard(username)).withSession("user" -> username)
+        } else {
+          Unauthorized("Invalid credentials")
+        }
+      }
+
+      def updateProfile(): Action[AnyContent] = Action { implicit request =>
+        val userId = request.session.get("user").getOrElse("")
+        
+        // Mass assignment vulnerability
+        val jsonBody = request.body.asJson.get
+        val userData = jsonBody.as[JsObject]
+        
+        // Directly applying all JSON fields
+        updateUserInDatabase(userId, userData)
+        
+        Ok("Profile updated")
+      }
+
+      def executeCommand(): Action[AnyContent] = Action { implicit request =>
+        val command = request.getQueryString("cmd").getOrElse("")
+        
+        // Command injection
+        import sys.process._
+        val result = s"bash -c '$command'".!!
+        
+        Ok(result)
+      }
+
+      def uploadFile(): Action[MultipartFormData[play.api.libs.Files.TemporaryFile]] = 
+        Action(parse.multipartFormData) { request =>
+          
+          request.body.file("file").map { filePart =>
+            val filename = filePart.filename
+            val contentType = filePart.contentType
+            
+            // No file validation
+            val targetFile = new java.io.File(s"/uploads/$filename")
+            filePart.ref.moveTo(targetFile)
+            
+            Ok("File uploaded successfully")
+          }.getOrElse {
+            BadRequest("No file uploaded")
+          }
+        }
+
+      def renderTemplate(): Action[AnyContent] = Action { implicit request =>
+        val templateContent = request.getQueryString("template").getOrElse("")
+        
+        // Server-side template injection
+        val compiledTemplate = views.html.dynamicTemplate(templateContent)
+        Ok(compiledTemplate)
+      }
+
+      def proxyRequest(): Action[AnyContent] = Action.async { implicit request =>
+        val targetUrl = request.getQueryString("url").getOrElse("")
+        
+        // SSRF vulnerability
+        play.api.libs.ws.WS.url(targetUrl).get().map { response =>
+          Ok(response.body)
+        }
+      }
+
+      def deserializeData(): Action[AnyContent] = Action { implicit request =>
+        val serializedData = request.body.asText.getOrElse("")
+        
+        // Unsafe deserialization
+        val bytes = java.util.Base64.getDecoder.decode(serializedData)
+        val ois = new java.io.ObjectInputStream(new java.io.ByteArrayInputStream(bytes))
+        val obj = ois.readObject()
+        
+        Ok(s"Deserialized: $obj")
+      }
+
+      private def authenticateUser(username: String, password: String): Boolean = {
+        // Vulnerable authentication logic
+        username.nonEmpty && password.nonEmpty
+      }
+
+      private def updateUserInDatabase(userId: String, userData: JsObject): Unit = {
+        // Database update with all provided fields
+      }
+    }
+
+    // Configuration vulnerabilities
+    object ApplicationConfig {
+      
+      def loadConfig(): play.api.Configuration = {
+        // Loading configuration from user-controllable source
+        val configFile = System.getProperty("config.file", "application.conf")
+        play.api.Configuration.load(new java.io.File(configFile))
+      }
+
+      def setupCrypto(): Unit = {
+        // Weak cryptographic configuration
+        play.api.libs.Crypto.sign("data", "weak-secret-key".getBytes)
+      }
+    }
+  criteria:
+    - 'play.*framework.*security|csrf.*protection'
+    - 'mass.*assignment.*prevention|input.*validation'
+    - 'command.*injection.*prevention|process.*execution'
+    - 'file.*upload.*validation|path.*traversal'
+    - 'template.*injection.*ssti|xss.*prevention'
+  must_not:
+    - 'play.*framework.*secure.*by.*default'
+    - 'mass.*assignment.*safe.*scala'
+  json: false
+
+- id: scala_deserialization_vulnerabilities
+  prompt: |
+    Analyze this Scala deserialization vulnerability:
+
+    import java.io._
+    import scala.util.{Try, Success, Failure}
+    import spray.json._
+    import akka.serialization._
+
+    case class UserCommand(action: String, params: Map[String, Any])
+
+    class SerializationService {
+
+      def deserializeJava(data: Array[Byte]): Option[Any] = {
+        Try {
+          val bis = new ByteArrayInputStream(data)
+          val ois = new ObjectInputStream(bis)
+          ois.readObject()
+        } match {
+          case Success(obj) => Some(obj)
+          case Failure(_) => None
+        }
+      }
+
+      def serializeObject(obj: Any): Array[Byte] = {
+        val bos = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(bos)
+        oos.writeObject(obj)
+        oos.close()
+        bos.toByteArray
+      }
+
+      def processUserCommand(serializedCommand: String): Unit = {
+        val bytes = java.util.Base64.getDecoder.decode(serializedCommand)
+        
+        deserializeJava(bytes) match {
+          case Some(cmd: UserCommand) =>
+            executeCommand(cmd)
+          case Some(obj) =>
+            // Processing unknown deserialized objects
+            processUnknownObject(obj)
+          case None =>
+            println("Deserialization failed")
+        }
+      }
+
+      def executeCommand(cmd: UserCommand): Unit = {
+        cmd.action match {
+          case "eval" =>
+            // Code execution from deserialized data
+            val script = cmd.params.getOrElse("script", "").toString
+            evaluateScript(script)
+          case "file_op" =>
+            val path = cmd.params.getOrElse("path", "").toString
+            val content = cmd.params.getOrElse("content", "").toString
+            writeFile(path, content)
+          case _ =>
+            println(s"Unknown command: ${cmd.action}")
+        }
+      }
+
+      def processUnknownObject(obj: Any): Unit = {
+        // Reflection-based processing of unknown objects
+        val clazz = obj.getClass
+        val methods = clazz.getMethods
+        
+        methods.foreach { method =>
+          if (method.getName.startsWith("execute") && method.getParameterCount == 0) {
+            Try(method.invoke(obj))
+          }
+        }
+      }
+
+      def evaluateScript(script: String): Any = {
+        // Script execution from deserialized data
+        val engine = new javax.script.ScriptEngineManager().getEngineByName("scala")
+        engine.eval(script)
+      }
+
+      def writeFile(path: String, content: String): Unit = {
+        // File operations from deserialized data
+        val file = new java.io.File(path)
+        val writer = new java.io.PrintWriter(file)
+        writer.write(content)
+        writer.close()
+      }
+    }
+
+    // Akka serialization vulnerabilities
+    class AkkaSerializationService extends Serializer {
+      
+      override def identifier: Int = 1234
+      override def includeManifest: Boolean = true
+
+      override def toBinary(o: AnyRef): Array[Byte] = {
+        // Using Java serialization (vulnerable)
+        val bos = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(bos)
+        oos.writeObject(o)
+        oos.close()
+        bos.toByteArray
+      }
+
+      override def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]): AnyRef = {
+        // Deserializing without validation
+        val bis = new ByteArrayInputStream(bytes)
+        val ois = new ObjectInputStream(bis)
+        ois.readObject().asInstanceOf[AnyRef]
+      }
+    }
+
+    // JSON deserialization issues
+    object JsonProcessor extends DefaultJsonProtocol {
+
+      implicit val userCommandFormat = jsonFormat2(UserCommand)
+
+      def processJsonCommand(jsonString: String): Unit = {
+        try {
+          val command = jsonString.parseJson.convertTo[UserCommand]
+          
+          // Executing commands from JSON without validation
+          command.action match {
+            case "shell" =>
+              val cmd = command.params.getOrElse("command", "").toString
+              import sys.process._
+              cmd.!!
+            case "load_class" =>
+              val className = command.params.getOrElse("class", "").toString
+              val clazz = Class.forName(className)
+              clazz.newInstance()
+            case _ =>
+          }
+        } catch {
+          case _: Exception => // Ignoring errors
+        }
+      }
+    }
+  criteria:
+    - 'deserialization.*attack|object.*injection'
+    - 'whitelist.*classes|type.*validation'
+    - 'avoid.*java.*serialization|safer.*formats'
+    - 'input.*validation.*deserialization|schema.*validation'
+    - 'code.*execution.*prevention|reflection.*security'
+  must_not:
+    - 'java.*serialization.*safe'
+    - 'deserialization.*always.*secure'
+  json: false
+
+- id: scala_xml_processing_vulnerabilities
+  prompt: |
+    Review this Scala XML processing vulnerability:
+
+    import scala.xml._
+    import javax.xml.parsers.DocumentBuilderFactory
+    import org.w3c.dom.Document
+
+    class XMLProcessor {
+
+      def parseUserXML(xmlString: String): Elem = {
+        // Direct XML parsing without XXE protection
+        XML.loadString(xmlString)
+      }
+
+      def processXMLFile(filename: String): NodeSeq = {
+        // Loading XML file from user input
+        val xmlData = XML.loadFile(filename)
+        xmlData \\ "user"
+      }
+
+      def parseWithDOM(xmlContent: String): Document = {
+        val factory = DocumentBuilderFactory.newInstance()
+        
+        // XXE vulnerability - entities not disabled
+        factory.setExpandEntityReferences(true)
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", true)
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", true)
+        
+        val builder = factory.newDocumentBuilder()
+        val inputSource = new org.xml.sax.InputSource(new java.io.StringReader(xmlContent))
+        builder.parse(inputSource)
+      }
+
+      def transformXML(xmlInput: String, xslInput: String): String = {
+        import javax.xml.transform._
+        import javax.xml.transform.stream.StreamSource
+        import javax.xml.transform.stream.StreamResult
+        
+        // XSLT injection vulnerability
+        val factory = TransformerFactory.newInstance()
+        val xslSource = new StreamSource(new java.io.StringReader(xslInput))
+        val transformer = factory.newTransformer(xslSource)
+        
+        val xmlSource = new StreamSource(new java.io.StringReader(xmlInput))
+        val result = new java.io.StringWriter()
+        val streamResult = new StreamResult(result)
+        
+        transformer.transform(xmlSource, streamResult)
+        result.toString
+      }
+
+      def processSOAPMessage(soapXML: String): NodeSeq = {
+        // SOAP message processing without validation
+        val parsedXML = XML.loadString(soapXML)
+        val body = parsedXML \\ "Body"
+        
+        // Extracting method name and parameters without validation
+        val methodName = (body \\ "@method").text
+        val params = body \\ "param"
+        
+        executeSOAPMethod(methodName, params)
+        body
+      }
+
+      def executeSOAPMethod(methodName: String, params: NodeSeq): Unit = {
+        methodName match {
+          case "executeCommand" =>
+            val command = (params \\ "command").text
+            import sys.process._
+            command.!!
+          case "readFile" =>
+            val filepath = (params \\ "path").text
+            scala.io.Source.fromFile(filepath).mkString
+          case "writeFile" =>
+            val filepath = (params \\ "path").text
+            val content = (params \\ "content").text
+            val writer = new java.io.PrintWriter(filepath)
+            writer.write(content)
+            writer.close()
+          case _ =>
+        }
+      }
+
+      def generateDynamicXML(data: Map[String, String]): Elem = {
+        // XML injection through string concatenation
+        val xmlString = s"""
+          <user>
+            <name>${data.getOrElse("name", "")}</name>
+            <email>${data.getOrElse("email", "")}</email>
+            <bio>${data.getOrElse("bio", "")}</bio>
+          </user>
+        """
+        XML.loadString(xmlString)
+      }
+
+      def xpathQuery(xmlDoc: Elem, userQuery: String): NodeSeq = {
+        import javax.xml.xpath._
+        
+        // XPath injection vulnerability
+        val xpathFactory = XPathFactory.newInstance()
+        val xpath = xpathFactory.newXPath()
+        val expression = xpath.compile(userQuery)
+        
+        // Converting Scala XML to Java DOM for XPath
+        val domFactory = DocumentBuilderFactory.newInstance()
+        val builder = domFactory.newDocumentBuilder()
+        val doc = builder.parse(new org.xml.sax.InputSource(new java.io.StringReader(xmlDoc.toString())))
+        
+        val result = expression.evaluate(doc, XPathConstants.NODESET)
+        NodeSeq.Empty // Simplified return
+      }
+
+      def processXMLWithReflection(xmlData: String): Any = {
+        val xml = XML.loadString(xmlData)
+        
+        // Dangerous reflection based on XML content
+        val className = (xml \\ "class").text
+        val methodName = (xml \\ "method").text
+        val args = (xml \\ "args" \\ "arg").map(_.text).toArray
+        
+        val clazz = Class.forName(className)
+        val method = clazz.getMethod(methodName, classOf[Array[String]])
+        val instance = clazz.newInstance()
+        
+        method.invoke(instance, args)
+      }
+    }
+  criteria:
+    - 'xml.*external.*entity|xxe.*prevention'
+    - 'disable.*entities|secure.*xml.*parser'
+    - 'xpath.*injection|xml.*injection'
+    - 'xslt.*injection|transformation.*security'
+    - 'xml.*schema.*validation|input.*sanitization'
+  must_not:
+    - 'xml.*parsing.*always.*safe'
+    - 'scala.*xml.*secure.*by.*default'
+  json: false
+
+- id: scala_concurrency_vulnerabilities
+  prompt: |
+    Analyze this Scala concurrency and race condition vulnerability:
+
+    import scala.concurrent._
+    import scala.concurrent.duration._
+    import akka.actor._
+    import java.util.concurrent.atomic.AtomicInteger
+
+    class BankAccount {
+      @volatile private var balance: Double = 1000.0
+      
+      def withdraw(amount: Double): Boolean = {
+        // Race condition - not atomic
+        if (balance >= amount) {
+          Thread.sleep(100) // Simulating processing delay
+          balance -= amount
+          true
+        } else {
+          false
+        }
+      }
+      
+      def getBalance: Double = balance
+    }
+
+    class ConcurrencyVulnerabilities {
+      implicit val ec: ExecutionContext = ExecutionContext.global
+      
+      private var sharedCounter = 0
+      private val userSessions = scala.collection.mutable.Map[String, String]()
+      
+      def unsafeCounterIncrement(): Future[Int] = {
+        Future {
+          // Race condition on shared mutable state
+          val current = sharedCounter
+          Thread.sleep(10)
+          sharedCounter = current + 1
+          sharedCounter
+        }
+      }
+      
+      def concurrentMapAccess(userId: String): Future[Option[String]] = {
+        Future {
+          // Concurrent access to mutable map
+          if (userSessions.contains(userId)) {
+            Thread.sleep(50) // Simulating processing
+            userSessions.get(userId)
+          } else {
+            userSessions.put(userId, s"session-${System.currentTimeMillis()}")
+            userSessions.get(userId)
+          }
+        }
+      }
+      
+      def lazyInitialization(): String = {
+        // Double-checked locking vulnerability
+        if (expensiveResource == null) {
+          synchronized {
+            if (expensiveResource == null) {
+              expensiveResource = initializeResource()
+            }
+          }
+        }
+        expensiveResource
+      }
+      
+      @volatile private var expensiveResource: String = _
+      
+      private def initializeResource(): String = {
+        Thread.sleep(1000)
+        "Initialized Resource"
+      }
+      
+      def deadlockProne(resource1: AnyRef, resource2: AnyRef): Future[String] = {
+        Future {
+          resource1.synchronized {
+            Thread.sleep(100)
+            resource2.synchronized {
+              "Operation completed"
+            }
+          }
+        }
+      }
+      
+      // Another thread doing the same with resources in reverse order
+      def deadlockProneReverse(resource1: AnyRef, resource2: AnyRef): Future[String] = {
+        Future {
+          resource2.synchronized {
+            Thread.sleep(100)
+            resource1.synchronized {
+              "Reverse operation completed"
+            }
+          }
+        }
+      }
+    }
+
+    // Akka Actor vulnerabilities
+    class VulnerableActor extends Actor {
+      private var state = scala.collection.mutable.Map[String, Any]()
+      
+      def receive = {
+        case "getState" =>
+          // Sharing mutable state reference
+          sender() ! state
+          
+        case ("setState", key: String, value: Any) =>
+          // No validation or sanitization
+          state(key) = value
+          
+        case ("execute", command: String) =>
+          // Command execution from actor message
+          import sys.process._
+          val result = command.!!
+          sender() ! result
+          
+        case ("deserialize", data: Array[Byte]) =>
+          // Unsafe deserialization in actor
+          val ois = new java.io.ObjectInputStream(new java.io.ByteArrayInputStream(data))
+          val obj = ois.readObject()
+          state("deserialized") = obj
+      }
+    }
+
+    class AsyncResourceLeaks {
+      implicit val ec: ExecutionContext = ExecutionContext.global
+      
+      def resourceLeakingOperation(): Future[String] = {
+        val resource = scala.io.Source.fromFile("/tmp/large-file.txt")
+        
+        Future {
+          // Resource not properly closed on exception
+          val content = resource.mkString
+          if (content.contains("error")) {
+            throw new RuntimeException("Error in file")
+          }
+          resource.close() // Only closed on success
+          content
+        }
+      }
+      
+      def unhandledFutureFailures(): Unit = {
+        // Creating futures without proper error handling
+        (1 to 1000).foreach { i =>
+          Future {
+            if (i % 100 == 0) {
+              throw new RuntimeException(s"Error at $i")
+            }
+            s"Processing $i"
+          } // No error handling - failures are swallowed
+        }
+      }
+      
+      def infiniteRetries(operation: () => Future[String]): Future[String] = {
+        def retry: Future[String] = {
+          operation().recoverWith {
+            case _ => 
+              Thread.sleep(1000)
+              retry // Infinite recursion on failures
+          }
+        }
+        retry
+      }
+    }
+  criteria:
+    - 'race.*condition|atomic.*operations'
+    - 'thread.*safety|concurrent.*collections'
+    - 'deadlock.*prevention|lock.*ordering'
+    - 'actor.*security|message.*validation'
+    - 'resource.*management|future.*error.*handling'
+  must_not:
+    - 'volatile.*prevents.*race.*conditions'
+    - 'actor.*model.*always.*thread.*safe'
+  json: false
+
+- id: scala_reflection_type_vulnerabilities
+  prompt: |
+    Review this Scala reflection and type system bypass vulnerability:
+
+    import scala.reflect.runtime.universe._
+    import scala.reflect.ClassTag
+    import scala.util.{Try, Success, Failure}
+
+    class ReflectionVulnerabilities {
+
+      def instantiateByName(className: String): Any = {
+        // Dangerous class instantiation from user input
+        val clazz = Class.forName(className)
+        clazz.newInstance()
+      }
+
+      def invokeMethodByName(obj: Any, methodName: String, args: Any*): Any = {
+        // Method invocation without validation
+        val clazz = obj.getClass
+        val method = clazz.getMethods.find(_.getName == methodName).get
+        method.invoke(obj, args.map(_.asInstanceOf[AnyRef]): _*)
+      }
+
+      def processTypeErasure[T: ClassTag](data: Any): T = {
+        // Type erasure bypass
+        data.asInstanceOf[T]
+      }
+
+      def deserializeWithType(data: String, typeName: String): Any = {
+        import spray.json._
+
+        // Dynamic type deserialization
+        val jsonData = data.parseJson
+        
+        typeName match {
+          case "java.lang.Runtime" =>
+            // Dangerous type instantiation
+            Runtime.getRuntime()
+          case "java.io.File" =>
+            val path = jsonData.asJsObject.fields.get("path").map(_.convertTo[String]).getOrElse("/")
+            new java.io.File(path)
+          case _ =>
+            Class.forName(typeName).newInstance()
+        }
+      }
+
+      def runtimeReflection(config: Map[String, Any]): Any = {
+        val rm = runtimeMirror(getClass.getClassLoader)
+        
+        // Reflection based on user configuration
+        val className = config.getOrElse("class", "").toString
+        val methodName = config.getOrElse("method", "").toString
+        val args = config.getOrElse("args", List()).asInstanceOf[List[Any]]
+        
+        val classSymbol = rm.staticClass(className)
+        val classMirror = rm.reflectClass(classSymbol)
+        val constructor = classSymbol.primaryConstructor.asMethod
+        val constructorMirror = classMirror.reflectConstructor(constructor)
+        
+        val instance = constructorMirror()
+        val instanceMirror = rm.reflect(instance)
+        
+        val methodSymbol = classSymbol.toType.decl(TermName(methodName)).asMethod
+        val methodMirror = instanceMirror.reflectMethod(methodSymbol)
+        
+        methodMirror(args: _*)
+      }
+
+      def bypassTypeSystem(value: Any): String = {
+        // Using asInstanceOf to bypass type system
+        value.asInstanceOf[String]
+      }
+
+      def unsafeVariance[T](items: List[T]): List[Any] = {
+        // Variance issues
+        items.asInstanceOf[List[Any]]
+      }
+
+      def macroBasedExecution(code: String): Any = {
+        // Dangerous: executing code through reflection
+        val toolbox = runtimeMirror(getClass.getClassLoader).mkToolBox()
+        val tree = toolbox.parse(code)
+        toolbox.eval(tree)
+      }
+    }
+
+    // Pattern matching vulnerabilities
+    class PatternMatchingIssues {
+
+      def processUserInput(input: Any): String = {
+        input match {
+          case s: String => s.toUpperCase
+          case i: Int => i.toString
+          case _ => 
+            // Dangerous fallback - arbitrary toString
+            input.toString
+        }
+      }
+
+      def extractorInjection(data: String): Any = {
+        // User-controlled extractors
+        val ExtractorPattern = """(\w+)\((.*)\)""".r
+        
+        data match {
+          case ExtractorPattern(className, args) =>
+            val clazz = Class.forName(className)
+            val constructor = clazz.getConstructors()(0)
+            val argArray = args.split(",").map(_.trim)
+            constructor.newInstance(argArray: _*)
+          case _ => None
+        }
+      }
+
+      def unsafeOptionHandling(opt: Option[Any]): Any = {
+        // Force extraction without safety
+        opt.get // Runtime exception if None
+      }
+    }
+
+    // Implicit conversion vulnerabilities
+    class ImplicitConversionIssues {
+
+      implicit def stringToFile(path: String): java.io.File = new java.io.File(path)
+      implicit def anyToString(value: Any): String = value.toString
+
+      def processPath(path: String): String = {
+        // Implicit conversion creates File object
+        val file: java.io.File = path // Uses implicit conversion
+        scala.io.Source.fromFile(file).mkString
+      }
+
+      def processAnyValue(value: Any): String = {
+        // Implicit conversion might call dangerous toString methods
+        val str: String = value // Uses implicit conversion
+        str
+      }
+
+      // Dangerous implicit class
+      implicit class StringOps(s: String) {
+        def execute(): String = {
+          import sys.process._
+          s.!! // Execute string as shell command
+        }
+      }
+
+      def useImplicitOps(userInput: String): String = {
+        // User input can be executed as command
+        userInput.execute()
+      }
+    }
+  criteria:
+    - 'reflection.*security|class.*loading.*validation'
+    - 'type.*safety|runtime.*type.*checking'
+    - 'pattern.*matching.*exhaustiveness|unsafe.*extraction'
+    - 'implicit.*conversion.*security|dangerous.*implicits'
+    - 'macro.*security|code.*execution.*prevention'
+  must_not:
+    - 'reflection.*always.*safe'
+    - 'type.*system.*prevents.*all.*runtime.*errors'
+  json: false

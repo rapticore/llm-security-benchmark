@@ -1,5 +1,5 @@
 # Java Security Test Suite
-# File: test_suites/security_java.yaml
+# Built by the Rapticore Security Research Team
 # Java specific security vulnerability tests
 
 - id: java_deserialization
