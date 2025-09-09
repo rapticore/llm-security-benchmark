@@ -1,5 +1,5 @@
 # Go Security Test Suite
-# File: test_suites/security_go.yaml
+# Built by the Rapticore Security Research Team
 # Go-specific security vulnerability tests
 
 - id: go_race_condition

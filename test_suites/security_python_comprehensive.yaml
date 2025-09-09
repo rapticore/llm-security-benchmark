@@ -1,0 +1,708 @@
+# Python Comprehensive Security Test Suite
+# Built by the Rapticore Security Research Team
+# Covers real-world Python security vulnerabilities with exploitation examples
+
+- id: python_code_injection_eval
+  prompt: |
+    Analyze this Python code execution vulnerability:
+
+    def evaluate_expression(expr):
+        return eval(expr)
+
+    def calculate_math(formula):
+        result = eval(f"math.{formula}")
+        return result
+
+    # Flask endpoint
+    @app.route('/calc', methods=['POST'])
+    def calculator():
+        expression = request.json.get('expression')
+        result = evaluate_expression(expression)
+        return {'result': result}
+
+    # Django view
+    def dynamic_filter(request):
+        filter_expr = request.GET.get('filter')
+        objects = MyModel.objects.filter(eval(filter_expr))
+        return objects
+  criteria:
+    - 'eval.*dangerous|code.*injection'
+    - 'ast\.literal_eval.*safe|restricted.*evaluation'
+    - 'input.*validation|sanitize.*expression'
+    - 'whitelist.*functions|allowed.*operations'
+    - '__builtins__.*restrict|sandbox.*eval'
+  must_not:
+    - 'eval.*safe.*always'
+    - 'no.*security.*risk'
+  json: false
+
+- id: python_exec_injection
+  prompt: |
+    Review this Python exec() usage:
+
+    def run_user_script(script_code):
+        exec(script_code)
+
+    def dynamic_import(module_name):
+        exec(f"import {module_name}")
+
+    def template_engine(template, context):
+        # Custom template processing
+        exec(f"result = f'{template}'", context)
+        return context.get('result')
+
+    # Processing uploaded Python files
+    def execute_plugin(plugin_code):
+        namespace = {}
+        exec(plugin_code, namespace)
+        return namespace.get('main', lambda: None)()
+  criteria:
+    - 'exec.*injection|arbitrary.*code.*execution'
+    - 'restricted.*namespace|limited.*globals'
+    - 'code.*review|static.*analysis'
+    - 'sandbox.*environment|container.*isolation'
+    - 'compile.*ast|bytecode.*validation'
+  must_not:
+    - 'exec.*always.*safe'
+  json: false
+
+- id: python_pickle_deserialization
+  prompt: |
+    Analyze this Python pickle deserialization:
+
+    import pickle
+    import base64
+    import dill  # Extended pickling
+
+    def load_user_session(cookie_data):
+        decoded = base64.b64decode(cookie_data)
+        return pickle.loads(decoded)
+
+    def cache_restore(cache_file):
+        with open(cache_file, 'rb') as f:
+            return pickle.load(f)
+
+    def distributed_task_result(serialized_result):
+        return dill.loads(serialized_result)
+
+    # Redis cache deserialization
+    def get_cached_object(key):
+        data = redis_client.get(key)
+        if data:
+            return pickle.loads(data)
+        return None
+
+    class CustomUnpickler(pickle.Unpickler):
+        def load_global(self):
+            return super().load_global()
+  criteria:
+    - 'pickle.*unsafe|deserialization.*attack'
+    - 'json.*safer|yaml.*safe_load'
+    - 'whitelist.*classes|allowed.*modules'
+    - 'hmac.*signature|cryptographic.*integrity'
+    - '__reduce__.*exploit|arbitrary.*code'
+  must_not:
+    - 'pickle.*always.*safe'
+    - 'no.*security.*concern'
+  json: false
+
+- id: python_sql_injection_orm
+  prompt: |
+    Review this Python ORM usage for SQL injection:
+
+    # Django ORM
+    def search_users(query):
+        return User.objects.extra(where=[f"name LIKE '%{query}%'"])
+
+    def filter_products(category):
+        return Product.objects.extra(
+            where=[f"category = '{category}'"]
+        )
+
+    # SQLAlchemy raw queries
+    def get_user_by_id(user_id):
+        query = f"SELECT * FROM users WHERE id = {user_id}"
+        return db.session.execute(query).fetchone()
+
+    # Flask-SQLAlchemy
+    def search_posts(term):
+        sql = f"SELECT * FROM posts WHERE content LIKE '%{term}%'"
+        return db.engine.execute(sql)
+
+    # Peewee ORM
+    def find_records(field, value):
+        query = f"SELECT * FROM records WHERE {field} = '{value}'"
+        return database.execute_sql(query)
+  criteria:
+    - 'sql.*injection|parameterized.*queries'
+    - 'orm.*safe.*methods|prepared.*statements'
+    - '\.filter\(|\.where\(|Q\('
+    - 'escape.*input|sanitize.*sql'
+    - 'text\(.*bindparam|params.*dict'
+  must_not:
+    - 'string.*concatenation.*safe'
+    - 'f-string.*safe'
+  json: false
+
+- id: python_template_injection_jinja2
+  prompt: |
+    Analyze this Jinja2 template injection vulnerability:
+
+    from jinja2 import Template, Environment
+
+    def render_template(template_str, user_data):
+        template = Template(template_str)
+        return template.render(**user_data)
+
+    # Flask template rendering
+    @app.route('/page')
+    def dynamic_page():
+        page_template = request.args.get('template')
+        return render_template_string(page_template, user=current_user)
+
+    # Email template processing
+    def send_custom_email(template_content, variables):
+        template = Template(template_content)
+        html_content = template.render(variables)
+        send_email(html_content)
+
+    # Custom template engine
+    def process_user_template(template_code):
+        env = Environment()
+        template = env.from_string(template_code)
+        return template.render(config=app.config)
+  criteria:
+    - 'template.*injection|ssti|server.*side.*template'
+    - 'sandbox.*environment|restricted.*context'
+    - 'autoescape.*true|escape.*user.*input'
+    - 'whitelist.*filters|allowed.*functions'
+    - '__class__.*exploit|mro.*access'
+  must_not:
+    - 'user.*templates.*safe'
+    - 'no.*security.*risk'
+  json: false
+
+- id: python_xml_external_entity
+  prompt: |
+    Review this Python XML processing:
+
+    import xml.etree.ElementTree as ET
+    import xml.dom.minidom
+    import lxml.etree
+    from xml.sax import parse
+
+    def parse_user_xml(xml_content):
+        root = ET.fromstring(xml_content)
+        return root
+
+    def process_xml_file(file_path):
+        tree = ET.parse(file_path)
+        return tree.getroot()
+
+    # LXML parser
+    def parse_with_lxml(xml_data):
+        parser = lxml.etree.XMLParser()
+        return lxml.etree.fromstring(xml_data, parser)
+
+    # SAX parser
+    def sax_parse_xml(xml_input):
+        from xml.sax import ContentHandler
+        handler = ContentHandler()
+        parse(xml_input, handler)
+
+    # BeautifulSoup XML
+    def parse_xml_soup(xml_content):
+        from bs4 import BeautifulSoup
+        return BeautifulSoup(xml_content, 'xml')
+  criteria:
+    - 'xml.*external.*entity|xxe.*vulnerability'
+    - 'disable.*entities|resolve_entities.*false'
+    - 'defusedxml|safe.*xml.*parser'
+    - 'entity.*expansion|billion.*laughs'
+    - 'DOCTYPE.*declaration|external.*dtd'
+  must_not:
+    - 'xml.*parsing.*safe'
+    - 'no.*xxe.*risk'
+  json: false
+
+- id: python_path_traversal
+  prompt: |
+    Analyze this Python file access vulnerability:
+
+    import os
+    from pathlib import Path
+
+    def read_user_file(filename):
+        with open(f"/uploads/{filename}", 'r') as f:
+            return f.read()
+
+    def serve_static_file(file_path):
+        full_path = os.path.join("/static", file_path)
+        return send_file(full_path)
+
+    # Django file serving
+    def download_file(request, filename):
+        file_path = os.path.join(settings.MEDIA_ROOT, filename)
+        return FileResponse(open(file_path, 'rb'))
+
+    # Flask file operations
+    @app.route('/files/<path:filepath>')
+    def get_file(filepath):
+        return send_from_directory('/uploads', filepath)
+
+    def backup_user_data(user_id, backup_path):
+        target = f"/backups/{backup_path}"
+        shutil.copy(f"/users/{user_id}/data.json", target)
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - 'os\.path\.normpath|Path.*resolve'
+    - 'secure_filename|sanitize.*path'
+    - 'whitelist.*directories|allowed.*paths'
+    - '\.\.\/|\.\.\\\\|parent.*directory'
+  must_not:
+    - 'path.*safe.*always'
+    - 'no.*traversal.*risk'
+  json: false
+
+- id: python_command_injection
+  prompt: |
+    Review this Python system command execution:
+
+    import os
+    import subprocess
+    import shlex
+
+    def ping_host(hostname):
+        os.system(f"ping -c 4 {hostname}")
+
+    def convert_image(input_file, output_format):
+        command = f"convert {input_file} output.{output_format}"
+        subprocess.call(command, shell=True)
+
+    def git_clone_repo(repo_url):
+        os.popen(f"git clone {repo_url}").read()
+
+    # Processing user uploads
+    def extract_archive(archive_path, extract_to):
+        subprocess.run(f"tar -xzf {archive_path} -C {extract_to}", 
+                      shell=True, check=True)
+
+    def run_user_command(cmd, args):
+        full_command = f"{cmd} {' '.join(args)}"
+        return subprocess.check_output(full_command, shell=True)
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'subprocess.*safe|shlex\.quote'
+    - 'shell.*false|avoid.*shell.*true'
+    - 'whitelist.*commands|allowed.*executables'
+    - 'input.*validation|sanitize.*arguments'
+  must_not:
+    - 'shell.*true.*safe'
+    - 'os\.system.*safe'
+  json: false
+
+- id: python_insecure_deserialization_yaml
+  prompt: |
+    Analyze this Python YAML/JSON deserialization:
+
+    import yaml
+    import json
+    import jsonpickle
+    import msgpack
+
+    def load_config_yaml(config_data):
+        return yaml.load(config_data)
+
+    def process_user_settings(settings_str):
+        return yaml.load(settings_str, Loader=yaml.FullLoader)
+
+    def deserialize_object(json_data):
+        return jsonpickle.decode(json_data)
+
+    # MessagePack deserialization
+    def load_msgpack_data(packed_data):
+        return msgpack.unpackb(packed_data, raw=False, strict_map_key=False)
+
+    # Custom deserializer
+    def load_complex_json(data):
+        class CustomDecoder(json.JSONDecoder):
+            def __init__(self):
+                super().__init__(object_hook=self.dict_to_obj)
+            
+            def dict_to_obj(self, d):
+                if '__class__' in d:
+                    class_name = d.pop('__class__')
+                    return globals()[class_name](**d)
+                return d
+        return json.loads(data, cls=CustomDecoder)
+  criteria:
+    - 'yaml.*unsafe|yaml\.safe_load'
+    - 'deserialization.*attack|code.*execution'
+    - 'SafeLoader|BaseLoader.*safe'
+    - 'json.*safe|avoid.*object.*hooks'
+    - 'whitelist.*classes|allowed.*types'
+  must_not:
+    - 'yaml\.load.*safe.*default'
+    - 'no.*deserialization.*risk'
+  json: false
+
+- id: python_cryptographic_issues
+  prompt: |
+    Review this Python cryptographic implementation:
+
+    import hashlib
+    import random
+    import ssl
+    from cryptography.fernet import Fernet
+
+    def hash_password(password):
+        return hashlib.md5(password.encode()).hexdigest()
+
+    def generate_token():
+        return str(random.randint(100000, 999999))
+
+    def encrypt_data(data, key=b'default_key_123'):
+        # Simple XOR encryption
+        encrypted = bytearray()
+        for i, byte in enumerate(data.encode()):
+            encrypted.append(byte ^ key[i % len(key)])
+        return encrypted
+
+    # SSL context
+    def create_ssl_context():
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        return context
+
+    # JWT-like token generation
+    def create_jwt_token(payload):
+        import base64
+        header = base64.b64encode('{"alg":"none"}').decode()
+        body = base64.b64encode(str(payload)).decode()
+        return f"{header}.{body}."
+  criteria:
+    - 'md5.*weak|sha1.*deprecated|weak.*hash'
+    - 'bcrypt|scrypt|argon2|pbkdf2'
+    - 'random.*secure|secrets\..*random'
+    - 'ssl.*verification|certificate.*validation'
+    - 'strong.*encryption|aes.*encryption'
+  must_not:
+    - 'md5.*secure'
+    - 'random.*cryptographically.*secure'
+  json: false
+
+- id: python_race_condition
+  prompt: |
+    Analyze this Python concurrency vulnerability:
+
+    import threading
+    import multiprocessing
+    import asyncio
+    import time
+
+    class BankAccount:
+        def __init__(self, balance=0):
+            self.balance = balance
+            
+        def withdraw(self, amount):
+            if self.balance >= amount:
+                time.sleep(0.1)  # Simulate processing delay
+                self.balance -= amount
+                return True
+            return False
+
+    # File operation race condition
+    def process_temp_file(user_id):
+        temp_file = f"/tmp/user_{user_id}.tmp"
+        if os.path.exists(temp_file):
+            with open(temp_file, 'r') as f:
+                data = f.read()
+            os.remove(temp_file)
+            return process_data(data)
+
+    # Shared resource without protection
+    counter = 0
+    def increment_counter():
+        global counter
+        current = counter
+        time.sleep(0.001)
+        counter = current + 1
+
+    # Async race condition
+    async def update_user_score(user_id, points):
+        current_score = await get_user_score(user_id)
+        new_score = current_score + points
+        await asyncio.sleep(0.1)  # Simulate DB delay
+        await save_user_score(user_id, new_score)
+  criteria:
+    - 'race.*condition|toctou|time.*of.*check'
+    - 'threading\.Lock|asyncio\.Lock'
+    - 'atomic.*operations|thread.*safe'
+    - 'mutex|semaphore|concurrent\.futures'
+    - 'file.*locking|exclusive.*access'
+  must_not:
+    - 'no.*race.*condition.*possible'
+    - 'thread.*safe.*by.*default'
+  json: false
+
+- id: python_ldap_injection
+  prompt: |
+    Review this Python LDAP query construction:
+
+    import ldap
+
+    def authenticate_user(username, password):
+        dn = f"uid={username},ou=users,dc=example,dc=com"
+        try:
+            ldap_conn = ldap.open('ldap://localhost')
+            ldap_conn.simple_bind_s(dn, password)
+            return True
+        except:
+            return False
+
+    def search_users(search_term):
+        base_dn = "ou=users,dc=example,dc=com"
+        search_filter = f"(cn=*{search_term}*)"
+        ldap_conn = ldap.open('ldap://localhost')
+        results = ldap_conn.search_s(base_dn, ldap.SCOPE_SUBTREE, search_filter)
+        return results
+
+    def find_user_by_email(email):
+        filter_str = f"(&(objectClass=person)(mail={email}))"
+        return ldap_conn.search_s(base_dn, ldap.SCOPE_SUBTREE, filter_str)
+
+    def get_user_groups(username):
+        group_filter = f"(&(objectClass=group)(member=uid={username},ou=users,dc=example,dc=com))"
+        return ldap_conn.search_s("ou=groups,dc=example,dc=com", ldap.SCOPE_SUBTREE, group_filter)
+  criteria:
+    - 'ldap.*injection|ldap.*escape'
+    - 'ldap\.filter\.escape|sanitize.*ldap'
+    - 'parameterized.*ldap|prepared.*filter'
+    - 'whitelist.*characters|input.*validation'
+    - 'special.*characters|ldap.*metacharacters'
+  must_not:
+    - 'ldap.*injection.*impossible'
+    - 'string.*concatenation.*safe'
+  json: false
+
+- id: python_django_specific_vulnerabilities
+  prompt: |
+    Analyze these Django-specific security issues:
+
+    from django.http import HttpResponse
+    from django.shortcuts import render
+    from django.utils.safestring import mark_safe
+    from django.db import connection
+
+    # Template injection
+    def dynamic_template(request):
+        template_code = request.GET.get('template')
+        return HttpResponse(mark_safe(template_code))
+
+    # Raw SQL with user input
+    def search_products(request):
+        query = request.GET.get('q')
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM products WHERE name LIKE '%{query}%'")
+            return cursor.fetchall()
+
+    # Unsafe deserialization in sessions
+    def process_session_data(request):
+        serialized_data = request.session.get('user_data')
+        if serialized_data:
+            import pickle
+            return pickle.loads(serialized_data.encode())
+
+    # CSRF bypass
+    from django.views.decorators.csrf import csrf_exempt
+    @csrf_exempt
+    def api_endpoint(request):
+        user_id = request.POST.get('user_id')
+        amount = request.POST.get('amount')
+        transfer_money(user_id, amount)
+
+    # Mass assignment
+    def update_user_profile(request):
+        user = request.user
+        for field, value in request.POST.items():
+            setattr(user, field, value)
+        user.save()
+  criteria:
+    - 'django.*security|xss.*protection'
+    - 'csrf.*protection|csrf_exempt.*dangerous'
+    - 'sql.*injection.*orm|parameterized.*queries'
+    - 'mark_safe.*dangerous|template.*injection'
+    - 'mass.*assignment|field.*whitelist'
+  must_not:
+    - 'django.*secure.*by.*default'
+    - 'csrf_exempt.*safe.*always'
+  json: false
+
+- id: python_flask_specific_vulnerabilities
+  prompt: |
+    Review these Flask-specific security vulnerabilities:
+
+    from flask import Flask, request, session, render_template_string
+    import pickle
+
+    app = Flask(__name__)
+    app.secret_key = "weak_key"
+
+    # Template injection
+    @app.route('/hello')
+    def hello():
+        name = request.args.get('name')
+        template = f"Hello {name}!"
+        return render_template_string(template)
+
+    # Insecure session handling
+    @app.route('/save_data')
+    def save_data():
+        user_data = request.json
+        session['data'] = pickle.dumps(user_data)
+        return "Saved"
+
+    @app.route('/load_data')
+    def load_data():
+        data = session.get('data')
+        if data:
+            return pickle.loads(data)
+
+    # Debug mode in production
+    if __name__ == '__main__':
+        app.run(debug=True, host='0.0.0.0')
+
+    # Insecure file uploads
+    @app.route('/upload', methods=['POST'])
+    def upload_file():
+        file = request.files['file']
+        file.save(f"uploads/{file.filename}")
+        return "Uploaded successfully"
+
+    # SQL injection in Flask-SQLAlchemy
+    @app.route('/user/<user_id>')
+    def get_user(user_id):
+        query = f"SELECT * FROM users WHERE id = {user_id}"
+        result = db.engine.execute(query)
+        return result.fetchone()
+  criteria:
+    - 'flask.*security|ssti.*server.*side'
+    - 'debug.*false.*production|host.*localhost'
+    - 'strong.*secret.*key|session.*security'
+    - 'file.*upload.*validation|secure.*filename'
+    - 'sql.*injection.*prevention|parameterized'
+  must_not:
+    - 'debug.*true.*safe'
+    - 'weak.*secret.*key.*acceptable'
+  json: false
+
+- id: python_asyncio_vulnerabilities
+  prompt: |
+    Analyze these Python asyncio security issues:
+
+    import asyncio
+    import aiohttp
+    import aiofiles
+
+    async def fetch_url(url):
+        # SSRF vulnerability
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return await response.text()
+
+    async def process_user_file(filename):
+        # Path traversal in async file operations
+        async with aiofiles.open(f"uploads/{filename}", 'r') as f:
+            content = await f.read()
+        return content
+
+    # Race condition in async operations
+    user_balances = {}
+    async def transfer_money(from_user, to_user, amount):
+        if user_balances[from_user] >= amount:
+            await asyncio.sleep(0.1)  # Simulate network delay
+            user_balances[from_user] -= amount
+            user_balances[to_user] += amount
+            return True
+        return False
+
+    # Uncontrolled resource consumption
+    async def handle_requests(websocket):
+        tasks = []
+        async for message in websocket:
+            # No limit on concurrent tasks
+            task = asyncio.create_task(process_message(message))
+            tasks.append(task)
+
+    # Insecure async subprocess
+    async def run_command(user_cmd):
+        proc = await asyncio.create_subprocess_shell(
+            user_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        return stdout.decode()
+  criteria:
+    - 'asyncio.*security|async.*vulnerabilities'
+    - 'rate.*limiting|resource.*limits'
+    - 'race.*condition.*async|atomic.*operations'
+    - 'path.*traversal|input.*validation'
+    - 'subprocess.*shell.*false|command.*injection'
+  must_not:
+    - 'async.*automatically.*secure'
+    - 'no.*race.*conditions.*async'
+  json: false
+
+- id: python_numpy_pandas_vulnerabilities
+  prompt: |
+    Review these NumPy/Pandas security issues:
+
+    import numpy as np
+    import pandas as pd
+    import pickle
+
+    def load_numpy_data(data_file):
+        # Dangerous numpy load
+        return np.load(data_file, allow_pickle=True)
+
+    def process_csv_data(csv_content):
+        # CSV injection via pandas
+        df = pd.read_csv(csv_content)
+        return df
+
+    def save_model_data(model_data, filename):
+        # Insecure pickle serialization
+        with open(filename, 'wb') as f:
+            pickle.dump(model_data, f)
+
+    def load_user_dataset(dataset_path):
+        # Path traversal in data loading
+        return pd.read_csv(f"datasets/{dataset_path}")
+
+    def execute_numpy_expression(expr):
+        # Code injection via numpy expressions
+        return eval(f"np.{expr}")
+
+    def process_formula(formula_str):
+        # Pandas eval() injection
+        df = pd.DataFrame({'x': [1, 2, 3], 'y': [4, 5, 6]})
+        return df.eval(formula_str)
+
+    def load_compressed_data(compressed_file):
+        # Zip bomb vulnerability
+        import zipfile
+        with zipfile.ZipFile(compressed_file, 'r') as zip_ref:
+            zip_ref.extractall("temp/")
+        return "Extracted successfully"
+  criteria:
+    - 'numpy.*security|pandas.*security'
+    - 'pickle.*dangerous|allow_pickle.*false'
+    - 'csv.*injection|formula.*injection'
+    - 'path.*traversal|directory.*validation'
+    - 'zip.*bomb|compression.*ratio'
+  must_not:
+    - 'numpy.*pandas.*always.*safe'
+    - 'pickle.*numpy.*safe'
+  json: false

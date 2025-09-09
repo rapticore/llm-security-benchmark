@@ -470,9 +470,18 @@ def export_to_csv(results: List, models: List[str], enhanced_metrics: Dict, outd
     
     # Write detailed results
     with open(csv_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=detailed_data[0].keys())
-        writer.writeheader()
-        writer.writerows(detailed_data)
+        if detailed_data:
+            writer = csv.DictWriter(f, fieldnames=detailed_data[0].keys())
+            writer.writeheader()
+            writer.writerows(detailed_data)
+        else:
+            # Write empty CSV with headers for failed runs
+            headers = ['model_name', 'test_id', 'success', 'score', 'response_time_s', 
+                      'cost_usd', 'input_tokens', 'output_tokens', 'criteria_met', 
+                      'criteria_missed', 'violations']
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writeheader()
+            # No rows to write for completely failed runs
     
     # Also create a summary CSV
     summary_path = outdir / "model_summary.csv"

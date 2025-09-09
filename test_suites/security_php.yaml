@@ -1,5 +1,5 @@
 # PHP Security Test Suite
-# File: test_suites/security_php.yaml
+# Built by the Rapticore Security Research Team
 # PHP specific security vulnerability tests
 
 - id: php_sql_injection

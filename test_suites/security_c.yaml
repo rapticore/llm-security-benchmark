@@ -1,5 +1,5 @@
 # C Security Test Suite
-# File: test_suites/security_c.yaml
+# Built by the Rapticore Security Research Team
 # C language specific security vulnerability tests
 
 - id: c_buffer_overflow

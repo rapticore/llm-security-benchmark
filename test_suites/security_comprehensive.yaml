@@ -1,5 +1,5 @@
 # Comprehensive Security Test Suite
-# File: test_suites/security_comprehensive.yaml
+# Built by the Rapticore Security Research Team
 # Extended test suite covering OWASP Top 10 and advanced security patterns
 
 # =================== INJECTION ATTACKS ===================
