@@ -454,7 +454,7 @@ def integrate_improved_charts(results: List, models: List[str], outdir: Path) ->
     return charts
 
 
-def generate_language_effectiveness_chart(language_results: Dict, outdir: Path) -> str:
+def generate_language_effectiveness_chart_from_dict(language_results: Dict, outdir: Path) -> str:
     """Generate effectiveness by language chart (adapted for consolidated reporting format)."""
     
     if not VISUALIZATION_AVAILABLE or not language_results:
