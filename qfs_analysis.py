@@ -7,16 +7,16 @@ Methodologically consistent analysis, statistical validation, and
 quality-first visualizations with Pareto frontier analysis.
 """
 
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Tuple, Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-import warnings
-from dataclasses import dataclass
 from scipy import stats
-import json
 
 # Import our centralized configuration
 from qfs_config import (
@@ -25,6 +25,7 @@ from qfs_config import (
     calculate_reliability, cost_per_million_tokens
 )
 
+
 # =============================================================================
 # DATA STRUCTURES
 # =============================================================================
@@ -32,63 +33,65 @@ from qfs_config import (
 @dataclass
 class QFSMetrics:
     """Quality-First Score metrics with statistical confidence."""
-    
+
     # Core metrics
     accuracy: float
-    accuracy_ci_lower: float 
+    accuracy_ci_lower: float
     accuracy_ci_upper: float
-    
+
     completeness: float
     completeness_ci_lower: float
     completeness_ci_upper: float
-    
+
     coverage: float
     coverage_ci_lower: float
     coverage_ci_upper: float
-    
+
     reliability: float
-    
+
     # Performance metrics
     mean_latency_s: float
     p95_latency_s: float
-    
+
     # Cost metrics
     cost_per_test_usd: float
     cost_per_1m_tokens: float
     cost_per_passing_test: float
-    
+
     # Quality-First Score
     qfs_raw: float
     qfs: float
     qfs_rank: int
-    
+
     # Sample validation
     n_tests: int
     is_low_n: bool
     failure_rate: float
     is_high_failure: bool
-    
+
     # Alternative rankings
     accuracy_rank: int
     accuracy_completeness_rank: int
 
-@dataclass 
+
+@dataclass
 class LanguageSliceAnalysis:
     """Analysis results for a specific language/test-type slice."""
-    
+
     language: str
     test_type: str
     models: Dict[str, QFSMetrics]
-    
+
     # Slice-level statistics
     best_model_qfs: str
-    best_model_accuracy: str  
+    best_model_accuracy: str
     total_tests_in_slice: int
-    
+
     # Quality distribution
     qfs_winner: str
     accuracy_winner: str
     pareto_optimal_models: List[str]
+
 
 # =============================================================================
 # DATA PROCESSING AND VALIDATION
@@ -96,7 +99,7 @@ class LanguageSliceAnalysis:
 
 def load_and_validate_results(results_path: str) -> Tuple[pd.DataFrame, Any]:
     """Load results and perform comprehensive validation."""
-    
+
     # Load data
     if results_path.endswith('.json'):
         with open(results_path, 'r') as f:
@@ -104,74 +107,75 @@ def load_and_validate_results(results_path: str) -> Tuple[pd.DataFrame, Any]:
         df = pd.DataFrame(data['detailed_results'])
     else:
         df = pd.read_csv(results_path)
-    
+
     # Validate dataset
     validation_result = validate_dataset(df)
-    
+
     if not validation_result.is_valid:
         raise ValueError(f"Dataset validation failed: {validation_result.errors}")
-    
+
     # Add derived columns
     df['empty_rate'] = (~df['success']).astype(float)
-    df['timeout_rate'] = (df['response_time_s'] > CONFIG.TIMEOUT_THRESHOLD_S).astype(float) 
+    df['timeout_rate'] = (df['response_time_s'] > CONFIG.TIMEOUT_THRESHOLD_S).astype(float)
     df['json_fail_rate'] = 0.0  # Placeholder - implement based on actual failure tracking
-    
+
     return df, validation_result
+
 
 def calculate_slice_metrics(slice_df: pd.DataFrame, cost_p95: float) -> QFSMetrics:
     """Calculate QFS metrics for a data slice with bootstrap CIs."""
-    
+
     scores = slice_df['score'].tolist()
     latencies = slice_df['response_time_s'].tolist()
     costs = slice_df['cost_usd'].tolist()
     input_tokens = slice_df['input_tokens'].tolist()
     output_tokens = slice_df['output_tokens'].tolist()
-    
+
     n_tests = len(scores)
     success_rate = slice_df['success'].mean()
     empty_rate = slice_df['empty_rate'].mean()
     timeout_rate = slice_df['timeout_rate'].mean()
-    
+
     # Core metrics with bootstrap CIs
     accuracy, acc_ci_low, acc_ci_up = bootstrap_ci(scores)
-    
+
     # Completeness and coverage
     completeness = calculate_completeness(scores)
     coverage = calculate_coverage(scores)
     reliability = calculate_reliability(success_rate, timeout_rate, empty_rate)
-    
+
     # For binary metrics, use Wilson confidence intervals
     def wilson_ci(successes: int, n: int) -> Tuple[float, float]:
         """Wilson confidence interval for proportions."""
         if n == 0:
             return 0.0, 0.0
-        
+
         p = successes / n
         z = stats.norm.ppf(1 - (1 - CONFIG.CONFIDENCE_LEVEL) / 2)
-        
-        term = z * np.sqrt((p * (1 - p) + z**2 / (4 * n)) / n)
-        denominator = 1 + z**2 / n
-        
-        ci_low = max(0, (p + z**2 / (2 * n) - term) / denominator)
-        ci_up = min(1, (p + z**2 / (2 * n) + term) / denominator)
-        
+
+        term = z * np.sqrt((p * (1 - p) + z ** 2 / (4 * n)) / n)
+        denominator = 1 + z ** 2 / n
+
+        ci_low = max(0, (p + z ** 2 / (2 * n) - term) / denominator)
+        ci_up = min(1, (p + z ** 2 / (2 * n) + term) / denominator)
+
         return ci_low, ci_up
-    
+
     # Completeness CI
     completeness_successes = sum(1 for s in scores if s >= CONFIG.COMPLETENESS_THRESHOLD)
     cmpl_ci_low, cmpl_ci_up = wilson_ci(completeness_successes, n_tests)
-    
+
     # Coverage CI  
     coverage_successes = sum(1 for s in scores if s >= CONFIG.COVERAGE_THRESHOLD)
     cov_ci_low, cov_ci_up = wilson_ci(coverage_successes, n_tests)
-    
+
     # Performance metrics
     mean_latency = np.mean(latencies)
     p95_latency = np.percentile(latencies, 95) if latencies else 0.0
-    
+
     # Cost metrics
     cost_per_test = np.mean(costs) if costs else 0.0
-    
+
     # Cost per 1M tokens (simplified - would need model-specific pricing)
     total_input = sum(input_tokens) if input_tokens else 0
     total_output = sum(output_tokens) if output_tokens else 0
@@ -180,17 +184,17 @@ def calculate_slice_metrics(slice_df: pd.DataFrame, cost_p95: float) -> QFSMetri
         cost_per_1m = cost_per_million_tokens(total_input, total_output, 0.5, 1.5)
     else:
         cost_per_1m = 0.0
-    
+
     cost_per_passing = cost_per_test / success_rate if success_rate > 0 else float('inf')
-    
+
     # Quality-First Score
     qfs = calculate_qfs(accuracy, completeness, coverage, reliability, cost_per_test, cost_p95)
     qfs_raw = calculate_qfs(accuracy, completeness, coverage, reliability, 0.0, 1.0)  # No cost penalty
-    
+
     # Validation flags
     is_low_n = flag_low_sample_size(n_tests)
     is_high_failure = (1 - success_rate) > CONFIG.HIGH_FAILURE_RATE
-    
+
     return QFSMetrics(
         accuracy=accuracy,
         accuracy_ci_lower=acc_ci_low,
@@ -218,221 +222,226 @@ def calculate_slice_metrics(slice_df: pd.DataFrame, cost_p95: float) -> QFSMetri
         accuracy_completeness_rank=0  # Set during ranking
     )
 
+
 # =============================================================================
 # PARETO FRONTIER ANALYSIS
 # =============================================================================
 
-def find_pareto_frontier(metrics_dict: Dict[str, QFSMetrics], 
-                        x_metric: str = 'mean_latency_s', 
-                        y_metric: str = 'accuracy',
-                        minimize_x: bool = True) -> List[str]:
+def find_pareto_frontier(metrics_dict: Dict[str, QFSMetrics],
+                         x_metric: str = 'mean_latency_s',
+                         y_metric: str = 'accuracy',
+                         minimize_x: bool = True) -> List[str]:
     """Find Pareto optimal models (non-dominated solutions)."""
-    
+
     models = list(metrics_dict.keys())
     if len(models) <= 1:
         return models
-    
+
     # Extract coordinates
     points = []
     for model in models:
         x_val = getattr(metrics_dict[model], x_metric)
         y_val = getattr(metrics_dict[model], y_metric)
         points.append((x_val, y_val, model))
-    
+
     # Sort by x-coordinate
     points.sort(key=lambda p: p[0], reverse=not minimize_x)
-    
+
     # Find Pareto frontier
     pareto_models = []
     best_y = float('-inf') if not minimize_x else float('-inf')
-    
+
     for x, y, model in points:
         if y > best_y:  # Assuming we want to maximize y (accuracy)
             pareto_models.append(model)
             best_y = y
-    
+
     return pareto_models
+
 
 # =============================================================================
 # VISUALIZATION FUNCTIONS
 # =============================================================================
 
-def create_accuracy_bars_with_ci(metrics_dict: Dict[str, QFSMetrics], 
+def create_accuracy_bars_with_ci(metrics_dict: Dict[str, QFSMetrics],
                                  title: str, outdir: Path) -> str:
     """Create accuracy bar chart with 95% confidence intervals and sample sizes."""
-    
+
     plt.style.use('default')
     fig, ax = plt.subplots(figsize=(12, 8))
-    
+
     models = list(metrics_dict.keys())
     accuracies = [metrics_dict[m].accuracy for m in models]
     ci_lowers = [metrics_dict[m].accuracy_ci_lower for m in models]
     ci_uppers = [metrics_dict[m].accuracy_ci_upper for m in models]
     sample_sizes = [metrics_dict[m].n_tests for m in models]
-    
+
     # Error bars (CI)
     errors = [[acc - ci_low for acc, ci_low in zip(accuracies, ci_lowers)],
               [ci_up - acc for acc, ci_up in zip(accuracies, ci_uppers)]]
-    
+
     # Color by QFS rank
     qfs_scores = [metrics_dict[m].qfs for m in models]
     colors = plt.cm.RdYlGn(np.array(qfs_scores) / max(qfs_scores))
-    
+
     bars = ax.bar(models, accuracies, yerr=errors, capsize=5, color=colors, alpha=0.8)
-    
+
     # Add sample sizes above bars
     for bar, n in zip(bars, sample_sizes):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + 0.02,
+        ax.text(bar.get_x() + bar.get_width() / 2., height + 0.02,
                 f'n={n}', ha='center', va='bottom', fontsize=9, fontweight='bold')
-        
+
         # Flag low-n slices
         if n < CONFIG.MIN_SAMPLE_SIZE:
-            ax.text(bar.get_x() + bar.get_width()/2., height/2,
-                   '⚠️', ha='center', va='center', fontsize=16, color='red')
-    
+            ax.text(bar.get_x() + bar.get_width() / 2., height / 2,
+                    '⚠️', ha='center', va='center', fontsize=16, color='red')
+
     ax.set_ylabel('Security Detection Accuracy', fontsize=12)
-    ax.set_title(f'{title}\nAccuracy with 95% Bootstrap Confidence Intervals', 
-                fontsize=14, fontweight='bold')
+    ax.set_title(f'{title}\nAccuracy with 95% Bootstrap Confidence Intervals',
+                 fontsize=14, fontweight='bold')
     ax.set_ylim(0, 1.1)
     ax.grid(True, alpha=0.3, axis='y')
     ax.tick_params(axis='x', rotation=45)
-    
+
     plt.tight_layout()
     chart_path = outdir / f"accuracy_ci_{title.lower().replace(' ', '_')}.png"
     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
     plt.close()
-    
+
     return str(chart_path)
 
-def create_pareto_frontier_plot(metrics_dict: Dict[str, QFSMetrics], 
-                               title: str, outdir: Path) -> str:
+
+def create_pareto_frontier_plot(metrics_dict: Dict[str, QFSMetrics],
+                                title: str, outdir: Path) -> str:
     """Create accuracy vs latency scatter with Pareto frontier."""
-    
-    plt.style.use('default') 
+
+    plt.style.use('default')
     fig, ax = plt.subplots(figsize=(12, 10))
-    
+
     models = list(metrics_dict.keys())
     accuracies = [metrics_dict[m].accuracy for m in models]
     latencies = [metrics_dict[m].mean_latency_s for m in models]
     costs = [metrics_dict[m].cost_per_test_usd for m in models]
     qfs_scores = [metrics_dict[m].qfs for m in models]
-    
+
     # Find Pareto frontier
     pareto_models = find_pareto_frontier(metrics_dict, 'mean_latency_s', 'accuracy', True)
-    
+
     # Color by QFS, size by cost
-    scatter = ax.scatter(latencies, accuracies, 
-                        s=[c*10000 + 50 for c in costs],  # Size by cost 
-                        c=qfs_scores, cmap='RdYlGn', alpha=0.7,
-                        edgecolors='black', linewidths=1)
-    
+    scatter = ax.scatter(latencies, accuracies,
+                         s=[c * 10000 + 50 for c in costs],  # Size by cost
+                         c=qfs_scores, cmap='RdYlGn', alpha=0.7,
+                         edgecolors='black', linewidths=1)
+
     # Highlight Pareto frontier
     pareto_latencies = [metrics_dict[m].mean_latency_s for m in pareto_models]
     pareto_accuracies = [metrics_dict[m].accuracy for m in pareto_models]
-    
+
     # Sort for proper line connection
     pareto_points = list(zip(pareto_latencies, pareto_accuracies, pareto_models))
     pareto_points.sort(key=lambda p: p[0])  # Sort by latency
-    
+
     if len(pareto_points) > 1:
         x_coords, y_coords, _ = zip(*pareto_points)
         ax.plot(x_coords, y_coords, 'r--', linewidth=2, alpha=0.8, label='Pareto Frontier')
-        
+
         # Mark Pareto optimal points
-        ax.scatter(x_coords, y_coords, s=100, facecolors='none', 
-                  edgecolors='red', linewidths=3, label='Pareto Optimal')
-    
+        ax.scatter(x_coords, y_coords, s=100, facecolors='none',
+                   edgecolors='red', linewidths=3, label='Pareto Optimal')
+
     # Add model labels
     for model, lat, acc in zip(models, latencies, accuracies):
         ax.annotate(model, (lat, acc), xytext=(5, 5), textcoords='offset points',
-                   fontsize=9, alpha=0.8)
-    
+                    fontsize=9, alpha=0.8)
+
     # Colorbar and legend
     cbar = plt.colorbar(scatter, ax=ax)
     cbar.set_label('Quality-First Score (QFS)', fontsize=11)
-    
+
     ax.set_xlabel('Mean Latency (seconds)', fontsize=12)
     ax.set_ylabel('Security Detection Accuracy', fontsize=12)
-    ax.set_title(f'{title}\nAccuracy vs Latency (bubble size = cost)', 
-                fontsize=14, fontweight='bold')
+    ax.set_title(f'{title}\nAccuracy vs Latency (bubble size = cost)',
+                 fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3)
     ax.legend()
-    
+
     plt.tight_layout()
     chart_path = outdir / f"pareto_frontier_{title.lower().replace(' ', '_')}.png"
     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
     plt.close()
-    
+
     return str(chart_path)
 
-def create_qfs_heatmap(language_metrics: Dict[str, Dict[str, QFSMetrics]], 
-                      outdir: Path) -> str:
+
+def create_qfs_heatmap(language_metrics: Dict[str, Dict[str, QFSMetrics]],
+                       outdir: Path) -> str:
     """Create QFS heatmap across languages and models."""
-    
+
     # Prepare data matrix
     languages = sorted(language_metrics.keys())
     all_models = set()
     for lang_data in language_metrics.values():
         all_models.update(lang_data.keys())
     models = sorted(list(all_models))
-    
+
     qfs_matrix = np.full((len(models), len(languages)), np.nan)
     n_matrix = np.full((len(models), len(languages)), 0, dtype=int)
-    
+
     for i, model in enumerate(models):
         for j, language in enumerate(languages):
             if language in language_metrics and model in language_metrics[language]:
                 metrics = language_metrics[language][model]
                 qfs_matrix[i, j] = metrics.qfs
                 n_matrix[i, j] = metrics.n_tests
-    
+
     # Create heatmap
     plt.style.use('default')
     fig, ax = plt.subplots(figsize=(14, 8))
-    
+
     # Use perceptually uniform colormap
     mask = np.isnan(qfs_matrix)
     sns.heatmap(qfs_matrix, annot=True, fmt='.3f', mask=mask,
                 xticklabels=languages, yticklabels=models,
                 cmap='viridis', cbar_kws={'label': 'Quality-First Score'},
                 ax=ax)
-    
+
     # Add sample sizes as text
     for i in range(len(models)):
         for j in range(len(languages)):
             if not mask[i, j] and n_matrix[i, j] > 0:
                 # Add sample size in corner
                 ax.text(j + 0.8, i + 0.8, f'n={n_matrix[i, j]}',
-                       ha='right', va='bottom', fontsize=8, color='white',
-                       bbox=dict(boxstyle="round,pad=0.1", facecolor='black', alpha=0.6))
-                
+                        ha='right', va='bottom', fontsize=8, color='white',
+                        bbox=dict(boxstyle="round,pad=0.1", facecolor='black', alpha=0.6))
+
                 # Flag low-n
                 if n_matrix[i, j] < CONFIG.MIN_SAMPLE_SIZE:
-                    ax.text(j + 0.1, i + 0.1, '⚠️', ha='left', va='top', 
-                           fontsize=10, color='yellow')
-    
+                    ax.text(j + 0.1, i + 0.1, '⚠️', ha='left', va='top',
+                            fontsize=10, color='yellow')
+
     ax.set_title('Quality-First Score by Model and Language\n'
-                '(values shown with sample sizes; ⚠️ indicates n<30)', 
-                fontsize=14, fontweight='bold')
+                 '(values shown with sample sizes; ⚠️ indicates n<30)',
+                 fontsize=14, fontweight='bold')
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
-    
+
     chart_path = outdir / "qfs_heatmap_by_language.png"
     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
     plt.close()
-    
+
     return str(chart_path)
+
 
 # =============================================================================
 # EXECUTIVE REPORTING
 # =============================================================================
 
-def generate_quality_first_executive_report(analysis_results: Dict, 
-                                          validation_result: Any,
-                                          outdir: Path) -> str:
+def generate_quality_first_executive_report(analysis_results: Dict,
+                                            validation_result: Any,
+                                            outdir: Path) -> str:
     """Generate executive summary with quality-first methodology."""
-    
+
     report = f"""# 🛡️ Quality-First LLM Security Analysis - Executive Report
 
 **Analysis Date:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -457,13 +466,13 @@ QFS = (Accuracy^0.50 × Completeness^0.30 × Coverage^0.15 × Reliability^0.05) 
 ## 🎯 Quality Validation Results
 
 """
-    
+
     if validation_result.warnings:
         report += "### ⚠️ Data Quality Warnings\n\n"
         for warning in validation_result.warnings:
             report += f"- {warning}\n"
         report += "\n"
-    
+
     if validation_result.low_n_slices:
         report += "### 📊 Low Sample Size Slices (n < 30)\n\n"
         report += "The following slices have insufficient data for statistical confidence:\n\n"
@@ -472,13 +481,13 @@ QFS = (Accuracy^0.50 × Completeness^0.30 × Coverage^0.15 × Reliability^0.05) 
         if len(validation_result.low_n_slices) > 10:
             report += f"- ... and {len(validation_result.low_n_slices) - 10} more\n"
         report += "\n"
-    
+
     if validation_result.high_failure_slices:
         report += "### 🚨 High Failure Rate Slices (>10%)\n\n"
         for slice_name in validation_result.high_failure_slices:
             report += f"- {slice_name}\n"
         report += "\n"
-    
+
     report += """---
 
 ## 🏆 Executive Recommendations
@@ -488,7 +497,7 @@ QFS = (Accuracy^0.50 × Completeness^0.30 × Coverage^0.15 × Reliability^0.05) 
 ### By Programming Language:
 
 """
-    
+
     # Add per-language recommendations (would be populated from actual analysis)
     report += """
 **Python Security Analysis:**
@@ -531,16 +540,17 @@ QFS = (Accuracy^0.50 × Completeness^0.30 × Coverage^0.15 × Reliability^0.05) 
 
 *Generated with Quality-First Score methodology prioritizing security detection accuracy over cost optimization.*
 """
-    
+
     report_path = outdir / "quality_first_executive_report.md"
     with open(report_path, 'w') as f:
         f.write(report)
-    
+
     return str(report_path)
+
 
 def create_validation_report(validation_result: Any, outdir: Path) -> str:
     """Create detailed validation report for data quality assessment."""
-    
+
     report = f"""# 📊 Data Validation Report
 
 **Validation Date:** {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -554,33 +564,33 @@ def create_validation_report(validation_result: Any, outdir: Path) -> str:
 - **High Failure Rate Slices:** {len(validation_result.high_failure_slices)}
 
 """
-    
+
     if validation_result.errors:
         report += "## ❌ Validation Errors\n\n"
         for i, error in enumerate(validation_result.errors, 1):
             report += f"{i}. {error}\n"
         report += "\n"
-    
+
     if validation_result.warnings:
         report += "## ⚠️ Warnings\n\n"
         for i, warning in enumerate(validation_result.warnings, 1):
             report += f"{i}. {warning}\n"
         report += "\n"
-    
+
     if validation_result.low_n_slices:
         report += f"## 📊 Low Sample Size Slices (n < {CONFIG.MIN_SAMPLE_SIZE})\n\n"
         report += "These slices may have unreliable statistics:\n\n"
         for slice_name in validation_result.low_n_slices:
             report += f"- {slice_name}\n"
         report += "\n"
-    
+
     if validation_result.high_failure_slices:
         report += f"## 🚨 High Failure Rate Slices (> {CONFIG.HIGH_FAILURE_RATE:.0%})\n\n"
         report += "These slices show concerning failure patterns:\n\n"
         for slice_name in validation_result.high_failure_slices:
             report += f"- {slice_name}\n"
         report += "\n"
-    
+
     report += """## 📋 Recommendations
 
 1. **For Low-n Slices:** Consider collecting additional data before making decisions
@@ -592,12 +602,13 @@ def create_validation_report(validation_result: Any, outdir: Path) -> str:
 
 *Quality-First Score analysis requires adequate sample sizes for statistical confidence.*
 """
-    
+
     report_path = outdir / "validation_report.md"
     with open(report_path, 'w') as f:
         f.write(report)
-    
+
     return str(report_path)
+
 
 # =============================================================================
 # CHANGELOG GENERATION  
@@ -605,7 +616,7 @@ def create_validation_report(validation_result: Any, outdir: Path) -> str:
 
 def generate_changelog() -> str:
     """Generate changelog of fixes and improvements."""
-    
+
     return """# 🔧 QFS Analysis - Code Audit Changelog
 
 ## Issues Fixed

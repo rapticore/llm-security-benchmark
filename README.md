@@ -1,6 +1,6 @@
 # 🛡️ LLM Security Benchmark
 
-A comprehensive, high-performance security testing framework for evaluating Large Language Models (LLMs) across multiple providers. This benchmark tests how well LLMs identify and respond to various security vulnerabilities in code across different programming languages.
+A comprehensive, enterprise-grade security testing framework for evaluating Large Language Models (LLMs) across multiple providers. This benchmark tests how well LLMs identify and respond to various security vulnerabilities in code across different programming languages with statistical rigor and professional reporting.
 
 **Built by the Rapticore Security Research Team**
 
@@ -9,8 +9,9 @@ A comprehensive, high-performance security testing framework for evaluating Larg
 This framework is designed to advance the understanding of how Large Language Models can be effectively utilized to improve security outcomes. We provide this as an open testing platform for:
 
 - **Security Researchers**: Evaluate LLM capabilities against diverse security scenarios
-- **AI Developers**: Benchmark model performance on security-focused tasks
+- **AI Developers**: Benchmark model performance on security-focused tasks with statistical rigor
 - **Security Practitioners**: Understand LLM strengths and limitations for security analysis
+- **Enterprise Teams**: Make data-driven decisions on LLM deployment for security use cases
 - **Educators**: Teach security concepts using AI-assisted vulnerability detection
 
 We encourage the community to contribute, expand test cases, and explore new use cases for LLMs in cybersecurity applications.
@@ -40,6 +41,8 @@ We encourage the community to contribute, expand test cases, and explore new use
 - **OpenAI**: GPT-5, GPT-4o, and GPT-4o-mini require OpenAI API credits
 - **Anthropic**: Claude Opus 4 and Claude Sonnet 4 require Anthropic API credits  
 - **Google**: Gemini models require Google Cloud AI API credits
+- **X.AI**: Grok models require X.AI API credits
+- **DeepSeek**: DeepSeek models require DeepSeek API credits
 
 **💰 Optimized Cost Structure:**
 - **Fast suite (5 tests, 1 model)**: ~$0.01-0.05
@@ -59,6 +62,8 @@ This tool evaluates LLMs' ability to:
 - 🎯 Provide appropriate security recommendations
 - 🔍 Recognize common attack patterns and weaknesses
 - 📊 Demonstrate security knowledge across OWASP Top 10 and beyond
+- 📈 Deliver statistically rigorous performance analysis
+- 🏢 Support enterprise decision-making with professional reporting
 
 ### 🤖 Supported Models
 
@@ -100,43 +105,50 @@ This tool evaluates LLMs' ability to:
 
 ## 🎯 Enhanced Features (Enabled by Default)
 
-Every benchmark run includes professional-grade analysis:
+Every benchmark run includes professional-grade analysis with statistical rigor:
 
-**📊 Rich Data Collection & Analysis:**
-- Comprehensive raw data capture for future analysis
-- Advanced cost-effectiveness calculations with quality weighting
-- Token usage analysis and pricing optimization recommendations
-- System performance monitoring during concurrent execution
+### 📊 Rich Data Collection & Analysis
+- **Comprehensive raw data capture** for future analysis and audit trails
+- **Advanced cost-effectiveness calculations** with quality weighting and penalty adjustments
+- **Token usage analysis** and pricing optimization recommendations
+- **System performance monitoring** during concurrent execution
+- **Statistical confidence intervals** (Wilson CI for proportions, Bootstrap CI for means)
+- **Sample size adequacy validation** with warnings for low-confidence results
 
-**📈 Professional Reporting:**
-- Executive summary reports for business stakeholders
-- Multi-format exports: CSV, JSON, Markdown, Compressed archives
-- Interactive performance visualization charts and graphs
-- Language-specific and OWASP category effectiveness analysis
+### 📈 Professional Reporting
+- **Enhanced Executive Summary** with use-case profile analysis (RAPID_RESPONSE vs IN_DEPTH)
+- **Technical Analysis Report** with engineering-grade metrics and statistical validation
+- **Multi-format exports**: CSV, JSON, Markdown, Compressed archives
+- **Interactive performance visualization** charts and graphs
+- **Language-specific and OWASP category** effectiveness analysis
+- **Latency distribution analysis** (P95, P99, throughput, standard deviation)
 
-**🎯 Advanced Metrics:**
-- Quality-weighted cost effectiveness (accuracy, reliability, consistency)
-- Penalty-adjusted scoring for dangerous recommendations
-- Response quality assessment (excellent/good/fair/poor/unusable)
-- Business impact quantification and ROI calculations
+### 🎯 Advanced Metrics & Statistical Rigor
+- **Quality-weighted cost effectiveness** (accuracy, reliability, consistency)
+- **Penalty-adjusted scoring** for dangerous recommendations
+- **Response quality assessment** (excellent/good/fair/poor/unusable)
+- **Business impact quantification** and ROI calculations
+- **Use-case profile gates** with decision scoring algorithms
+- **Security-aware metrics** (precision/recall/F1 when TP/FP/FN data available)
+- **Reproducibility tracking** (model version, region, temperature, seed, max_tokens)
 
-**🔍 Manual Validation Tools:**
+### 🔍 Manual Validation Tools
 - **Enhanced response analysis** for manual validation
 - **Three display formats**: summary, detailed, full
 - **Complete scoring breakdown** with criteria met/missed
 - **Real-time quality assessment** during execution
 
-**🤖 Automatic Model Detection:**
+### 🤖 Automatic Model Detection
 - **Smart availability checking** - Only tests models with configured API keys
 - **Ollama model verification** - Checks if local models are actually pulled
 - **Helpful setup guidance** - Shows exactly how to configure missing models
 - **No failed runs** - Automatically skips unavailable models with clear explanations
 
-**💾 Future-Proof Data Capture:**
-- Complete API request/response logging
-- System environment and performance data
-- Reproducible results with full audit trail
-- Ready for integration with BI tools (Tableau, PowerBI)
+### 💾 Future-Proof Data Capture
+- **Complete API request/response logging** for audit trails
+- **System environment and performance data** for reproducibility
+- **Reproducible results** with full configuration tracking
+- **Ready for integration** with BI tools (Tableau, PowerBI)
 
 ## 🚀 Quick Start
 
@@ -161,8 +173,8 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # This installs:
-# - Core LLM APIs (OpenAI, Anthropic, Google)
-# - Data analysis libraries (pandas, numpy)
+# - Core LLM APIs (OpenAI, Anthropic, Google, X.AI, DeepSeek)
+# - Data analysis libraries (pandas, numpy, scipy)
 # - Visualization tools (matplotlib, seaborn) 
 # - System monitoring (psutil)
 # - Concurrent execution capabilities
@@ -194,6 +206,20 @@ You'll need API keys from the providers you want to test:
 3. Click "Create API Key"
 4. Copy the key (starts with `AI`)
 
+**X.AI API Key (for Grok models):**
+1. Visit [X.AI Console](https://console.x.ai/)
+2. Sign in or create account
+3. Go to "API Keys" section
+4. Click "Create Key"
+5. Copy the key
+
+**DeepSeek API Key (for DeepSeek models):**
+1. Visit [DeepSeek Platform](https://platform.deepseek.com/)
+2. Sign in or create account
+3. Go to "API Keys" section
+4. Click "Create Key"
+5. Copy the key
+
 #### Step 3.2: Configure Environment
 
 Create `.env` file and add your API keys:
@@ -206,6 +232,12 @@ ANTHROPIC_API_KEY=sk-ant-api03-your_anthropic_key_here
 
 # Google AI API Key (for Gemini models)  
 GEMINI_API_KEY=AIzaSy-your_google_key_here
+
+# X.AI API Key (for Grok models)
+XAI_API_KEY=xai-your_xai_key_here
+
+# DeepSeek API Key (for DeepSeek models)
+DEEPSEEK_API_KEY=sk-your_deepseek_key_here
 ```
 
 ### 4. Run Your First Benchmark
@@ -252,6 +284,11 @@ python3 enhanced_multi_llm_benchmark.py --suite basic --models gpt-4o-mini,claud
 - **php**: PHP web security (11 tests)
 - **ruby**: Ruby on Rails security (10 tests)
 - **haskell**: Functional programming security (10 tests)
+- **dart**: Dart/Flutter security (10 tests)
+- **kotlin**: Kotlin/Android security (10 tests)
+- **scala**: Scala enterprise security (10 tests)
+- **swift**: Swift/iOS security (10 tests)
+- **typescript**: TypeScript security (10 tests)
 
 ### 🎯 Predefined Combinations
 
@@ -424,36 +461,67 @@ python3 enhanced_multi_llm_benchmark.py \
 
 ## 📊 Output & Reports
 
-Every benchmark run generates comprehensive reports:
+Every benchmark run generates comprehensive reports with statistical rigor:
 
 ### 📁 File Structure
 ```
 benchmark_results/enhanced_YYYYMMDD_HHMMSS/
-├── 📋 executive_summary.md              # Business stakeholder report
-├── 📈 enhanced_analysis_report.md       # Technical deep-dive
-├── 📊 performance_analysis.json         # Machine-readable metrics
-├── 📄 detailed_results.csv             # Tabular analysis data
-├── 📄 comprehensive_analysis.json       # Complete structured data
+├── 📋 enhanced_executive_summary.md      # Enhanced business stakeholder report
+├── 🔧 technical_analysis_report.md       # Engineering-grade technical analysis
+├── 📊 performance_analysis.json          # Machine-readable metrics
+├── 📄 detailed_results.csv               # Tabular analysis data
+├── 📄 comprehensive_analysis.json        # Complete structured data
+├── 📄 model_summary.csv                  # Model performance summary
 ├── 🎯 Visualization Charts (5+ files):
-│   ├── performance_comparison.png       # Model comparison
-│   ├── cost_effectiveness.png          # Quality vs cost analysis
-│   ├── token_usage.png                 # Resource utilization
-│   ├── performance_breakdown.png       # Detailed metrics
-│   └── owasp_effectiveness.png         # OWASP category analysis
+│   ├── performance_comparison.png        # Model comparison
+│   ├── cost_effectiveness.png           # Quality vs cost analysis
+│   ├── token_usage.png                  # Resource utilization
+│   ├── performance_breakdown.png        # Detailed metrics
+│   └── owasp_effectiveness.png          # OWASP category analysis
 └── 💾 Raw Data Exports:
-    ├── complete_session_data.json      # Full audit trail
-    ├── session_data.json.gz           # Compressed archive
-    ├── analysis_ready.csv             # Ready for BI tools
-    └── session_summary.md             # Human-readable summary
+    ├── complete_session_data.json       # Full audit trail
+    ├── session_data.json.gz            # Compressed archive
+    ├── analysis_ready.csv              # Ready for BI tools
+    └── session_summary.md              # Human-readable summary
 ```
 
-### 📈 Sample Executive Summary Output
+### 📈 Enhanced Executive Summary Features
+
+The enhanced executive summary now includes:
+
+#### ⚡ Use-Case Profile Analysis
+- **RAPID_RESPONSE Profile**: Time-sensitive operations (PR reviews, rapid vuln checks, AoC triage)
+- **IN_DEPTH Profile**: Comprehensive analysis (full codebase, compliance reviews, architecture assessment)
+- **Profile-specific gates**: Accuracy, success rate, and P95 latency thresholds
+- **Decision scoring**: Weighted algorithms for optimal model selection per use case
+
+#### 📊 Latency Distribution Analysis
+- **Complete latency metrics**: Mean, median, P95, P99, standard deviation
+- **Throughput analysis**: Theoretical requests per hour
+- **Performance profiling**: Detailed response time distribution
+
+#### 📈 Statistical Validation
+- **Confidence intervals**: Wilson CI for success rates, Bootstrap CI for accuracy
+- **Sample size adequacy**: Warnings for low-confidence results
+- **Statistical rigor**: 95% confidence intervals with proper methodology
+
+#### 🛡️ Security-Aware Metrics
+- **Precision/Recall/F1**: When TP/FP/FN/TN data is available
+- **Severity-weighted scoring**: For security-critical assessments
+- **Security-specific analysis**: Tailored for vulnerability detection
+
+#### 🔬 Reproducibility & Configuration
+- **Model configuration tracking**: Version, region, temperature, seed, max_tokens
+- **Run reproducibility**: Complete configuration capture for audit trails
+- **Methodology documentation**: Statistical methods and profile definitions
+
+### 📈 Sample Enhanced Executive Summary Output
 
 ```markdown
-# 🛡️ LLM Security Benchmark Executive Summary
+# 🛡️ Enhanced Security Benchmark Executive Summary
 
 **Suite:** fast | **Models Tested:** 2 | **Total Security Tests:** 5
-**Analysis Date:** September 07, 2025 | **Runtime:** 23.4 seconds
+**Analysis Date:** September 10, 2025 | **Runtime:** 23.4 seconds
 
 ## 🎯 Key Security Findings
 
@@ -462,16 +530,32 @@ benchmark_results/enhanced_YYYYMMDD_HHMMSS/
 ⚡ **Fastest Response Time:** gpt-4o-mini averages 3.2s per analysis
 🎯 **Most Consistent Performance:** claude-sonnet-4 shows 0.12 variance
 
-## 💼 Strategic Recommendations
+## ⚡ Use-Case Profile Analysis
 
-**For Production Security Analysis:**
-- **Primary:** claude-sonnet-4 (highest accuracy, reliable)
-- **Secondary:** gpt-4o-mini (cost-effective, fast)
-- **Avoid:** Models scoring <60% accuracy for critical security analysis
+### RAPID_RESPONSE Profile (Time-Sensitive Operations)
+| Model | Meets Gate | Accuracy | Success | P95 Latency | Decision Score |
+|-------|------------|----------|---------|-------------|----------------|
+| claude-sonnet-4 | ✅ | 85.2% | 100.0% | 12.3s | 2.45 |
+| gpt-4o-mini | ⚠️ | 78.4% | 95.0% | 18.7s | 1.89 |
 
-**Cost-Effectiveness Analysis:**
-- **Best ROI:** gpt-4o-mini at $0.00089 per test with 78.4% accuracy
-- **Premium Option:** claude-sonnet-4 at $0.00234 per test with 85.2% accuracy
+**RAPID_RESPONSE Recommendations:**
+- **Primary Pick:** claude-sonnet-4 (meets all gates)
+- **Gate Requirements:** Accuracy ≥75%, Success ≥95%, P95 ≤15s
+
+## 📊 Latency Distribution Analysis
+
+| Model | Mean | Median | P95 | P99 | Std Dev | Throughput/hr |
+|-------|------|--------|-----|-----|---------|---------------|
+| gpt-4o-mini | 3.2s | 2.8s | 5.1s | 6.2s | 1.1s | 1,125 |
+| claude-sonnet-4 | 4.1s | 3.9s | 12.3s | 15.2s | 2.3s | 878 |
+
+## 📈 Statistical Validation
+
+### Confidence Intervals (95%)
+| Model | Success Rate CI | Accuracy CI | Sample Size |
+|-------|-----------------|-------------|-------------|
+| claude-sonnet-4 | 95.0%-100.0% | 80.1%-90.3% | 5 ✅ |
+| gpt-4o-mini | 90.0%-100.0% | 72.1%-84.7% | 5 ✅ |
 ```
 
 ### 🔍 Manual Validation Output Examples
@@ -679,28 +763,29 @@ time python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini -
 
 **Core LLM API clients:**
 ```
-openai>=1.0.0          # GPT models
-anthropic>=0.8.0       # Claude models  
-google-generativeai>=0.3.0  # Gemini models
-python-dotenv>=1.0.0   # Environment configuration
-pyyaml>=6.0.0          # Test suite parsing
+openai>=1.0.0                    # GPT models
+anthropic>=0.8.0                 # Claude models  
+google-generativeai>=0.3.0       # Gemini models
+python-dotenv>=1.0.0             # Environment configuration
+pyyaml>=6.0.0                    # Test suite parsing
 ```
 
 **Enhanced analysis & visualization (core features):**
 ```
-pandas>=1.3.0          # Data analysis
-numpy>=1.21.0          # Numerical computing
-matplotlib>=3.5.0      # Chart generation
-seaborn>=0.11.0        # Statistical visualization
-psutil>=5.8.0          # System monitoring
+pandas>=1.3.0                    # Data analysis
+numpy>=1.21.0                    # Numerical computing
+scipy>=1.16.0                    # Statistical functions for QFS audit
+matplotlib>=3.5.0                # Chart generation
+seaborn>=0.11.0                  # Statistical visualization
+psutil>=5.8.0                    # System monitoring
 ```
 
 **Performance & data handling:**
 ```
-requests>=2.31.0       # HTTP client
-pathlib>=1.0.0         # Path handling
-dataclasses>=0.6.0     # Data structures
-typing-extensions>=4.0.0  # Type hints
+requests>=2.31.0                 # HTTP client
+pathlib>=1.0.0                   # Path handling
+dataclasses>=0.6.0               # Data structures
+typing-extensions>=4.0.0         # Type hints
 ```
 
 ## 🤝 Contributing
@@ -710,7 +795,7 @@ typing-extensions>=4.0.0  # Type hints
 1. **Add model configuration** in `enhanced_multi_llm_benchmark.py`:
 ```python
 # Add to appropriate model category
-FAST_MODELS.append("new-fast-model")
+javaFAST_MODELS.append("new-fast-model")
 ```
 
 2. **Implement model runner**:
@@ -752,9 +837,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🐛 Issues and Support
 
 - **GitHub Issues**: Report bugs and request features
-- **Documentation**: See additional guides:
-  - [Speed Optimization Guide](SPEED_OPTIMIZATION_GUIDE.md)
-  - [Response Analysis Guide](RESPONSE_ANALYSIS_GUIDE.md)
+- **Documentation**: See additional guides in the `docs/` directory:
+  - [Installation Guide](docs/installation.md)
+  - [New Models Guide](docs/guides/new-models.md)
+  - [Response Analysis Guide](docs/guides/response-analysis.md)
+  - [Speed Optimization Guide](docs/guides/speed-optimization.md)
+  - [Raw Data Analysis Guide](docs/guides/raw-data-analysis.md)
+  - [Technical Analysis Background](docs/guides/technical_analysis_background.md)
 
 ## 🔧 Troubleshooting
 
@@ -851,11 +940,8 @@ This framework demonstrates practical applications of AI in cybersecurity:
 
 **🛡️ Built by the Rapticore Security Research Team**
 
-*Advancing AI-powered security research through comprehensive LLM testing frameworks*
+*Advancing AI-powered security research through comprehensive LLM testing frameworks with statistical rigor and enterprise-grade reporting*
 
-**📧 Contact & Support**: For research collaborations, enterprise applications, or technical support, please reach out through our research channels.
+**📧 Contact & Support**: For research collaborations, enterprise applications, or technical support, please reach out through our research channel - contact@rapticore.com.
 
-**🔗 Documentation**: See our comprehensive guides:
-- [NEW_MODELS_GUIDE.md](NEW_MODELS_GUIDE.md) - Complete setup for all model providers
-- [RESPONSE_ANALYSIS_GUIDE.md](RESPONSE_ANALYSIS_GUIDE.md) - Manual validation workflows
-- [SPEED_OPTIMIZATION_GUIDE.md](SPEED_OPTIMIZATION_GUIDE.md) - Performance tuning guide
+**🔗 Documentation**: See our comprehensive guides in the `docs/` directory for detailed information on all aspects of the framework.

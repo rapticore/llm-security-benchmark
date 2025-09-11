@@ -20,24 +20,19 @@ Features:
 Usage:
     python enhanced_multi_llm_benchmark.py --models "gpt-5,claude-opus-4,gemini-2.5-pro"
 """
-import logging
-import os
-import sys
-import re
-import time
-import json
-import csv
 import argparse
-import statistics
-import asyncio
-import threading
+import json
+import os
 import random
-import tiktoken
+import re
+import statistics
+import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
-from typing import Optional, Any, Tuple, List, Dict
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Optional, Any, Tuple, List, Dict
 
 from dotenv import load_dotenv
 
@@ -45,11 +40,12 @@ from dotenv import load_dotenv
 try:
     from qfs_config import CONFIG, calculate_qfs, bootstrap_ci, validate_dataset
     from qfs_analysis import (
-        load_and_validate_results, calculate_slice_metrics, 
+        load_and_validate_results, calculate_slice_metrics,
         create_accuracy_bars_with_ci, create_pareto_frontier_plot,
         create_qfs_heatmap, generate_quality_first_executive_report,
         generate_changelog
     )
+
     QFS_AUDIT_AVAILABLE = True
     print("✅ QFS audit modules loaded - using methodologically consistent analysis")
 except ImportError as e:
@@ -57,71 +53,66 @@ except ImportError as e:
     print(f"⚠️ QFS audit modules not available: {e}")
     print("   Falling back to original QFS calculation")
 
-# Import consolidated enhanced cost-effectiveness analysis
+# Import cost-effectiveness analysis
 try:
-    from enhanced_cost_effectiveness_consolidated import (
-        ConsolidatedCostEffectivenessAnalyzer,
-        apply_consolidated_fixes,
-        integrate_enhanced_effectiveness,
-        create_enhanced_effectiveness_report,
-        apply_aggressive_fixes
+    from cost_effectiveness_analysis import (
+        apply_aggressive_fixes_list,
+        create_enhanced_effectiveness_report
     )
+
     ENHANCED_EFFECTIVENESS_AVAILABLE = True
-    print("✅ Consolidated enhanced cost-effectiveness analysis available")
+    print("✅ Enhanced cost-effectiveness analysis available")
 except ImportError as e:
     ENHANCED_EFFECTIVENESS_AVAILABLE = False
     print(f"⚠️ Enhanced cost-effectiveness not available: {e}")
     print("   Using traditional cost-effectiveness calculations")
 
-# Import consolidated improved chart generation
+# Import chart generation
 try:
-    from improved_chart_generation_consolidated import (
+    from chart_generation import (
         integrate_improved_charts,
         generate_language_effectiveness_chart_from_dict,
         generate_owasp_effectiveness_chart
     )
+
     IMPROVED_CHARTS_AVAILABLE = True
-    print("✅ Consolidated improved chart generation available")
+    print("✅ Chart generation available")
 except ImportError as e:
     IMPROVED_CHARTS_AVAILABLE = False
-    print(f"⚠️ Improved chart generation not available: {e}")
+    print(f"⚠️ Chart generation not available: {e}")
     print("   Using traditional chart generation")
 
-# Import enhanced executive summary generator
+# Import technical reporter
 try:
-    from enhanced_executive_summary import (
-        create_enhanced_executive_summary,
-        QualityGate,
-        SpeedTargets,
-        CostCaps,
-        FairnessSettings
+    from technical_reporter import (
+        generate_engineering_technical_report
     )
-    ENHANCED_EXECUTIVE_SUMMARY_AVAILABLE = True
-    print("✅ Enhanced executive summary generator available")
-except ImportError as e:
-    ENHANCED_EXECUTIVE_SUMMARY_AVAILABLE = False
-    print(f"⚠️ Enhanced executive summary not available: {e}")
-    print("   Using traditional executive summary")
 
-# Import consolidated enhanced reporting
-try:
-    from consolidated_reporting_enhanced import (
-        ConsolidatedEnhancedReporter,
-        generate_comprehensive_executive_summary, 
-        clean_up_redundant_reports,
-        generate_unified_report,
-        consolidate_reporting_files
-    )
-    AGGRESSIVE_FIXES_AVAILABLE = True
-    print("✅ Consolidated enhanced reporting available")
+    TECHNICAL_REPORTER_AVAILABLE = True
+    print("✅ Technical reporter available")
 except ImportError as e:
-    AGGRESSIVE_FIXES_AVAILABLE = False
-    print(f"⚠️ Enhanced reporting not available: {e}")
-    print("   Using standard reporting only")
+    TECHNICAL_REPORTER_AVAILABLE = False
+    print(f"⚠️ Technical reporter not available: {e}")
+    print("   Using basic reporting only")
+
+# Import executive summary with integrated reporter functionality
+try:
+    from executive_summary import (
+        generate_enhanced_unified_executive_summary,
+        EnhancedUnifiedReporter
+    )
+
+    EXECUTIVE_SUMMARY_AVAILABLE = True
+    print("✅ Executive summary with integrated reporter available")
+except ImportError as e:
+    EXECUTIVE_SUMMARY_AVAILABLE = False
+    print(f"⚠️ Executive summary not available: {e}")
+    print("   Using basic reporting only")
 
 # Import API clients
 try:
     from openai import OpenAI
+
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -129,6 +120,7 @@ except ImportError:
 
 try:
     import anthropic
+
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
@@ -136,6 +128,7 @@ except ImportError:
 
 try:
     import google.generativeai as genai
+
     GOOGLE_AVAILABLE = True
 except ImportError:
     GOOGLE_AVAILABLE = False
@@ -143,6 +136,7 @@ except ImportError:
 
 try:
     import requests
+
     OLLAMA_AVAILABLE = True
 except ImportError:
     OLLAMA_AVAILABLE = False
@@ -163,6 +157,7 @@ try:
     import seaborn as sns
     import pandas as pd
     import numpy as np
+
     VISUALIZATION_AVAILABLE = True
 except ImportError:
     VISUALIZATION_AVAILABLE = False
@@ -175,9 +170,12 @@ import yaml
 # ---------------------------- Enhanced Config ----------------------------
 # Model categories
 # Comprehensive model categories - ALL testable models for objective benchmarking
-PREMIUM_MODELS = ["gpt-5", "claude-opus-4", "gemini-2.5-flash", "grok-4", "grok-3", "deepseek-reasoner", "deepseek-chat"]  # Include ALL premium models
-BALANCED_MODELS = ["gpt-4o", "claude-sonnet-4", "gemini-2.0-flash", "grok-3", "deepseek-chat", "llama-3.3-70b"]  # All balanced models  
-FAST_MODELS = ["gpt-5-mini", "gpt-4o-mini", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite", "grok-3-mini", "grok-code-fast-1", "llama-3.3-11b"]  # All fast models
+PREMIUM_MODELS = ["gpt-5", "claude-opus-4", "gemini-2.5-flash", "grok-4", "grok-3", "deepseek-reasoner",
+                  "deepseek-chat"]  # Include ALL premium models
+BALANCED_MODELS = ["gpt-4o", "claude-sonnet-4", "gemini-2.0-flash", "grok-3", "deepseek-chat",
+                   "llama-3.3-70b"]  # All balanced models
+FAST_MODELS = ["gpt-5-mini", "gpt-4o-mini", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite", "grok-3-mini",
+               "grok-code-fast-1", "llama-3.3-11b"]  # All fast models
 
 # Local models (excluded from 'all' by default - require explicit selection)
 LOCAL_MODELS = ["ollama/llama3.3", "ollama/deepseek-r1", "ollama/qwen2.5", "ollama/gemma2", "ollama/mistral"]
@@ -201,34 +199,34 @@ DEFAULT_PRICING = {
     "gpt-5-mini": {"in": 1.0, "out": 4.0},
     "gpt-4o": {"in": 2.5, "out": 10.0},
     "gpt-4o-mini": {"in": 0.15, "out": 0.6},
-    
+
     # Anthropic models
     "claude-opus-4": {"in": 15.0, "out": 75.0},
     "claude-sonnet-4": {"in": 3.0, "out": 15.0},
-    
+
     # Google models
     "gemini-2.5-flash": {"in": 0.075, "out": 0.3},
     "gemini-2.5-flash-lite": {"in": 0.0375, "out": 0.15},
     "gemini-2.0-flash": {"in": 0.075, "out": 0.3},
     "gemini-2.0-flash-lite": {"in": 0.0375, "out": 0.15},
-    
+
     # X.AI Grok models (updated with official pricing)
     "grok-4": {"in": 3.0, "out": 15.0},
     "grok-code-fast-1": {"in": 0.2, "out": 1.5},
     "grok-3": {"in": 3.0, "out": 15.0},
     "grok-3-mini": {"in": 0.3, "out": 0.5},
-    
+
     # DeepSeek models (updated pricing from official docs)
-    "deepseek-chat": {"in": 0.14, "out": 0.28},    # DeepSeek V3.1 non-thinking mode
-    "deepseek-reasoner": {"in": 0.55, "out": 2.19}, # DeepSeek V3.1 thinking mode
-    "deepseek-coder": {"in": 0.14, "out": 0.28},    # Legacy model
-    
+    "deepseek-chat": {"in": 0.14, "out": 0.28},  # DeepSeek V3.1 non-thinking mode
+    "deepseek-reasoner": {"in": 0.55, "out": 2.19},  # DeepSeek V3.1 thinking mode
+    "deepseek-coder": {"in": 0.14, "out": 0.28},  # Legacy model
+
     # Meta Llama models (via API providers)
     "llama-3.3-70b": {"in": 0.9, "out": 0.9},
     "llama-3.3-11b": {"in": 0.2, "out": 0.2},
     "llama-3.2-90b": {"in": 1.2, "out": 1.2},
     "llama-3.2-11b": {"in": 0.15, "out": 0.15},
-    
+
     # Local models (Ollama) - no cost
     "ollama/llama3.3": {"in": 0.0, "out": 0.0},
     "ollama/deepseek-r1": {"in": 0.0, "out": 0.0},
@@ -263,7 +261,8 @@ DEFAULT_SUITE_FILES = {
     "haskell": "test_suites/security_haskell.yaml",
 
     # Combinations
-    "all": ["basic", "comprehensive", "owasp", "python", "javascript", "typescript", "go", "rust", "java", "kotlin", "swift", "c", "cpp", "csharp", "scala", "dart", "php", "ruby", "haskell"],
+    "all": ["basic", "comprehensive", "owasp", "python", "javascript", "typescript", "go", "rust", "java", "kotlin",
+            "swift", "c", "cpp", "csharp", "scala", "dart", "php", "ruby", "haskell"],
     "enterprise": ["comprehensive", "java", "kotlin", "csharp", "scala", "python"],
     "web_dev": ["javascript", "typescript", "python", "php", "java"],
     "mobile": ["kotlin", "swift", "dart"],
@@ -271,8 +270,10 @@ DEFAULT_SUITE_FILES = {
     "memory_safe": ["java", "kotlin", "csharp", "scala", "python", "javascript", "typescript", "dart", "haskell"],
     "memory_unsafe": ["c", "cpp"],
     "functional": ["haskell", "scala", "rust"],
-    "all_languages": ["python", "javascript", "typescript", "go", "rust", "java", "kotlin", "swift", "c", "cpp", "csharp", "scala", "dart", "php", "ruby", "haskell"]
+    "all_languages": ["python", "javascript", "typescript", "go", "rust", "java", "kotlin", "swift", "c", "cpp",
+                      "csharp", "scala", "dart", "php", "ruby", "haskell"]
 }
+
 
 # -------------------------- Enhanced Data Types --------------------------
 @dataclass
@@ -315,6 +316,7 @@ class EnhancedRunResult:
             return "fair"
         else:
             return "poor"
+
 
 @dataclass
 class ModelPerformance:
@@ -361,7 +363,8 @@ class ModelPerformance:
                 success_rate=0.0, avg_score=0.0, avg_response_time=0.0,
                 total_cost=0.0, cost_per_test=0.0, perfect_scores=0, good_scores=0, poor_scores=total_tests,
                 score_std_dev=0.0, cost_effectiveness=0.0, speed_score=0.0,
-                total_input_tokens=0, total_output_tokens=0, avg_input_tokens_per_test=0.0, avg_output_tokens_per_test=0.0
+                total_input_tokens=0, total_output_tokens=0, avg_input_tokens_per_test=0.0,
+                avg_output_tokens_per_test=0.0
             )
 
         # Use all scores (including 0 for failures) for fair comparison
@@ -372,15 +375,15 @@ class ModelPerformance:
 
         perfect_scores = sum(1 for r in successful if r.perfect_score)
         good_scores = sum(1 for r in results if r.score >= 0.6)  # Count all tests with scores >= 0.6 as good
-        poor_scores = sum(1 for r in results if r.score < 0.4)   # Count all tests with scores < 0.4 as poor
+        poor_scores = sum(1 for r in results if r.score < 0.4)  # Count all tests with scores < 0.4 as poor
 
         score_std_dev = statistics.stdev(all_scores) if len(all_scores) > 1 else 0.0
-        
+
         # Enhanced cost-effectiveness calculation that prioritizes accuracy and usability
         if cost_per_test > 0 and avg_score > 0:
             # Base effectiveness (traditional approach)
             base_effectiveness = avg_score / cost_per_test
-            
+
             # Quality multiplier: severely penalize models with low average scores
             # Models below 0.4 average score are essentially unusable for security analysis
             if avg_score < 0.4:
@@ -393,21 +396,21 @@ class ModelPerformance:
                 quality_multiplier = 0.9  # Good quality
             else:
                 quality_multiplier = 1.0  # Excellent quality
-            
+
             # Reliability multiplier: penalize models with high failure rates
             # Failed tests waste money and provide no value
             reliability_multiplier = successful_tests / total_tests  # 0.0 to 1.0
-            
+
             # Consistency multiplier: reward consistent performance
             # High standard deviation means unpredictable results
             consistency_multiplier = max(0.5, 1.0 - (score_std_dev * 2))  # 0.5 to 1.0
-            
+
             # Final cost-effectiveness: accuracy is paramount for security analysis
-            cost_effectiveness = (base_effectiveness * quality_multiplier * 
-                                reliability_multiplier * consistency_multiplier)
+            cost_effectiveness = (base_effectiveness * quality_multiplier *
+                                  reliability_multiplier * consistency_multiplier)
         else:
             cost_effectiveness = 0.0
-            
+
         speed_score = 1.0 / avg_response_time if avg_response_time > 0 else 0.0
 
         # Token averages
@@ -435,19 +438,20 @@ class ModelPerformance:
             avg_output_tokens_per_test=avg_output_tokens_per_test
         )
 
+
 # ------------------------ Google Gemini Integration -------------------------
 
-#----------------------------------------- working improved --------------
+# ----------------------------------------- working improved --------------
 
 
 def run_gemini(
-    suite_id: str,
-    model: str,
-    sys_msg: str,
-    prompt: str,
-    timeout: float,
-    json_mode: bool,
-    pricing: Dict[str, Dict[str, float]]
+        suite_id: str,
+        model: str,
+        sys_msg: str,
+        prompt: str,
+        timeout: float,
+        json_mode: bool,
+        pricing: Dict[str, Dict[str, float]]
 ) -> EnhancedRunResult:
     """
     Run Google Gemini models, attempting to resolve failures for non-lite models
@@ -571,8 +575,7 @@ def run_gemini(
                 if hasattr(candidate, 'content') and candidate.content:
                     print(f"DEBUG: Content parts: {getattr(candidate.content, 'parts', 'None')}")
                     for i, part in enumerate(candidate.content.parts):
-                         print(f"DEBUG: Content part {i}: {getattr(part, 'text', 'No text attribute')}")
-
+                        print(f"DEBUG: Content part {i}: {getattr(part, 'text', 'No text attribute')}")
 
         # Estimate token usage (Gemini doesn't provide detailed usage info)
         # Using a rough estimation based on character count might be more accurate than word count for code.
@@ -614,14 +617,15 @@ def _unpack_usage(usage) -> tuple[int, int, int]:
     reasoning = _get(details, "reasoning_tokens", 0) or 0
     return inp, out, reasoning
 
+
 def run_openai_enhanced(
-    suite_id: str,
-    model: str,
-    sys_msg: str,
-    prompt: str,
-    timeout: float,
-    json_mode: bool,
-    pricing: Dict[str, Dict[str, float]]
+        suite_id: str,
+        model: str,
+        sys_msg: str,
+        prompt: str,
+        timeout: float,
+        json_mode: bool,
+        pricing: Dict[str, Dict[str, float]]
 ) -> EnhancedRunResult:
     """Enhanced OpenAI runner with better error handling."""
     if not OPENAI_AVAILABLE:
@@ -692,15 +696,16 @@ def run_openai_enhanced(
             elapsed_s=time.time() - t0, error=str(e)
         )
 
+
 # ------------------------ Enhanced Anthropic Integration -------------------------
 def run_anthropic_enhanced(
-    suite_id: str,
-    model: str,
-    sys_msg: str,
-    prompt: str,
-    timeout: float,
-    json_mode: bool,
-    pricing: Dict[str, Dict[str, float]]
+        suite_id: str,
+        model: str,
+        sys_msg: str,
+        prompt: str,
+        timeout: float,
+        json_mode: bool,
+        pricing: Dict[str, Dict[str, float]]
 ) -> EnhancedRunResult:
     """Enhanced Anthropic runner."""
     if not ANTHROPIC_AVAILABLE:
@@ -748,9 +753,10 @@ def run_anthropic_enhanced(
             elapsed_s=time.time() - t0, error=str(e)
         )
 
+
 # ------------------------ Utility Functions -------------------------
 def estimate_cost(model: str, input_tokens: int, output_tokens: int,
-                 pricing: Dict[str, Dict[str, float]]) -> Optional[float]:
+                  pricing: Dict[str, Dict[str, float]]) -> Optional[float]:
     """Enhanced cost estimation."""
     if model in pricing:
         p = pricing[model]
@@ -760,6 +766,7 @@ def estimate_cost(model: str, input_tokens: int, output_tokens: int,
         return None
 
     return (input_tokens / 1000000.0) * p["in"] + (output_tokens / 1000000.0) * p["out"]
+
 
 def parse_pricing_arg(pricing_str: Optional[str]) -> Dict[str, Dict[str, float]]:
     """Parse pricing string into model pricing config."""
@@ -781,6 +788,7 @@ def parse_pricing_arg(pricing_str: Optional[str]) -> Dict[str, Dict[str, float]]
         except Exception:
             print(f"[warn] Could not parse pricing segment: {part}", file=sys.stderr)
     return pricing
+
 
 def load_suite(path: Optional[str]) -> List[dict]:
     """Load test suite with enhanced format support."""
@@ -806,6 +814,7 @@ def load_suite(path: Optional[str]) -> List[dict]:
         else:
             return json.load(f)
 
+
 # -------------------------- Optimized GPT-5 Functions --------------------------
 @dataclass
 class RunResult:
@@ -818,9 +827,11 @@ class RunResult:
     error: str = ""
     usage: Any = None
 
+
 # --- GPT-5 helpers: robust extraction + correct starvation check + explicit text output ---
 
 STARVED_RATIO = 0.70  # keep your global
+
 
 def responses_call(client, model: str, sys_msg: str, user_prompt: str, max_tokens: int, timeout: float):
     """
@@ -842,12 +853,14 @@ def responses_call(client, model: str, sys_msg: str, user_prompt: str, max_token
         timeout=timeout,
     )
 
+
 def _get(obj, name, default=None):
     if obj is None:
         return default
     if isinstance(obj, dict):
         return obj.get(name, default)
     return getattr(obj, name, default)
+
 
 def extract_responses_usage(resp) -> tuple[int, int, int, int]:
     """
@@ -862,6 +875,7 @@ def extract_responses_usage(resp) -> tuple[int, int, int, int]:
     details = _get(usage, "output_tokens_details", {}) or {}
     reasoning_tokens = _get(details, "reasoning_tokens", 0) or 0
     return input_tokens, output_tokens, reasoning_tokens, total_tokens
+
 
 def extract_responses_text(resp) -> str:
     """
@@ -901,6 +915,7 @@ def extract_responses_text(resp) -> str:
 
     return ""
 
+
 def starved_reasoning(resp) -> bool:
     """
     True when (a) almost all output tokens were used for reasoning
@@ -909,6 +924,7 @@ def starved_reasoning(resp) -> bool:
     _, out, r, _ = extract_responses_usage(resp)
     txt = extract_responses_text(resp)
     return (out > 0 and (r / float(out)) >= STARVED_RATIO) and (not txt)
+
 
 def run_gpt5_optimized(client, model: str, sys_msg: str, prompt: str, timeout: float):
     """
@@ -928,8 +944,8 @@ def run_gpt5_optimized(client, model: str, sys_msg: str, prompt: str, timeout: f
 
         if starved_reasoning(resp):
             tight = (
-                "Answer in exactly 3 short bullet lines. "
-                "Output final TEXT only. No hidden steps, no analysis.\n\n" + prompt
+                    "Answer in exactly 3 short bullet lines. "
+                    "Output final TEXT only. No hidden steps, no analysis.\n\n" + prompt
             )
             resp2 = responses_call(client, model, sys_msg, tight, max_tokens=768, timeout=timeout)
             text2 = extract_responses_text(resp2)
@@ -964,37 +980,40 @@ def run_gpt5_optimized(client, model: str, sys_msg: str, prompt: str, timeout: f
 
 
 # -------------------------- Enhanced Model Runners --------------------------
-def display_response_analysis(suite_id, model, result, test_case, criteria_met, criteria_missed, violations, response_format="detailed"):
+def display_response_analysis(suite_id, model, result, test_case, criteria_met, criteria_missed, violations,
+                              response_format="detailed"):
     """Display formatted response analysis for manual validation."""
-    
+
     if response_format == "summary":
         # Compact summary format
-        print(f"📋 {suite_id} | 🤖 {model} | 📊 {result.score:.3f} ({result.score*100:.1f}%) | ⏱️ {result.elapsed_s:.2f}s")
+        print(
+            f"📋 {suite_id} | 🤖 {model} | 📊 {result.score:.3f} ({result.score * 100:.1f}%) | ⏱️ {result.elapsed_s:.2f}s")
         if result.text:
             response_preview = result.text[:100] + "..." if len(result.text) > 100 else result.text
             print(f"   💬 {response_preview}")
         if criteria_met or violations:
             print(f"   ✅ {len(criteria_met)} met | ❌ {len(criteria_missed)} missed | ⚠️ {len(violations)} violations")
         print()
-        
+
     elif response_format == "detailed":
         # Detailed format (default)
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"📋 TEST: {suite_id}")
         print(f"🤖 MODEL: {model}")
-        print(f"📊 SCORE: {result.score:.3f}/1.0 ({result.score*100:.1f}%)")
+        print(f"📊 SCORE: {result.score:.3f}/1.0 ({result.score * 100:.1f}%)")
         print(f"⏱️  TIME: {result.elapsed_s:.2f}s")
         if result.cost_usd:
             print(f"💰 COST: ${result.cost_usd:.5f}")
-        print(f"{'='*80}")
-        
+        print(f"{'=' * 80}")
+
         # Show test prompt for context
         if test_case:
             print(f"🎯 TEST PROMPT:")
-            prompt_preview = test_case['prompt'][:200] + "..." if len(test_case['prompt']) > 200 else test_case['prompt']
+            prompt_preview = test_case['prompt'][:200] + "..." if len(test_case['prompt']) > 200 else test_case[
+                'prompt']
             print(f"   {prompt_preview}")
             print()
-        
+
         # Show response (truncated for readability)
         print(f"🔍 MODEL RESPONSE:")
         if len(result.text) > 500:
@@ -1003,7 +1022,7 @@ def display_response_analysis(suite_id, model, result, test_case, criteria_met, 
         else:
             print(f"   {result.text}")
         print()
-        
+
         # Show scoring breakdown
         print(f"📈 SCORING BREAKDOWN:")
         if criteria_met:
@@ -1011,31 +1030,31 @@ def display_response_analysis(suite_id, model, result, test_case, criteria_met, 
             for criterion in criteria_met[:3]:  # Show first 3
                 print(f"      • {criterion}")
             if len(criteria_met) > 3:
-                print(f"      ... and {len(criteria_met)-3} more")
-        
+                print(f"      ... and {len(criteria_met) - 3} more")
+
         if criteria_missed:
             print(f"   ❌ CRITERIA MISSED ({len(criteria_missed)}):")
             for criterion in criteria_missed[:3]:  # Show first 3
                 print(f"      • {criterion}")
             if len(criteria_missed) > 3:
-                print(f"      ... and {len(criteria_missed)-3} more")
-        
+                print(f"      ... and {len(criteria_missed) - 3} more")
+
         if violations:
             print(f"   ⚠️  MUST NOT VIOLATIONS ({len(violations)}):")
             for violation in violations:
                 print(f"      • {violation}")
-                
+
         if not criteria_met and not criteria_missed and not violations:
             print(f"   ℹ️  No specific criteria defined for this test")
-            
-        print(f"{'='*80}\n")
-        
+
+        print(f"{'=' * 80}\n")
+
     elif response_format == "full":
         # Full detailed format with everything
-        print(f"\n{'='*100}")
+        print(f"\n{'=' * 100}")
         print(f"📋 TEST: {suite_id}")
         print(f"🤖 MODEL: {model}")
-        print(f"📊 SCORE: {result.score:.3f}/1.0 ({result.score*100:.1f}%)")
+        print(f"📊 SCORE: {result.score:.3f}/1.0 ({result.score * 100:.1f}%)")
         print(f"⏱️  TIME: {result.elapsed_s:.2f}s")
         if result.cost_usd:
             print(f"💰 COST: ${result.cost_usd:.5f}")
@@ -1043,24 +1062,24 @@ def display_response_analysis(suite_id, model, result, test_case, criteria_met, 
             print(f"📥 INPUT TOKENS: {result.input_tokens}")
         if hasattr(result, 'output_tokens') and result.output_tokens:
             print(f"📤 OUTPUT TOKENS: {result.output_tokens}")
-        print(f"{'='*100}")
-        
+        print(f"{'=' * 100}")
+
         # Show full test prompt
         if test_case:
             print(f"🎯 FULL TEST PROMPT:")
             print(f"   {test_case['prompt']}")
             print()
-        
+
         # Show full response
         print(f"🔍 FULL MODEL RESPONSE:")
         print(f"   {result.text}")
         print()
-        
+
         # Show complete scoring breakdown
         if test_case:
             all_criteria = test_case.get("criteria", [])
             must_not_patterns = test_case.get("must_not", [])
-            
+
             print(f"📈 COMPLETE SCORING BREAKDOWN:")
             print(f"   📋 TOTAL CRITERIA: {len(all_criteria)}")
             if all_criteria:
@@ -1068,14 +1087,15 @@ def display_response_analysis(suite_id, model, result, test_case, criteria_met, 
                 for i, criterion in enumerate(all_criteria, 1):
                     status = "✅" if criterion in criteria_met else "❌"
                     print(f"      {i}. {status} {criterion}")
-            
+
             if must_not_patterns:
                 print(f"   🚫 MUST NOT PATTERNS ({len(must_not_patterns)}):")
                 for pattern in must_not_patterns:
                     violation_status = "⚠️ VIOLATED" if pattern in violations else "✅ OK"
                     print(f"      • {violation_status}: {pattern}")
-                    
-        print(f"{'='*100}\n")
+
+        print(f"{'=' * 100}\n")
+
 
 def run_single_test_concurrent(clients, suite_id, model, sys_msg, prompt, timeout, want_json, pricing):
     """Run a single test case for a single model - designed for concurrent execution."""
@@ -1089,6 +1109,7 @@ def run_single_test_concurrent(clients, suite_id, model, sys_msg, prompt, timeou
             text=f"Concurrent execution error: {str(e)}", input_tokens=0, output_tokens=0, cost_usd=0.0, score=0.0
         )
         return (model, suite_id, error_result)
+
 
 # -------------------------- XAI--------------------------
 
@@ -1231,6 +1252,7 @@ def run_xai_enhanced(
         suite_id=suite_id, model=model, path="XAI", ok=False,
         elapsed_s=time.time() - t0, error="Unexpected failure after retries"
     )
+
 
 # -------------------------- Deepseek--------------------------
 
@@ -1397,17 +1419,18 @@ def clean_response_text(text: str) -> str:
 
     return cleaned_text
 
-#-------------------------- LLAMA--------------------------
+
+# -------------------------- LLAMA--------------------------
 
 def run_llama_enhanced(
-    clients: Dict[str, Any],
-    suite_id: str,
-    model: str,
-    sys_msg: str, 
-    prompt: str,
-    timeout: float,
-    json_mode: bool,
-    pricing: Dict[str, Dict[str, float]]
+        clients: Dict[str, Any],
+        suite_id: str,
+        model: str,
+        sys_msg: str,
+        prompt: str,
+        timeout: float,
+        json_mode: bool,
+        pricing: Dict[str, Dict[str, float]]
 ) -> EnhancedRunResult:
     """Run Llama model via OpenAI-compatible API provider."""
     client = clients.get("llama")
@@ -1416,7 +1439,7 @@ def run_llama_enhanced(
             suite_id=suite_id, model=model, path="Llama", ok=False,
             elapsed_s=0.0, error="Llama client not initialized"
         )
-    
+
     t0 = time.time()
     try:
         # Map model names to provider API names
@@ -1425,7 +1448,7 @@ def run_llama_enhanced(
             api_model += "-Instruct"
         elif "11b" in model:
             api_model += "-Vision-Instruct"
-        
+
         response = client.chat.completions.create(
             model=api_model,
             messages=[
@@ -1436,45 +1459,46 @@ def run_llama_enhanced(
             temperature=0.1,
             timeout=timeout
         )
-        
+
         text = response.choices[0].message.content or ""
         usage = getattr(response, 'usage', None)
-        
+
         if usage:
             input_tokens = usage.prompt_tokens
             output_tokens = usage.completion_tokens
-            
+
             # Calculate cost
             model_pricing = pricing.get(model, DEFAULT_PRICING.get(model, {"in": 0, "out": 0}))
-            cost_usd = (input_tokens / 1000000 * model_pricing["in"] + 
-                       output_tokens / 1000000 * model_pricing["out"])
+            cost_usd = (input_tokens / 1000000 * model_pricing["in"] +
+                        output_tokens / 1000000 * model_pricing["out"])
         else:
             input_tokens = len(prompt.split()) * 1.3  # Rough estimate
             output_tokens = len(text.split()) * 1.3
             cost_usd = 0.0  # Some providers don't report usage
-        
+
         return EnhancedRunResult(
             suite_id=suite_id, model=model, path="Llama", ok=True,
             elapsed_s=time.time() - t0, text=text,
             input_tokens=int(input_tokens), output_tokens=int(output_tokens),
             cost_usd=cost_usd
         )
-        
+
     except Exception as e:
         return EnhancedRunResult(
             suite_id=suite_id, model=model, path="Llama", ok=False,
             elapsed_s=time.time() - t0, error=str(e)
         )
 
+
 def run_ollama_enhanced(
-    clients: Dict[str, Any],
-    suite_id: str,
-    model: str,
-    sys_msg: str,
-    prompt: str, 
-    timeout: float,
-    json_mode: bool,
-    pricing: Dict[str, Dict[str, float]]
+        clients: Dict[str, Any],
+        suite_id: str,
+        model: str,
+        sys_msg: str,
+        prompt: str,
+        timeout: float,
+        json_mode: bool,
+        pricing: Dict[str, Dict[str, float]]
 ) -> EnhancedRunResult:
     """Run Ollama local model via REST API."""
     ollama_client = clients.get("ollama")
@@ -1483,24 +1507,24 @@ def run_ollama_enhanced(
             suite_id=suite_id, model=model, path="Ollama", ok=False,
             elapsed_s=0.0, error="Ollama client not initialized"
         )
-    
+
     base_url = ollama_client["base_url"]
     model_name = model.replace("ollama/", "")
-    
+
     t0 = time.time()
     try:
         # Check if model is available
         models_response = requests.get(f"{base_url}/api/tags", timeout=5)
         if models_response.status_code != 200:
             raise Exception("Failed to list Ollama models")
-            
+
         available_models = [m["name"] for m in models_response.json().get("models", [])]
         if model_name not in available_models:
             raise Exception(f"Model {model_name} not available. Run: ollama pull {model_name}")
-        
+
         # Prepare prompt
         full_prompt = f"System: {sys_msg}\n\nUser: {prompt}\n\nAssistant:"
-        
+
         # Make request to Ollama
         ollama_request = {
             "model": model_name,
@@ -1512,48 +1536,49 @@ def run_ollama_enhanced(
                 "num_predict": RETRY_SHOT_TOKENS if json_mode else FIRST_SHOT_TOKENS
             }
         }
-        
+
         if json_mode:
             ollama_request["format"] = "json"
-        
+
         response = requests.post(
             f"{base_url}/api/generate",
             json=ollama_request,
             timeout=timeout
         )
-        
+
         if response.status_code != 200:
             raise Exception(f"Ollama request failed: {response.status_code}")
-        
+
         result = response.json()
         text = result.get("response", "")
-        
+
         # Ollama doesn't provide exact token counts, estimate them
         input_tokens = len(full_prompt.split()) * 1.3
         output_tokens = len(text.split()) * 1.3
-        
+
         return EnhancedRunResult(
             suite_id=suite_id, model=model, path="Ollama", ok=True,
             elapsed_s=time.time() - t0, text=text,
             input_tokens=int(input_tokens), output_tokens=int(output_tokens),
             cost_usd=0.0  # Local models are free
         )
-        
+
     except Exception as e:
         return EnhancedRunResult(
             suite_id=suite_id, model=model, path="Ollama", ok=False,
             elapsed_s=time.time() - t0, error=str(e)
         )
 
+
 def run_enhanced_model(
-    clients: Dict[str, Any],
-    suite_id: str,
-    model: str,
-    sys_msg: str,
-    prompt: str,
-    timeout: float,
-    json_mode: bool,
-    pricing: Dict[str, Dict[str, float]]
+        clients: Dict[str, Any],
+        suite_id: str,
+        model: str,
+        sys_msg: str,
+        prompt: str,
+        timeout: float,
+        json_mode: bool,
+        pricing: Dict[str, Dict[str, float]]
 ) -> EnhancedRunResult:
     """Route to appropriate enhanced runner."""
     if model.startswith("gpt-"):
@@ -1575,6 +1600,7 @@ def run_enhanced_model(
             suite_id=suite_id, model=model, path="Unknown", ok=False,
             elapsed_s=0.0, error=f"Unknown model type: {model}"
         )
+
 
 # ------------------------ Enhanced Scoring & Analysis -------------------------
 def score_text_enhanced(text: str, criteria: List[str], must_not: List[str]) -> Tuple[
@@ -1622,24 +1648,25 @@ def score_text_enhanced(text: str, criteria: List[str], must_not: List[str]) -> 
 
     return score, criteria_met, criteria_missed, must_not_violations
 
+
 # ------------------------ Executive Reporting System -------------------------
 def generate_rigorous_analysis_data(
-    results: List[EnhancedRunResult],
-    models: List[str]
+        results: List[EnhancedRunResult],
+        models: List[str]
 ) -> Dict:
     """Generate rigorous analysis data for LLM benchmark evaluation."""
-    
+
     # Analyze performance by model
     performance_by_model = {}
     model_data = []
     warnings = []
-    
+
     for model in models:
         model_results = [r for r in results if r.model == model]
         if model_results:
             perf = ModelPerformance.from_results(model, model_results)
             performance_by_model[model] = perf
-            
+
             # Calculate metrics with flags
             flags = []
             if perf.success_rate < 0.8:
@@ -1652,11 +1679,11 @@ def generate_rigorous_analysis_data(
                 flags.append("HIGH_VARIANCE")
             if perf.total_input_tokens > 1000000 and perf.cost_per_test < 0.001:
                 flags.append("TOKEN_COST_MISMATCH")
-                
+
             score_per_dollar = None
             if perf.cost_per_test > 0:
                 score_per_dollar = perf.avg_score / perf.cost_per_test
-                
+
             model_data.append({
                 "model": model,
                 "tests": perf.total_tests,
@@ -1671,42 +1698,42 @@ def generate_rigorous_analysis_data(
                 "out_tokens": perf.total_output_tokens,
                 "flags": flags
             })
-    
+
     # Check fairness of comparison
     test_counts = [d["tests"] for d in model_data]
     fair_comparison = (max(test_counts) - min(test_counts)) <= (max(test_counts) * 0.05) if test_counts else True
-    
+
     if not fair_comparison:
         warnings.append("UNFAIR_COMPARISON: Test counts vary by >5% across models")
         warnings.append(f"Test counts range: {min(test_counts)} to {max(test_counts)}")
-    
+
     # Check for missing costs
     missing_costs = [d["model"] for d in model_data if d["cost_per_test_usd"] == 0]
     if missing_costs:
         warnings.append(f"MISSING_COSTS: {len(missing_costs)} models have no cost data: {missing_costs}")
-    
+
     # Rankings (top 3 each)
     accuracy_top3 = sorted(model_data, key=lambda x: x["avg_score"], reverse=True)[:3]
     speed_top3 = sorted(model_data, key=lambda x: x["avg_time_s"])[:3]  # Lower is better
-    cost_efficiency_top3 = sorted([m for m in model_data if m["score_per_dollar"]], 
+    cost_efficiency_top3 = sorted([m for m in model_data if m["score_per_dollar"]],
                                   key=lambda x: x["score_per_dollar"], reverse=True)[:3]
     reliability_top3 = sorted(model_data, key=lambda x: x["success_rate"], reverse=True)[:3]
-    
+
     # Tier recommendations based on use cases
     # Triage (fast & cheap): speed < 10s, cost < $0.01/test, decent accuracy
-    triage_candidates = [m for m in model_data if m["avg_time_s"] < 10 and 
-                        (m["cost_per_test_usd"] or 0) < 0.01 and m["avg_score"] > 0.5]
+    triage_candidates = [m for m in model_data if m["avg_time_s"] < 10 and
+                         (m["cost_per_test_usd"] or 0) < 0.01 and m["avg_score"] > 0.5]
     triage_fast_cheap = sorted(triage_candidates, key=lambda x: x["avg_score"], reverse=True)[:2]
-    
+
     # CI Gate (balanced): accuracy > 0.6, reasonable speed/cost
-    balanced_candidates = [m for m in model_data if m["avg_score"] > 0.6 and 
-                          m["avg_time_s"] < 20 and (m["cost_per_test_usd"] or 0) < 0.05]
-    ci_gate_balanced = sorted(balanced_candidates, 
-                             key=lambda x: (x["avg_score"] * 0.7 + (1/x["avg_time_s"]) * 0.3), reverse=True)[:2]
-    
+    balanced_candidates = [m for m in model_data if m["avg_score"] > 0.6 and
+                           m["avg_time_s"] < 20 and (m["cost_per_test_usd"] or 0) < 0.05]
+    ci_gate_balanced = sorted(balanced_candidates,
+                              key=lambda x: (x["avg_score"] * 0.7 + (1 / x["avg_time_s"]) * 0.3), reverse=True)[:2]
+
     # Audits (max signal): highest accuracy regardless of cost
     audits_max_signal = sorted(model_data, key=lambda x: x["avg_score"], reverse=True)[:2]
-    
+
     return {
         "dataset_summary": {
             "total_models": len(models),
@@ -1735,364 +1762,14 @@ def generate_rigorous_analysis_data(
         ]
     }
 
-def generate_executive_summary(
-    results: List[EnhancedRunResult],
-    models: List[str],
-    suite_name: str,
-    outdir: Path,
-    charts: Optional[Dict[str, str]] = None,
-    enhanced_metrics: Optional[Dict] = None
-) -> None:
-    """Generate rigorous executive summary report for business stakeholders."""
-
-    # Generate rigorous analysis data
-    analysis_data = generate_rigorous_analysis_data(results, models)
-    
-    # Analyze performance by model  
-    performance_by_model = {}
-    for model in models:
-        model_results = [r for r in results if r.model == model]
-        if model_results:
-            performance_by_model[model] = ModelPerformance.from_results(model, model_results)
-
-    if not performance_by_model:
-        return
-
-    # Integrate enhanced cost-effectiveness analysis
-    enhanced_effectiveness_data = {}
-    if ENHANCED_EFFECTIVENESS_AVAILABLE:
-        try:
-            enhanced_effectiveness_data = integrate_enhanced_effectiveness(results, models)
-            print("✅ Enhanced cost-effectiveness analysis completed")
-            
-            # Save enhanced effectiveness report
-            if "report" in enhanced_effectiveness_data:
-                enhanced_report_path = outdir / "enhanced_cost_effectiveness_report.md"
-                with open(enhanced_report_path, "w", encoding="utf-8") as f:
-                    f.write(enhanced_effectiveness_data["report"])
-                print(f"✓ Saved enhanced cost-effectiveness report: {enhanced_report_path.name}")
-        except Exception as e:
-            print(f"⚠️ Enhanced cost-effectiveness analysis failed: {e}")
-            enhanced_effectiveness_data = {}
-
-    # Apply aggressive anti-gaming fixes
-    aggressive_analysis_data = {}
-    if AGGRESSIVE_FIXES_AVAILABLE:
-        print("🚨 Applying aggressive anti-gaming fixes...")
-        try:
-            # Convert performance data for aggressive analysis
-            aggressive_input = {}
-            for model in models:
-                model_results = [r for r in results if r.model == model]
-                if model_results:
-                    perf = ModelPerformance.from_results(model, model_results)
-                    aggressive_input[model] = {
-                        'avg_score': perf.avg_score,
-                        'cost_per_test': perf.cost_per_test,
-                        'total_tests': perf.total_tests,
-                        'good_scores': perf.good_scores,
-                        'score_std_dev': perf.score_std_dev,
-                        'success_rate': perf.success_rate,
-                        'total_cost': perf.total_cost,
-                        'avg_response_time': perf.avg_response_time
-                    }
-            
-            aggressive_analysis_data = apply_aggressive_fixes(results, models, outdir)
-            
-            # Save aggressive analysis report
-            if "report" in aggressive_analysis_data:
-                aggressive_report_path = outdir / "AGGRESSIVE_ANTI_GAMING_ANALYSIS.md"
-                with open(aggressive_report_path, "w", encoding="utf-8") as f:
-                    f.write(aggressive_analysis_data["report"])
-                print(f"✓ Saved aggressive anti-gaming report: {aggressive_report_path.name}")
-                
-            # Add Pareto chart explanation
-            if "pareto_explanation" in aggressive_analysis_data:
-                pareto_path = outdir / "PARETO_CHART_GUIDE.md"
-                with open(pareto_path, "w", encoding="utf-8") as f:
-                    f.write(aggressive_analysis_data["pareto_explanation"])
-                print(f"✓ Saved Pareto chart explanation: {pareto_path.name}")
-                
-            disqualified_models = aggressive_analysis_data.get('total_models', 0) - aggressive_analysis_data.get('qualified_models', 0)
-            print(f"🚨 Aggressive fixes applied - {disqualified_models} models disqualified for gaming")
-            
-        except Exception as e:
-            print(f"⚠️ Aggressive anti-gaming fixes failed: {e}")
-            aggressive_analysis_data = {}
-
-    # Find best performers using rigorous analysis
-    rankings = analysis_data["rankings"]
-    best_accuracy_name = rankings["accuracy_top3"][0] if rankings["accuracy_top3"] else models[0]
-    best_speed_name = rankings["speed_top3"][0] if rankings["speed_top3"] else models[0]  
-    best_cost_eff_name = rankings["cost_efficiency_top3"][0] if rankings["cost_efficiency_top3"] else models[0]
-    best_reliability_name = rankings["reliability_top3"][0] if rankings["reliability_top3"] else models[0]
-    
-    best_accuracy = performance_by_model.get(best_accuracy_name, list(performance_by_model.values())[0])
-    fastest = performance_by_model.get(best_speed_name, list(performance_by_model.values())[0])
-    best_value = performance_by_model.get(best_cost_eff_name, list(performance_by_model.values())[0])
-    most_reliable = performance_by_model.get(best_reliability_name, list(performance_by_model.values())[0])
-
-    # Calculate test statistics
-    total_tests = len(results) // len(models) if models else 0
-
-    # Build enhanced metrics section if available
-    enhanced_section = ""
-    if enhanced_metrics:
-        # Find best performers using enhanced metrics
-        best_weighted = max(enhanced_metrics.items(), key=lambda x: x[1].quality_weighted_effectiveness)
-        best_penalty_adjusted = max(enhanced_metrics.items(), key=lambda x: x[1].penalty_adjusted_effectiveness)
-        most_perfect = max(enhanced_metrics.items(), key=lambda x: x[1].perfect_scores)
-
-        enhanced_section = f"""
-### 🔍 Enhanced Cost-Effectiveness Analysis
-
-#### Quality-Weighted Performance: {best_weighted[0]}
-- **Quality-Weighted Effectiveness:** {best_weighted[1].quality_weighted_effectiveness:.1f} points/$
-- **Perfect Scores:** {best_weighted[1].perfect_scores}
-- **Score Distribution:** P:{best_weighted[1].perfect_scores} | E:{best_weighted[1].excellent_scores} | G:{best_weighted[1].good_scores} | F:{best_weighted[1].fair_scores} | Poor:{best_weighted[1].poor_scores}
-
-#### Penalty-Adjusted Performance: {best_penalty_adjusted[0]}
-- **Penalty-Adjusted Effectiveness:** {best_penalty_adjusted[1].penalty_adjusted_effectiveness:.1f} points/$
-- **Failed Test Rate:** {best_penalty_adjusted[1].failed_tests / best_penalty_adjusted[1].total_tests:.1%}
-- **Failed Tests:** {best_penalty_adjusted[1].failed_tests}
-
-#### Most Accurate Performer: {most_perfect[0]}
-- **Perfect Scores:** {most_perfect[1].perfect_scores} / {most_perfect[1].total_tests}
-- **Cost per Perfect Answer:** ${most_perfect[1].cost_per_correct_answer:.5f}
-- **Quality Weighted Score:** {most_perfect[1].quality_weighted_effectiveness:.2f}
-
-*Enhanced metrics consider partial correctness, apply quality weighting, and penalize wrong/missed answers.*
-"""
-
-    # Add enhanced effectiveness analysis section
-    if enhanced_effectiveness_data and "enhanced_scores" in enhanced_effectiveness_data:
-        enhanced_scores = enhanced_effectiveness_data["enhanced_scores"]
-        recommendations = enhanced_effectiveness_data.get("recommendations", {})
-        
-        # Get top performers by different metrics (with safety checks)
-        if len(enhanced_scores) >= 3:
-            top_quality_adjusted = sorted(enhanced_scores, key=lambda s: s.quality_adjusted, reverse=True)[:3]
-            top_practical = sorted(enhanced_scores, key=lambda s: s.practical_effectiveness, reverse=True)[:3]
-        elif len(enhanced_scores) >= 1:
-            top_quality_adjusted = enhanced_scores
-            top_practical = enhanced_scores
-        else:
-            top_quality_adjusted = []
-            top_practical = []
-        
-        problematic_models = [s for s in enhanced_scores if s.warnings]
-        
-        if top_quality_adjusted:
-            enhanced_section += f"""
-
-### 🚨 Enhanced Cost-Effectiveness Analysis (Addresses Gaming Issues)
-
-**IMPORTANT:** This analysis prevents cheap models with poor responses from artificially dominating rankings.
-
-#### Top Quality-Adjusted Performers:"""
-            
-            for i, score in enumerate(top_quality_adjusted[:3], 1):
-                tier_display = score.tier.replace('_', ' ').title()
-                enhanced_section += f"\n{i}. **{score.model_name}** - {score.quality_adjusted:.1f} points/$ (Tier: {tier_display})"
-
-            enhanced_section += "\n\n#### Practical Effectiveness (Real-World Usage):"
-            
-            for i, score in enumerate(top_practical[:3], 1):
-                note = "(accounts for multiple rounds needed)" if i == 1 else ""
-                enhanced_section += f"\n{i}. **{score.model_name}** - {score.practical_effectiveness:.1f} points/$ {note}"
-
-            enhanced_section += "\n\n#### ⚠️ Quality Concerns Detected:"
-
-            if problematic_models:
-                for model in problematic_models[:5]:  # Show top 5 problematic models
-                    warnings_str = "; ".join(model.warnings[:2])
-                    enhanced_section += f"\n- **{model.model_name}:** {warnings_str}"
-            else:
-                enhanced_section += "\n- None - all models meet quality standards"
-                
-            enhanced_section += f"""
-
-#### Strategic Recommendations:
-- **High-Stakes Security Reviews:** {', '.join(recommendations.get('high_stakes_security', ['No suitable models'])[:3])}
-- **Balanced CI/CD Integration:** {', '.join(recommendations.get('balanced_cicd', ['No suitable models'])[:3])}
-- **Cost-Conscious Teams:** {', '.join(recommendations.get('cost_conscious', ['No suitable models'])[:3])}
-- **Accuracy-Focused Analysis:** {', '.join(recommendations.get('accuracy_focused', ['No suitable models'])[:3])}
-
-*This analysis accounts for response quality, technical depth, completeness, and prevents gaming by ultra-cheap models with poor analysis quality.*
-"""
-        else:
-            enhanced_section += "\n\n### ⚠️ Enhanced Cost-Effectiveness Analysis Unavailable\nInsufficient data for enhanced analysis. Need more test results to prevent gaming by cheap models."
-
-    # Build chart section
-    chart_section = ""
-    if charts:
-        if "performance_comparison" in charts:
-            chart_section += f"- **Performance Comparison Chart:** `{Path(charts['performance_comparison']).name}` - Scatter plot showing security score vs response time with cost indicators\n"
-        if "cost_effectiveness" in charts:
-            chart_section += f"- **Cost Effectiveness Chart:** `{Path(charts['cost_effectiveness']).name}` - Quality-weighted cost effectiveness (penalizes inaccurate and unreliable models)\n"
-        if "token_usage" in charts:
-            chart_section += f"- **Token Usage Analysis:** `{Path(charts['token_usage']).name}` - Input and output token consumption by model\n"
-        if "performance_comparison_bars" in charts:
-            chart_section += f"- **Multi-Model Comparison Chart:** `{Path(charts['performance_comparison_bars']).name}` - Side-by-side performance metrics comparison\n"
-        if "performance_breakdown" in charts:
-            chart_section += f"- **Performance Breakdown Chart:** `{Path(charts['performance_breakdown']).name}` - Detailed metrics analysis for single model\n"
-        if "language_effectiveness" in charts:
-            chart_section += f"- **Language Effectiveness Chart:** `{Path(charts['language_effectiveness']).name}` - Performance comparison across programming languages\n"
-        if "language_performance_analysis" in charts:
-            chart_section += f"- **Language Performance Analysis:** `{Path(charts['language_performance_analysis']).name}` - Comprehensive language-specific accuracy, timing, and cost analysis\n"
-        if "accuracy_timing_analysis" in charts:
-            chart_section += f"- **Accuracy & Timing Analysis:** `{Path(charts['accuracy_timing_analysis']).name}` - Score distributions, response times, and cost efficiency metrics\n"
-        if "owasp_effectiveness" in charts:
-            chart_section += f"- **OWASP Category Chart:** `{Path(charts['owasp_effectiveness']).name}` - Effectiveness against OWASP Top 10 categories\n"
-    else:
-        chart_section = "*Charts not available - install matplotlib and seaborn for visual analysis*"
-
-    # Calculate total costs for summary
-    total_cost_all = sum(r.cost_usd for r in results if r.cost_usd)
-    avg_cost_per_test = total_cost_all / len(results) if results else 0
-
-    # Build complete executive summary
-    summary = f"""# 🛡️ LLM Security Benchmark Executive Summary
-
-**Suite:** {suite_name} | **Models Tested:** {len(models)} | **Total Security Tests:** {total_tests}
-**Analysis Date:** {datetime.now().strftime("%B %d, %Y")}
-
-## 💰 Cost Overview
-
-**⚠️ COST NOTICE:** This benchmark uses paid API services and incurred costs.
-
-- **Total Cost This Run:** ${total_cost_all:.4f}
-- **Average Cost per Test:** ${avg_cost_per_test:.6f}
-- **Total API Calls:** {len(results):,}
-
-*Premium models (Claude Opus 4, GPT-5) cost significantly more than budget models (Gemini Flash, GPT-4o-mini)*
-
-## 🎯 Executive Overview
-
-This comprehensive security assessment evaluated {len(models)} leading AI models across {total_tests} security scenarios, analyzing their capability to identify vulnerabilities, provide appropriate recommendations, and demonstrate security knowledge alignment with industry standards.
-
-### Key Security Findings
-
-🏆 **Highest Security Accuracy:** {best_accuracy.model_name} achieved {best_accuracy.avg_score:.1%} detection rate
-💰 **Best Value (Quality-Aware):** {best_value.model_name} delivers {best_value.cost_effectiveness:.1f} quality-weighted points per dollar
-⚡ **Fastest Response Time:** {fastest.model_name} averages {fastest.avg_response_time:.2f}s per analysis
-🎯 **Most Consistent Performance:** {most_reliable.model_name} shows {most_reliable.score_std_dev:.3f} variance in scoring
-
-## 📊 Strategic Model Analysis
-
-### Premium Security Models (Highest Accuracy):
-{best_accuracy.model_name}
-- **Security Detection Rate:** {best_accuracy.avg_score:.3f}/1.0 ({best_accuracy.avg_score:.1%})
-- **Reliability:** {best_accuracy.success_rate:.1%} success rate
-- **Response Time:** {best_accuracy.avg_response_time:.2f}s average
-- **Cost Efficiency:** ${best_accuracy.cost_per_test:.5f} per analysis
-- **Perfect Assessments:** {best_accuracy.perfect_scores}/{best_accuracy.total_tests}
-
-### Most Cost-Effective: {best_value.model_name}
-- **Value Score:** {best_value.cost_effectiveness:.1f} security points per dollar
-  - *Formula: average_score ÷ cost_per_test*
-  - *Higher values indicate better cost-effectiveness for security analysis*
-- **Detection Accuracy:** {best_value.avg_score:.3f}/1.0
-- **Operational Cost:** ${best_value.cost_per_test:.5f} per test
-- **Success Rate:** {best_value.success_rate:.1%}
-
-### Fastest Response: {fastest.model_name}
-- **Average Response Time:** {fastest.avg_response_time:.2f}s
-- **Security Accuracy:** {fastest.avg_score:.3f}/1.0
-- **Speed Score:** {fastest.speed_score:.3f}
-
-### Most Consistent: {most_reliable.model_name}
-- **Score Consistency:** {most_reliable.score_std_dev:.3f} standard deviation
-- **Average Detection:** {most_reliable.avg_score:.3f}/1.0
-- **Reliability:** {most_reliable.success_rate:.1%}
-
-## 🔍 Rigorous Multi-Dimensional Analysis
-
-### Winners by Performance Dimension
-
-**🎯 Accuracy Leaders (Top 3):**
-{' | '.join(rankings["accuracy_top3"])}
-
-**⚡ Speed Champions (Top 3):**
-{' | '.join(rankings["speed_top3"])}
-
-**💰 Cost Efficiency Masters (Top 3):**
-{' | '.join(rankings["cost_efficiency_top3"]) if rankings["cost_efficiency_top3"] else "No cost data available"}
-
-**🛡️ Reliability Champions (Top 3):**
-{' | '.join(rankings["reliability_top3"])}
-
-### 🚀 Tiered Deployment Recommendations
-
-**PR/Commit Triage (Fast & Cheap):**
-{' | '.join(analysis_data["tier_recommendations"]["triage_fast_cheap"]) if analysis_data["tier_recommendations"]["triage_fast_cheap"] else "No suitable models found"}
-- *Use for: High-volume PR screening, initial triage*
-- *Requirements: <10s response, <$0.01/test, >50% accuracy*
-
-**CI Gate (Balanced Performance):**
-{' | '.join(analysis_data["tier_recommendations"]["ci_gate_balanced"]) if analysis_data["tier_recommendations"]["ci_gate_balanced"] else "No suitable models found"}  
-- *Use for: CI/CD security gates, automated security reviews*
-- *Requirements: >60% accuracy, <20s response, reasonable cost*
-
-**Security Audits (Maximum Signal):**
-{' | '.join(analysis_data["tier_recommendations"]["audits_max_signal"])}
-- *Use for: Critical security audits, compliance reviews*
-- *Requirements: Highest possible accuracy regardless of cost*
-
-### ⚠️ Red Flags & Caveats
-
-**Comparison Fairness:** {"❌ UNFAIR - " + analysis_data["dataset_summary"]["fairness_notes"] if not analysis_data["dataset_summary"]["fair_comparison"] else "✅ Fair comparison across models"}
-
-**Warnings Detected:**
-{chr(10).join('- ' + warning for warning in analysis_data["warnings"]) if analysis_data["warnings"] else "- No major issues detected"}
-
-### 🧪 Recommended Next Experiments
-
-{chr(10).join('- ' + exp for exp in analysis_data["next_experiments"])}
-
-{enhanced_section}
-
-## 📊 Performance Visualizations
-
-The following charts provide visual insights into model performance and comparisons:
-
-{chart_section}
-
----
-
-*This analysis is based on {len(results)} security test executions across {len(models)} leading LLM models. Built by the Rapticore Security Research Team for comprehensive security program optimization.*
-
-*For detailed technical metrics and raw performance data, see `performance_analysis.json`*"""
-
-    # Write executive summary
-    with open(outdir / "executive_summary.md", "w", encoding="utf-8") as f:
-        f.write(summary)
-        
-    # Write rigorous analysis JSON
-    with open(outdir / "rigorous_analysis.json", "w", encoding="utf-8") as f:
-        json.dump(analysis_data, f, indent=2, default=str)
-        
-    # Generate standardized table analysis
-    try:
-        generate_standardized_table_analysis(results, models, outdir)
-        print(f"✓ Standardized table analysis: {outdir}/standardized_analysis.md")
-    except Exception as e:
-        print(f"⚠️ Standardized analysis failed: {e}")
-        
-    # Generate enhanced language breakdown analysis
-    try:
-        generate_enhanced_language_breakdown_analysis(results, models, outdir)
-        print(f"✓ Enhanced language breakdown: {outdir}/enhanced_language_breakdown.md")
-    except Exception as e:
-        print(f"⚠️ Enhanced language breakdown failed: {e}")
 
 def generate_standardized_table_analysis(
-    results: List[EnhancedRunResult],
-    models: List[str],
-    outdir: Path
+        results: List[EnhancedRunResult],
+        models: List[str],
+        outdir: Path
 ) -> None:
     """Generate standardized table analysis using rigorous methodology."""
-    
+
     # Build raw performance data by model
     model_data = {}
     for model in models:
@@ -2111,17 +1788,17 @@ def generate_standardized_table_analysis(
                 'score_std_dev': perf.score_std_dev,
                 'notes': []
             }
-    
+
     if not model_data:
         return
-        
+
     # Check for duplicate models or test count differences
     test_counts = list(set(data['total_tests'] for data in model_data.values()))
     mixed_test_counts = len(test_counts) > 1
     if mixed_test_counts:
         for model, data in model_data.items():
             data['notes'].append(f"tested on {data['total_tests']} tests")
-    
+
     # Calculate metrics for each model
     for model, data in model_data.items():
         # Traditional Score-per-Dollar
@@ -2134,7 +1811,7 @@ def generate_standardized_table_analysis(
         else:
             traditional = float('inf') if data['avg_score'] > 0 else 0
             data['notes'].append("free model")
-            
+
         # Weighted (Reliability-adjusted)  
         reliability_factor = data['success_rate'] * (1 + 0.5 * data['perfect_rate'])
         if data['avg_time_s'] > 0:
@@ -2143,7 +1820,7 @@ def generate_standardized_table_analysis(
         else:
             weighted = traditional * reliability_factor
             data['notes'].append("no timing data")
-        
+
         # Penalty-Adjusted (Quality & Stability) - simplified version
         # Using score variance as proxy for stability
         if data['score_std_dev'] > 0:
@@ -2152,49 +1829,49 @@ def generate_standardized_table_analysis(
         else:
             penalty_adjusted = weighted
             data['notes'].append("penalties not available")
-        
+
         data['traditional'] = traditional
-        data['weighted'] = weighted  
+        data['weighted'] = weighted
         data['penalty_adjusted'] = penalty_adjusted
-    
+
     # Sort by penalty-adjusted (or weighted if penalty not available)
-    sorted_models = sorted(model_data.items(), 
-                          key=lambda x: x[1]['penalty_adjusted'] if x[1]['penalty_adjusted'] != float('inf') 
-                          else x[1]['weighted'], reverse=True)
-    
+    sorted_models = sorted(model_data.items(),
+                           key=lambda x: x[1]['penalty_adjusted'] if x[1]['penalty_adjusted'] != float('inf')
+                           else x[1]['weighted'], reverse=True)
+
     # Generate clean table
     table_rows = []
     for model, data in sorted_models:
         notes_str = "; ".join(data['notes']) if data['notes'] else ""
-        
+
         # Format values
-        success_pct = f"{data['success_rate']*100:.1f}%"
-        perfect_pct = f"{data['perfect_rate']*100:.1f}%"
+        success_pct = f"{data['success_rate'] * 100:.1f}%"
+        perfect_pct = f"{data['perfect_rate'] * 100:.1f}%"
         cost_str = f"{data['cost_per_test']:.5f}" if data['cost_per_test'] > 0 else "Free"
         avg_score_str = f"{data['avg_score']:.3f}" if data['avg_score'] > 0 else "N/A"
         avg_time_str = f"{data['avg_time_s']:.2f}" if data['avg_time_s'] > 0 else "N/A"
         traditional_str = f"{data['traditional']:.1f}" if data['traditional'] != float('inf') else "∞"
         weighted_str = f"{data['weighted']:.1f}" if data['weighted'] != float('inf') else "∞"
         penalty_str = f"{data['penalty_adjusted']:.1f}" if data['penalty_adjusted'] != float('inf') else "∞"
-        
+
         table_rows.append([
             model, str(data['total_tests']), success_pct, perfect_pct, cost_str,
             avg_score_str, avg_time_str, traditional_str, weighted_str, penalty_str, notes_str
         ])
-    
+
     # Generate rankings
     def safe_sort(items, key_func, reverse=True):
         valid_items = [(k, v) for k, v in items if key_func(v) not in [float('inf'), float('-inf')] and key_func(v) > 0]
         return sorted(valid_items, key=lambda x: key_func(x[1]), reverse=reverse)[:3]
-    
+
     accuracy_top3 = safe_sort(model_data.items(), lambda x: x['avg_score'])
-    cost_eff_top3 = safe_sort(model_data.items(), lambda x: x['traditional'])  
+    cost_eff_top3 = safe_sort(model_data.items(), lambda x: x['traditional'])
     weighted_top3 = safe_sort(model_data.items(), lambda x: x['weighted'])
     penalty_top3 = safe_sort(model_data.items(), lambda x: x['penalty_adjusted'])
-    
+
     # Speed rankings (lower is better)
-    speed_top3 = safe_sort(model_data.items(), lambda x: 1/x['avg_time_s'] if x['avg_time_s'] > 0 else 0)
-    
+    speed_top3 = safe_sort(model_data.items(), lambda x: 1 / x['avg_time_s'] if x['avg_time_s'] > 0 else 0)
+
     # Generate analysis
     analysis = f"""# Standardized LLM Security Benchmark Analysis
 
@@ -2203,10 +1880,10 @@ def generate_standardized_table_analysis(
 | Model | Total Tests | Success | Perfect | Cost/Test (USD) | AvgScore | AvgTime(s) | Traditional | Weighted | Penalty-Adjusted | Notes |
 |-------|-------------|---------|---------|------------------|----------|------------|-------------|----------|------------------|-------|
 """
-    
+
     for row in table_rows:
         analysis += f"| {' | '.join(row)} |\n"
-    
+
     analysis += f"""
 ## Summary Analysis
 
@@ -2247,18 +1924,19 @@ def generate_standardized_table_analysis(
 ---
 *Analysis generated using standardized LLM benchmark methodology*
 """
-    
+
     # Write standardized analysis
     with open(outdir / "standardized_analysis.md", "w", encoding="utf-8") as f:
         f.write(analysis)
 
-def generate_enhanced_language_breakdown_analysis(
-    results: List[EnhancedRunResult],
-    models: List[str], 
-    outdir: Path
+
+def generate_language_breakdown_analysis(
+        results: List[EnhancedRunResult],
+        models: List[str],
+        outdir: Path
 ) -> None:
     """Generate enhanced analysis with per-language and per-test-type breakdowns."""
-    
+
     # Language and test type inference mappings
     language_patterns = {
         'Python': ['python', 'django', 'flask', 'pickle', 'eval', 'exec', '.py'],
@@ -2277,7 +1955,7 @@ def generate_enhanced_language_breakdown_analysis(
         'Dart': ['dart', 'flutter', '.dart'],
         'Haskell': ['haskell', '.hs']
     }
-    
+
     test_type_patterns = {
         'OWASP': ['owasp', 'top10', 'top_10'],
         'SAST': ['sast', 'static', 'lint', 'code_analysis'],
@@ -2287,7 +1965,7 @@ def generate_enhanced_language_breakdown_analysis(
         'Architecture': ['arch', 'architecture', 'design', 'pattern'],
         'Quality': []  # Default fallback
     }
-    
+
     def infer_language(suite_id: str) -> str:
         """Infer programming language from suite_id."""
         suite_lower = suite_id.lower()
@@ -2295,7 +1973,7 @@ def generate_enhanced_language_breakdown_analysis(
             if any(pattern in suite_lower for pattern in patterns):
                 return lang
         return 'Unknown'
-    
+
     def infer_test_type(suite_id: str) -> str:
         """Infer test type from suite_id."""
         suite_lower = suite_id.lower()
@@ -2303,13 +1981,13 @@ def generate_enhanced_language_breakdown_analysis(
             if test_type != 'Quality' and any(pattern in suite_lower for pattern in patterns):
                 return test_type
         return 'Quality'  # Default fallback
-    
+
     # Build enhanced dataset with language and test type inference
     enhanced_data = []
     for result in results:
         language = infer_language(result.suite_id)
         test_type = infer_test_type(result.suite_id)
-        
+
         enhanced_data.append({
             'result': result,
             'model': result.model,
@@ -2321,7 +1999,7 @@ def generate_enhanced_language_breakdown_analysis(
             'time_s': result.elapsed_s,
             'cost_usd': result.cost_usd if hasattr(result, 'cost_usd') else 0
         })
-    
+
     # Group by model, language, test_type
     grouped_data = {}
     for item in enhanced_data:
@@ -2329,33 +2007,33 @@ def generate_enhanced_language_breakdown_analysis(
         if key not in grouped_data:
             grouped_data[key] = []
         grouped_data[key].append(item)
-    
+
     # Calculate aggregated metrics for each group
     aggregated_rows = []
     for (model, language, test_type), items in grouped_data.items():
         total_tests = len(items)
         successful_tests = sum(1 for item in items if item['success'])
         success_rate = successful_tests / total_tests if total_tests > 0 else 0
-        
+
         # Calculate perfect scores (scores >= 0.95)
         perfect_scores = sum(1 for item in items if item['score'] >= 0.95)
         perfect_rate = perfect_scores / total_tests if total_tests > 0 else 0
-        
+
         avg_score = sum(item['score'] for item in items) / total_tests if total_tests > 0 else 0
         avg_time_s = sum(item['time_s'] for item in items) / total_tests if total_tests > 0 else 0
         total_cost = sum(item['cost_usd'] for item in items)
         cost_per_test = total_cost / total_tests if total_tests > 0 else 0
-        
+
         # Calculate score variance for penalty adjustment
         if total_tests > 1:
             score_variance = sum((item['score'] - avg_score) ** 2 for item in items) / total_tests
             score_std_dev = score_variance ** 0.5
         else:
             score_std_dev = 0
-        
+
         # Calculate metrics using standardized formulas
         notes = []
-        
+
         # Traditional Score-per-Dollar
         if cost_per_test > 0:
             if avg_score > 0:
@@ -2366,7 +2044,7 @@ def generate_enhanced_language_breakdown_analysis(
         else:
             traditional = float('inf') if avg_score > 0 else 0
             notes.append("free model")
-        
+
         # Weighted (Reliability-adjusted)
         reliability_factor = success_rate * (1 + 0.5 * perfect_rate)
         if avg_time_s > 0:
@@ -2375,7 +2053,7 @@ def generate_enhanced_language_breakdown_analysis(
         else:
             weighted = traditional * reliability_factor
             notes.append("no timing data")
-        
+
         # Penalty-Adjusted (Quality & Stability)
         if score_std_dev > 0:
             variance_penalty = max(0, 1 - (score_std_dev * 2))
@@ -2383,7 +2061,7 @@ def generate_enhanced_language_breakdown_analysis(
         else:
             penalty_adjusted = weighted
             notes.append("penalties not available")
-        
+
         aggregated_rows.append({
             'model': model,
             'language': language,
@@ -2399,10 +2077,11 @@ def generate_enhanced_language_breakdown_analysis(
             'penalty_adjusted': penalty_adjusted,
             'notes': notes
         })
-    
+
     # Sort by penalty-adjusted score
-    aggregated_rows.sort(key=lambda x: x['penalty_adjusted'] if x['penalty_adjusted'] != float('inf') else x['weighted'], reverse=True)
-    
+    aggregated_rows.sort(
+        key=lambda x: x['penalty_adjusted'] if x['penalty_adjusted'] != float('inf') else x['weighted'], reverse=True)
+
     # Build analysis report
     analysis = f"""# Enhanced LLM Security Benchmark Analysis
 ## Per-Language and Test-Type Breakdown
@@ -2412,11 +2091,11 @@ def generate_enhanced_language_breakdown_analysis(
 | Model | Language | TestType | Total Tests | Success | Perfect | Cost/Test (USD) | AvgScore | AvgTime(s) | Traditional | Weighted | Penalty-Adjusted | Notes |
 |-------|----------|----------|-------------|---------|---------|------------------|----------|------------|-------------|----------|------------------|-------|
 """
-    
+
     # Add global table rows
     for row in aggregated_rows:
-        success_pct = f"{row['success_rate']*100:.1f}%"
-        perfect_pct = f"{row['perfect_rate']*100:.1f}%"
+        success_pct = f"{row['success_rate'] * 100:.1f}%"
+        perfect_pct = f"{row['perfect_rate'] * 100:.1f}%"
         cost_str = f"{row['cost_per_test']:.5f}" if row['cost_per_test'] > 0 else "Free"
         avg_score_str = f"{row['avg_score']:.3f}" if row['avg_score'] > 0 else "N/A"
         avg_time_str = f"{row['avg_time_s']:.2f}" if row['avg_time_s'] > 0 else "N/A"
@@ -2424,9 +2103,9 @@ def generate_enhanced_language_breakdown_analysis(
         weighted_str = f"{row['weighted']:.1f}" if row['weighted'] != float('inf') else "∞"
         penalty_str = f"{row['penalty_adjusted']:.1f}" if row['penalty_adjusted'] != float('inf') else "∞"
         notes_str = "; ".join(row['notes']) if row['notes'] else ""
-        
+
         analysis += f"| {row['model']} | {row['language']} | {row['test_type']} | {row['total_tests']} | {success_pct} | {perfect_pct} | {cost_str} | {avg_score_str} | {avg_time_str} | {traditional_str} | {weighted_str} | {penalty_str} | {notes_str} |\n"
-    
+
     # Group data by language for per-language analysis
     by_language = {}
     for row in aggregated_rows:
@@ -2434,63 +2113,64 @@ def generate_enhanced_language_breakdown_analysis(
         if lang not in by_language:
             by_language[lang] = {'rows': [], 'by_test_type': {}}
         by_language[lang]['rows'].append(row)
-        
+
         test_type = row['test_type']
         if test_type not in by_language[lang]['by_test_type']:
             by_language[lang]['by_test_type'][test_type] = []
         by_language[lang]['by_test_type'][test_type].append(row)
-    
+
     analysis += "\n## 2) Per-Language Sections\n\n"
-    
+
     # Generate per-language breakdowns
     for language in sorted(by_language.keys()):
         lang_data = by_language[language]
         analysis += f"### {language}\n\n"
-        
+
         # Overview
         total_tests = sum(row['total_tests'] for row in lang_data['rows'])
         unique_models = len(set(row['model'] for row in lang_data['rows']))
         top_model = max(lang_data['rows'], key=lambda x: x['penalty_adjusted'])
-        
+
         analysis += f"**Overview:**\n"
         analysis += f"- Dataset: {total_tests} total tests across {unique_models} models\n"
         analysis += f"- Top performer: {top_model['model']} (penalty-adjusted: {top_model['penalty_adjusted']:.1f})\n"
         analysis += f"- Test types: {', '.join(sorted(lang_data['by_test_type'].keys()))}\n\n"
-        
+
         # Per-language table
         analysis += f"**{language} Performance Table:**\n\n"
         analysis += "| Model | TestType | Total Tests | Success | Perfect | Cost/Test (USD) | Traditional | Weighted | Penalty-Adjusted |\n"
         analysis += "|-------|----------|-------------|---------|---------|------------------|-------------|----------|------------------|\n"
-        
+
         for row in sorted(lang_data['rows'], key=lambda x: x['penalty_adjusted'], reverse=True):
-            success_pct = f"{row['success_rate']*100:.1f}%"
-            perfect_pct = f"{row['perfect_rate']*100:.1f}%"
+            success_pct = f"{row['success_rate'] * 100:.1f}%"
+            perfect_pct = f"{row['perfect_rate'] * 100:.1f}%"
             cost_str = f"{row['cost_per_test']:.5f}" if row['cost_per_test'] > 0 else "Free"
             traditional_str = f"{row['traditional']:.1f}" if row['traditional'] != float('inf') else "∞"
             weighted_str = f"{row['weighted']:.1f}" if row['weighted'] != float('inf') else "∞"
             penalty_str = f"{row['penalty_adjusted']:.1f}" if row['penalty_adjusted'] != float('inf') else "∞"
-            
+
             analysis += f"| {row['model']} | {row['test_type']} | {row['total_tests']} | {success_pct} | {perfect_pct} | {cost_str} | {traditional_str} | {weighted_str} | {penalty_str} |\n"
-        
+
         # Per-test-type breakdowns
         analysis += f"\n**Test Type Breakdowns for {language}:**\n\n"
         for test_type in sorted(lang_data['by_test_type'].keys()):
-            type_rows = sorted(lang_data['by_test_type'][test_type], key=lambda x: x['penalty_adjusted'], reverse=True)[:3]
+            type_rows = sorted(lang_data['by_test_type'][test_type], key=lambda x: x['penalty_adjusted'], reverse=True)[
+                        :3]
             models_str = ', '.join([f"{r['model']} ({r['penalty_adjusted']:.1f})" for r in type_rows])
             analysis += f"- **{test_type}**: {models_str}\n"
-        
+
         analysis += "\n"
-    
+
     # Cross-language leaderboards by test type
     analysis += "## 3) Cross-Language Leaderboards (by TestType)\n\n"
-    
+
     by_test_type = {}
     for row in aggregated_rows:
         test_type = row['test_type']
         if test_type not in by_test_type:
             by_test_type[test_type] = []
         by_test_type[test_type].append(row)
-    
+
     for test_type in sorted(by_test_type.keys()):
         top_3 = sorted(by_test_type[test_type], key=lambda x: x['penalty_adjusted'], reverse=True)[:3]
         analysis += f"**{test_type}:**\n"
@@ -2505,7 +2185,7 @@ def generate_enhanced_language_breakdown_analysis(
             rationale_str = f"({', '.join(rationale)})" if rationale else ""
             analysis += f"{i}. {row['model']} ({row['language']}) - {row['penalty_adjusted']:.1f} {rationale_str}\n"
         analysis += "\n"
-    
+
     # Generate machine-readable JSON
     json_export = {
         "rows": aggregated_rows,
@@ -2522,7 +2202,7 @@ def generate_enhanced_language_breakdown_analysis(
             "Penalty-adjusted scoring uses simplified variance penalty"
         ]
     }
-    
+
     analysis += f"""## 4) Summary Analysis
 
 ### Performance Rankings
@@ -2544,105 +2224,18 @@ def generate_enhanced_language_breakdown_analysis(
 ---
 *Enhanced analysis with per-language and test-type breakdowns*
 """
-    
+
     # Write enhanced analysis
     with open(outdir / "enhanced_language_breakdown.md", "w", encoding="utf-8") as f:
         f.write(analysis)
-    
+
     # Write JSON export
     with open(outdir / "enhanced_language_breakdown.json", "w", encoding="utf-8") as f:
         json.dump(json_export, f, indent=2, default=str)
 
-def generate_basic_executive_summary(
-    results: List[EnhancedRunResult],
-    models: List[str], 
-    suite_name: str,
-    outdir: Path
-) -> None:
-    """Generate basic executive summary when enhanced features aren't available."""
-    
-    # Calculate basic performance metrics
-    performance_by_model = {}
-    for model in models:
-        model_results = [r for r in results if r.model == model]
-        if model_results:
-            performance_by_model[model] = ModelPerformance.from_results(model, model_results)
-    
-    if not performance_by_model:
-        return
-    
-    # Find best performers
-    best_accuracy = max(performance_by_model.values(), key=lambda p: p.avg_score)
-    best_value = max(performance_by_model.values(), key=lambda p: p.cost_effectiveness)
-    fastest = max(performance_by_model.values(), key=lambda p: p.speed_score)
-    
-    # Calculate totals
-    total_tests = len(results) // len(models) if models else 0
-    total_cost = sum(r.cost_usd for r in results if r.cost_usd)
-    avg_cost_per_test = total_cost / len(results) if results else 0
-    
-    # Generate basic summary
-    summary = f"""# 🛡️ LLM Security Benchmark - Basic Summary
 
-**Suite:** {suite_name} | **Models Tested:** {len(models)} | **Total Tests:** {total_tests}
-**Analysis Date:** {datetime.now().strftime("%B %d, %Y")}
-
-## 💰 Cost Overview
-
-- **Total Cost This Run:** ${total_cost:.4f}
-- **Average Cost per Test:** ${avg_cost_per_test:.6f}
-- **Total API Calls:** {len(results):,}
-
-## 🏆 Top Performers
-
-**🎯 Most Accurate:** {best_accuracy.model_name}
-- Average Security Score: {best_accuracy.avg_score:.1%}
-- Success Rate: {best_accuracy.success_rate:.1%}
-- Total Cost: ${best_accuracy.total_cost:.4f}
-
-**💰 Best Cost-Effectiveness:** {best_value.model_name}
-- Cost-Effectiveness Score: {best_value.cost_effectiveness:.1f} points per dollar
-- Average Score: {best_value.avg_score:.3f}
-- Cost per Test: ${best_value.cost_per_test:.5f}
-
-**⚡ Fastest Response:** {fastest.model_name}
-- Average Response Time: {fastest.avg_response_time:.2f} seconds
-- Speed Score: {fastest.speed_score:.2f}
-
-## 📊 Model Comparison
-
-| Model | Tests | Success Rate | Avg Score | Response Time | Total Cost | Cost/Test |
-|-------|--------|-------------|-----------|---------------|------------|-----------|"""
-
-    for model, perf in performance_by_model.items():
-        summary += f"\n| {model} | {perf.total_tests} | {perf.success_rate:.1%} | {perf.avg_score:.3f} | {perf.avg_response_time:.2f}s | ${perf.total_cost:.4f} | ${perf.cost_per_test:.5f} |"
-
-    summary += f"""
-
-## 📋 Summary
-
-This security assessment evaluated {len(models)} AI models across {total_tests} security test scenarios. 
-
-**Key Findings:**
-- Highest accuracy: {best_accuracy.avg_score:.1%} by {best_accuracy.model_name}
-- Best value: {best_value.cost_effectiveness:.1f} points/$ by {best_value.model_name}
-- Total investment: ${total_cost:.4f}
-
-**Note:** This is a basic summary. For enhanced analysis with visualizations and detailed cost-effectiveness metrics, install the complete requirements:
-```bash
-pip install -r requirements.txt
-```
-
----
-
-*Built by the Rapticore Security Research Team*
-"""
-    
-    # Write basic executive summary
-    with open(outdir / "basic_executive_summary.md", "w", encoding="utf-8") as f:
-        f.write(summary)
-
-def analyze_vulnerability_categories(results: List[EnhancedRunResult], models: List[str]) -> Dict[str, Dict[str, float]]:
+def analyze_vulnerability_categories(results: List[EnhancedRunResult], models: List[str]) -> Dict[
+    str, Dict[str, float]]:
     """Analyze performance by vulnerability category."""
     vulnerability_patterns = {
         "SQL Injection": ["sql.*injection", "sqli", "parameterized.*query"],
@@ -2675,12 +2268,13 @@ def analyze_vulnerability_categories(results: List[EnhancedRunResult], models: L
 
     return category_scores
 
+
 def calculate_business_metrics(performance_by_model: Dict[str, Any]) -> Dict[str, Any]:
     """Calculate business-focused security metrics."""
     # Security incident cost estimates (industry averages)
     CRITICAL_VULN_COST = 50000  # Cost of critical vulnerability if exploited
     MODERATE_VULN_COST = 15000  # Cost of moderate vulnerability
-    COMPLIANCE_PENALTY = 100000 # Cost of compliance failure
+    COMPLIANCE_PENALTY = 100000  # Cost of compliance failure
 
     business_metrics = {}
     for model, perf in performance_by_model.items():
@@ -2706,10 +2300,11 @@ def calculate_business_metrics(performance_by_model: Dict[str, Any]) -> Dict[str
 
     return business_metrics
 
+
 def generate_performance_analysis(
-    results: List[EnhancedRunResult],
-    models: List[str],
-    outdir: Path
+        results: List[EnhancedRunResult],
+        models: List[str],
+        outdir: Path
 ) -> None:
     """Generate detailed performance analysis JSON."""
 
@@ -2790,10 +2385,12 @@ def generate_performance_analysis(
     with open(outdir / "performance_analysis.json", "w", encoding="utf-8") as f:
         json.dump(performance_data, f, indent=2, default=str)
 
+
 # ------------------------ Enhanced Language Performance Analysis -------------------------
-def analyze_language_performance(results: List[EnhancedRunResult], models: List[str]) -> Dict[str, Dict[str, Dict[str, float]]]:
+def analyze_language_performance(results: List[EnhancedRunResult], models: List[str]) -> Dict[
+    str, Dict[str, Dict[str, float]]]:
     """Analyze performance by programming language."""
-    
+
     # Define language test mappings
     language_patterns = {
         'Python': ['python', 'django', 'flask', 'pickle', 'eval', 'exec'],
@@ -2805,33 +2402,34 @@ def analyze_language_performance(results: List[EnhancedRunResult], models: List[
         'Systems': ['go_', 'rust_', 'race_condition', 'concurrency'],
         'Modern Languages': ['dart', 'flutter', 'haskell', 'functional']
     }
-    
+
     language_results = {}
-    
+
     for language, patterns in language_patterns.items():
         language_results[language] = {}
-        
+
         # Filter tests for this language
         lang_tests = [r for r in results if any(pattern in r.suite_id.lower() for pattern in patterns)]
-        
+
         if not lang_tests:
             continue
-            
+
         for model in models:
             model_tests = [r for r in lang_tests if r.model == model]
             if model_tests:
                 avg_score = sum(r.score for r in model_tests) / len(model_tests)
                 avg_time = sum(r.elapsed_s for r in model_tests) / len(model_tests)
                 success_rate = sum(1 for r in model_tests if r.ok) / len(model_tests)
-                
+
                 language_results[language][model] = {
                     'avg_score': avg_score,
                     'avg_time': avg_time,
                     'success_rate': success_rate,
                     'test_count': len(model_tests)
                 }
-    
+
     return language_results
+
 
 def calculate_enhanced_cost_effectiveness(perf: 'ModelPerformance') -> float:
     """Calculate enhanced cost effectiveness that balances accuracy and cost.
@@ -2841,26 +2439,27 @@ def calculate_enhanced_cost_effectiveness(perf: 'ModelPerformance') -> float:
     """
     if perf.cost_per_test <= 0:
         return float('inf')  # Free models get infinite cost effectiveness
-    
+
     # Weights favor accuracy over cost
     accuracy_weight = 0.6  # Primary factor
     reliability_weight = 0.3  # Secondary factor  
     speed_bonus_weight = 0.1  # Minor factor
-    
+
     # Quadratic scoring rewards high accuracy significantly more
     accuracy_score = perf.avg_score ** 2  # Quadratic to heavily favor accurate models
     reliability_score = perf.success_rate
-    
+
     # Speed bonus: faster is better, but capped
     speed_bonus = max(0, min(1.0, (10 - perf.avg_response_time) / 10))
-    
+
     # Combined quality score
-    quality_score = (accuracy_weight * accuracy_score + 
-                    reliability_weight * reliability_score + 
-                    speed_bonus_weight * speed_bonus)
-    
+    quality_score = (accuracy_weight * accuracy_score +
+                     reliability_weight * reliability_score +
+                     speed_bonus_weight * speed_bonus)
+
     # Cost effectiveness = quality per dollar
     return quality_score / perf.cost_per_test
+
 
 # ------------------------ Visualization Generation -------------------------
 def generate_performance_charts(results: List[EnhancedRunResult], models: List[str], outdir: Path) -> Dict[str, str]:
@@ -2893,7 +2492,8 @@ def generate_performance_charts(results: List[EnhancedRunResult], models: List[s
     times = [performance_by_model[m].avg_response_time for m in models_list]
     costs = [performance_by_model[m].cost_per_test * 1000 for m in models_list]  # Convert to milli-dollars
 
-    scatter = ax.scatter(times, scores, s=[c*100 for c in costs], alpha=0.7, c=range(len(models_list)), cmap='viridis')
+    scatter = ax.scatter(times, scores, s=[c * 100 for c in costs], alpha=0.7, c=range(len(models_list)),
+                         cmap='viridis')
 
     # Add model labels
     for i, model in enumerate(models_list):
@@ -2928,7 +2528,7 @@ def generate_performance_charts(results: List[EnhancedRunResult], models: List[s
     # Add value labels on bars
     for bar, eff in zip(bars, effectiveness):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + max(effectiveness)*0.01,
+        ax.text(bar.get_x() + bar.get_width() / 2., height + max(effectiveness) * 0.01,
                 f'{eff:.1f}', ha='center', va='bottom', fontsize=10)
 
     plt.tight_layout()
@@ -2979,17 +2579,18 @@ def generate_performance_charts(results: List[EnhancedRunResult], models: List[s
                 perf.success_rate * 100,
                 perf.avg_score * 100,
                 100 - min((perf.avg_response_time / 10) * 100, 100),  # Inverted: faster = higher score
-                min(100 * (perf.cost_effectiveness / max(p.cost_effectiveness for p in performance_by_model.values())), 100) if performance_by_model else 0  # Relative to best model
+                min(100 * (perf.cost_effectiveness / max(p.cost_effectiveness for p in performance_by_model.values())),
+                    100) if performance_by_model else 0  # Relative to best model
             ]
 
-            bars = ax.bar(x + (i - len(models_list)/2 + 0.5) * width, values,
-                         width, label=model, color=colors[i], alpha=0.8)
+            bars = ax.bar(x + (i - len(models_list) / 2 + 0.5) * width, values,
+                          width, label=model, color=colors[i], alpha=0.8)
 
             # Add value labels on bars
             for bar, value in zip(bars, values):
                 height = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width()/2., height + 1,
-                       f'{value:.1f}', ha='center', va='bottom', fontsize=9)
+                ax.text(bar.get_x() + bar.get_width() / 2., height + 1,
+                        f'{value:.1f}', ha='center', va='bottom', fontsize=9)
 
         ax.set_xlabel('Performance Metrics')
         ax.set_ylabel('Score (0-100)')
@@ -3036,9 +2637,9 @@ def generate_performance_charts(results: List[EnhancedRunResult], models: List[s
         # Add value labels on bars
         for bar, value in zip(bars, values):
             width = bar.get_width()
-            ax.text(width + 1, bar.get_y() + bar.get_height()/2,
-                   f'{value:.1f}%' if value < 10 else f'{value:.0f}%',
-                   ha='left', va='center', fontweight='bold')
+            ax.text(width + 1, bar.get_y() + bar.get_height() / 2,
+                    f'{value:.1f}%' if value < 10 else f'{value:.0f}%',
+                    ha='left', va='center', fontweight='bold')
 
         # Add performance zones
         ax.axvspan(0, 30, alpha=0.1, color='red', label='Poor')
@@ -3051,66 +2652,87 @@ def generate_performance_charts(results: List[EnhancedRunResult], models: List[s
         plt.close()
         charts_created["performance_breakdown"] = str(chart_path)
 
-    # 5. Enhanced Language-specific Performance Analysis with Statistical Rigor
+    # 5. Language-specific Performance Analysis
     try:
         language_data = analyze_language_performance(results, models)
         if language_data and len(language_data) > 0:
-            # Create comprehensive analysis with reliability metrics
-            enhanced_lang_data = create_enhanced_language_analysis(results, models)
-            
+            # Create analysis with reliability metrics
+            lang_data = create_language_analysis(results, models)
+
             # Generate improved visualizations
-            charts_created.update(generate_enhanced_language_charts(enhanced_lang_data, outdir))
-            
+            charts_created.update(generate_language_charts(lang_data, outdir))
+
     except Exception as e:
         print(f"⚠️  Enhanced language performance analysis failed: {e}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        print("Skipping heatmap generation due to analysis failure")
 
-def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: List[str]) -> Dict:
-    """Create enhanced language analysis with reliability metrics and test type breakdown."""
-    
-    # Enhanced language and test type patterns
+
+def create_language_analysis(results: List[EnhancedRunResult], models: List[str]) -> Dict:
+    """Create language analysis with reliability metrics and test type breakdown."""
+
+    # Language and test type patterns (order matters - more specific patterns first)
     language_patterns = {
-        'Python': ['python', 'django', 'flask', 'pickle', 'eval', 'exec'],
-        'JavaScript': ['javascript', 'js', 'typescript', 'node', 'prototype', 'npm'],
-        'Java/JVM': ['java', 'kotlin', 'scala', 'jvm', 'deserialization', 'spring'],
-        'C/C++': ['c_', 'cpp_', 'buffer_overflow', 'memory', 'unsafe'],
-        'Mobile': ['kotlin', 'swift', 'android', 'ios', 'intent', 'keychain'],
-        'Go': ['go_', 'golang', 'race_condition']
+        'Rust': ['rust_', 'rust'],
+        'Python': ['python_', 'python', 'django', 'flask', 'pickle', 'eval', 'exec'],
+        'JavaScript': ['javascript_', 'javascript', 'js_', 'js', 'typescript_', 'typescript', 'node', 'prototype', 'npm'],
+        'Java/JVM': ['java_', 'java', 'kotlin_', 'kotlin', 'scala_', 'scala', 'jvm', 'spring'],
+        'C/C++': ['c_', 'c', 'cpp_', 'cpp'],
+        'Mobile': ['swift_', 'swift', 'android', 'ios', 'intent', 'keychain'],
+        'Go': ['go_', 'go', 'golang'],
+        'PHP': ['php_', 'php'],
+        'Ruby': ['ruby_', 'ruby'],
+        'Haskell': ['haskell_', 'haskell'],
+        'Scala': ['scala_', 'scala'],
+        'Kotlin': ['kotlin_', 'kotlin'],
+        'Dart': ['dart_', 'dart']
     }
-    
+
     test_type_patterns = {
-        'SAST': ['sast', 'static', 'lint', 'code_analysis', 'injection', 'xss', 'sql'],
+        'SAST': ['sast', 'static', 'lint', 'code_analysis', 'injection', 'xss', 'sql', 'buffer_overflow', 
+                'race_condition', 'path_traversal', 'format_string', 'integer_overflow', 'null_pointer',
+                'use_after_free', 'double_free', 'memory_leak', 'toctou', 'deserialization', 'xxe',
+                'ldap_injection', 'mass_assignment', 'jwt', 'crypto', 'random', 'tls', 'direct_object',
+                'code_injection', 'exec_injection', 'unsafe_pointer', 'memory_safety', 'goroutine_leak',
+                'json_injection', 'tls_config', 'prototype_pollution', 'regex_dos', 'jwt_vulnerabilities',
+                'xss_dom', 'nosql_injection', 'command_injection', 'sql_injection', 'pickle_deserialization',
+                'xml_external_entity', 'path_traversal', 'network_security', 'url_scheme', 'webview',
+                'plist_xml', 'core_data', 'insecure_storage'],
         'Secrets': ['secret', 'token', 'key', 'credential', 'hardcoded'],
-        'OWASP': ['owasp', 'top10', 'csrf', 'broken_access'],
-        'Quality': ['comprehensive', 'basic', 'deserialization']
+        'OWASP': ['owasp', 'top10', 'csrf', 'broken_access', 'weak_authentication', 'weak_cryptography',
+                 'insecure_deserialization', 'xml_external_entity', 'ssrf', 'insecure_direct_object'],
+        'Quality': ['comprehensive', 'basic', 'quality']
     }
-    
+
     def classify_test(suite_id: str) -> Tuple[str, str]:
         """Classify test by language and type."""
         suite_lower = suite_id.lower()
-        
+
         # Determine language
         language = 'Other'
         for lang, patterns in language_patterns.items():
             if any(pattern in suite_lower for pattern in patterns):
                 language = lang
                 break
-        
+
         # Determine test type  
         test_type = 'Quality'  # Default
         for t_type, patterns in test_type_patterns.items():
             if any(pattern in suite_lower for pattern in patterns):
                 test_type = t_type
                 break
-        
+
         return language, test_type
-    
+
     # Analyze results with enhanced classification
     analysis = {}
-    
+
     for result in results:
         language, test_type = classify_test(result.suite_id)
         model = result.model
-        
+
         # Initialize structure
         if language not in analysis:
             analysis[language] = {}
@@ -3120,7 +2742,7 @@ def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: 
             analysis[language][test_type][model] = {
                 'scores': [], 'times': [], 'costs': [], 'successes': [], 'suite_ids': []
             }
-        
+
         # Collect data
         data = analysis[language][test_type][model]
         data['scores'].append(result.score)
@@ -3128,23 +2750,23 @@ def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: 
         data['costs'].append(result.cost_usd if hasattr(result, 'cost_usd') else 0)
         data['successes'].append(1 if result.ok else 0)
         data['suite_ids'].append(result.suite_id)
-    
+
     # Ensure all models are represented in analysis structure
     # This handles models that had zero results (complete failures)
     all_languages = set()
     all_test_types = set()
-    
+
     # First pass: collect all languages and test types that exist
     for language in analysis:
         all_languages.add(language)
         for test_type in analysis[language]:
             all_test_types.add(test_type)
-    
+
     # If no results exist at all, create minimal structure
     if not all_languages:
         all_languages = {'Other'}
         all_test_types = {'Quality'}
-    
+
     # Second pass: ensure all models exist in all language/test_type combinations
     for language in all_languages:
         if language not in analysis:
@@ -3157,13 +2779,13 @@ def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: 
                     analysis[language][test_type][model] = {
                         'scores': [], 'times': [], 'costs': [], 'successes': [], 'suite_ids': []
                     }
-    
+
     # Calculate enhanced metrics
     for language in analysis:
         for test_type in analysis[language]:
             for model in analysis[language][test_type]:
                 data = analysis[language][test_type][model]
-                
+
                 # Handle completely failed models (no successful results)
                 if not data['scores']:
                     # Set default values for failed models to ensure they appear in heatmaps
@@ -3187,63 +2809,95 @@ def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: 
                         'raw_times': []
                     }
                     continue
+
+                # Calculate robust statistics - filter out None values
+                scores = np.array([s for s in data['scores'] if s is not None])
+                times = np.array([t for t in data['times'] if t is not None])
+                costs = np.array([c for c in data['costs'] if c is not None])
+                successes = np.array([s for s in data['successes'] if s is not None])
                 
-                # Calculate robust statistics
-                scores = np.array(data['scores'])
-                times = np.array(data['times'])
-                costs = np.array(data['costs'])
-                successes = np.array(data['successes'])
+                # Handle empty arrays by setting default values
+                if len(scores) == 0 or len(times) == 0 or len(successes) == 0:
+                    # Set default values for failed models to ensure they appear in heatmaps
+                    analysis[language][test_type][model] = {
+                        'mean_score': 0.0,
+                        'score_std': 0.0,
+                        'score_ci_95': 0.0,
+                        'mean_time': 0.0,
+                        'time_p95': 0.0,
+                        'n': 0,
+                        'success_rate': 0.0,
+                        'completeness': 0.0,
+                        'reliability': 0.0,
+                        'cost_per_test': 0.0,
+                        'qfs': 0.0,
+                        'accuracy_rank_score': 0.0,
+                        'accuracy_completeness_score': 0.0,
+                        'empty_rate': 1.0,
+                        'timeout_rate': 0.0,
+                        'raw_scores': [],
+                        'raw_times': []
+                    }
+                    continue
                 
+                # Handle empty costs array separately
+                if len(costs) == 0:
+                    costs = np.array([0.0])  # Default to 0 cost
+
                 n = len(scores)
-                
+
                 # Central tendency and spread
-                mean_score = np.mean(scores)
+                mean_score = np.mean(scores) if len(scores) > 0 else 0.0
                 score_std = np.std(scores, ddof=1) if n > 1 else 0
                 score_ci = 1.96 * score_std / np.sqrt(n) if n > 1 else 0
-                
-                mean_time = np.mean(times)
-                time_p95 = np.percentile(times, 95) if n >= 5 else mean_time
-                
+
+                mean_time = np.mean(times) if len(times) > 0 else 0.0
+                time_p95 = np.percentile(times, 95) if len(times) >= 5 else mean_time
+
                 # Reliability metrics
-                success_rate = np.mean(successes)
+                success_rate = np.mean(successes) if len(successes) > 0 else 0.0
                 empty_rate = 1 - success_rate  # Simplified
-                timeout_rate = sum(1 for t in times if t > 30) / n  # 30s timeout proxy
-                
+                timeout_rate = sum(1 for t in times if t is not None and t > 30) / n if n > 0 else 0  # 30s timeout proxy
+
                 reliability = 1 - empty_rate - timeout_rate
                 reliability = max(0, min(1, reliability))  # Clip to [0,1]
-                
+
                 # Calculate Quality-First Score (QFS) using audit-compliant methodology
-                cost_per_test = np.mean(costs)
-                
+                cost_per_test = np.mean(costs) if len(costs) > 0 else 0.0
+
                 if QFS_AUDIT_AVAILABLE:
                     # Use centralized QFS configuration and functions
-                    completeness = sum(1 for s in scores if s >= CONFIG.COMPLETENESS_THRESHOLD) / n if n > 0 else 0
-                    coverage = sum(1 for s in scores if s >= CONFIG.COVERAGE_THRESHOLD) / n if n > 0 else 0
-                    
+                    completeness = sum(1 for s in scores if s is not None and s >= CONFIG.COMPLETENESS_THRESHOLD) / n if n > 0 else 0
+                    coverage = sum(1 for s in scores if s is not None and s >= CONFIG.COVERAGE_THRESHOLD) / n if n > 0 else 0
+
                     # Calculate cost p95 for proper normalization  
                     all_costs = []
                     for lang_data in analysis.values():
                         for test_data in lang_data.values():
                             for model_data in test_data.values():
                                 if 'costs' in model_data:
-                                    all_costs.extend(model_data['costs'])
+                                    # Filter out None values from costs
+                                    valid_costs = [c for c in model_data['costs'] if c is not None]
+                                    all_costs.extend(valid_costs)
                                 else:
                                     all_costs.append(cost_per_test)
+                    # Filter out None values from all_costs before percentile calculation
+                    all_costs = [c for c in all_costs if c is not None]
                     cost_p95 = np.percentile(all_costs, 95) if all_costs else 0.1
-                    
+
                     # Use audited QFS calculation with proper cost normalization
                     qfs = calculate_qfs(mean_score, completeness, coverage, reliability, cost_per_test, cost_p95)
                     qfs_raw = calculate_qfs(mean_score, completeness, coverage, reliability, 0.0, 1.0)
                 else:
                     # Fallback to original calculation
-                    completeness = sum(1 for s in scores if s >= 0.8) / n if n > 0 else 0
-                    coverage = sum(1 for s in scores if s >= 0.5) / n if n > 0 else 0
-                    
+                    completeness = sum(1 for s in scores if s is not None and s >= 0.8) / n if n > 0 else 0
+                    coverage = sum(1 for s in scores if s is not None and s >= 0.5) / n if n > 0 else 0
+
                     A, Cmpl, Cov, Rel = mean_score, completeness, coverage, reliability
-                    
+
                     if A > 0 and Cmpl > 0 and Cov > 0 and Rel > 0:
-                        qfs_raw = (A**0.50) * (Cmpl**0.30) * (Cov**0.15) * (Rel**0.05)
-                        
+                        qfs_raw = (A ** 0.50) * (Cmpl ** 0.30) * (Cov ** 0.15) * (Rel ** 0.05)
+
                         if cost_per_test > 0:
                             max_cost_estimate = 0.1
                             cost_normalized = np.log1p(cost_per_test) / np.log1p(max_cost_estimate)
@@ -3253,13 +2907,13 @@ def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: 
                             qfs = qfs_raw
                     else:
                         qfs_raw = qfs = 0
-                
+
                 # Traditional accuracy-only ranking for comparison
                 accuracy_rank_score = mean_score
-                
+
                 # Accuracy + Completeness combo for sanity check
                 accuracy_completeness_score = (mean_score * 0.7) + (completeness * 0.3)
-                
+
                 # Store enhanced metrics
                 analysis[language][test_type][model] = {
                     'n': n,
@@ -3281,47 +2935,44 @@ def create_enhanced_language_analysis(results: List[EnhancedRunResult], models: 
                     'raw_scores': scores.tolist(),
                     'raw_times': times.tolist()
                 }
-    
+
     return analysis
 
-def generate_enhanced_language_charts(analysis_data: Dict, outdir: Path) -> Dict[str, str]:
-    """Generate enhanced language performance charts with statistical rigor."""
-    
+
+def generate_language_charts(analysis_data: Dict, outdir: Path) -> Dict[str, str]:
+    """Generate language performance charts with statistical analysis."""
+
     if not VISUALIZATION_AVAILABLE:
         return {}
-    
+
     charts = {}
-    
+
     # 1. Language × Test Type Heatmaps
     try:
         create_language_test_heatmaps(analysis_data, outdir, charts)
     except Exception as e:
         print(f"⚠️ Heatmap generation failed: {e}")
-    
+
     # 2. Per-slice detailed charts with confidence intervals
     try:
         create_detailed_slice_charts(analysis_data, outdir, charts)
     except Exception as e:
         print(f"⚠️ Detailed slice charts failed: {e}")
-    
+
     # 3. Enhanced scatter plot with Pareto frontier
     try:
         create_pareto_scatter(analysis_data, outdir, charts)
     except Exception as e:
         print(f"⚠️ Pareto scatter failed: {e}")
-    
-    # 4. Quality-first executive summary
-    try:
-        generate_quality_first_executive_summary(analysis_data, outdir)
-        charts["quality_executive_summary"] = str(outdir / "quality_first_executive_summary.md")
-    except Exception as e:
-        print(f"⚠️ Quality-first executive summary failed: {e}")
-        
+
+    # Quality-first executive summary removed - now handled by unified executive summary
+
     return charts
+
 
 def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dict):
     """Create heatmaps for Language × Model performance by test type."""
-    
+
     # Get all languages and models
     all_languages = sorted(analysis_data.keys())
     all_models = set()
@@ -3329,23 +2980,23 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
         for test_data in lang_data.values():
             all_models.update(test_data.keys())
     all_models = sorted(list(all_models))
-    
+
     # Get all test types
     all_test_types = set()
     for lang_data in analysis_data.values():
         all_test_types.update(lang_data.keys())
     all_test_types = sorted(list(all_test_types))
-    
+
     # Create separate heatmap for each test type
     for test_type in all_test_types:
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
-        
+
         # Initialize matrices for quality-first analysis
         accuracy_matrix = np.full((len(all_models), len(all_languages)), np.nan)
         completeness_matrix = np.full((len(all_models), len(all_languages)), np.nan)
         qfs_matrix = np.full((len(all_models), len(all_languages)), np.nan)
         reliability_matrix = np.full((len(all_models), len(all_languages)), np.nan)
-        
+
         for i, model in enumerate(all_models):
             for j, language in enumerate(all_languages):
                 if language in analysis_data and test_type in analysis_data[language]:
@@ -3356,7 +3007,19 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
                         completeness_matrix[i, j] = data.get('completeness', 0.0) * 100
                         qfs_matrix[i, j] = data.get('qfs', 0.0) * 100
                         reliability_matrix[i, j] = data.get('reliability', 0.0) * 100
-        
+                    else:
+                        # Model has no data for this language/test_type combination
+                        accuracy_matrix[i, j] = 0.0
+                        completeness_matrix[i, j] = 0.0
+                        qfs_matrix[i, j] = 0.0
+                        reliability_matrix[i, j] = 0.0
+                else:
+                    # Language/test_type combination doesn't exist
+                    accuracy_matrix[i, j] = 0.0
+                    completeness_matrix[i, j] = 0.0
+                    qfs_matrix[i, j] = 0.0
+                    reliability_matrix[i, j] = 0.0
+
         # Accuracy heatmap
         im1 = ax1.imshow(accuracy_matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
         ax1.set_title(f'{test_type}: Accuracy % (with sample sizes)', fontweight='bold')
@@ -3364,25 +3027,33 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
         ax1.set_xticklabels(all_languages, rotation=45, ha='right')
         ax1.set_yticks(range(len(all_models)))
         ax1.set_yticklabels(all_models)
-        
+
         # Add text annotations with n and confidence intervals
         for i in range(len(all_models)):
             for j in range(len(all_languages)):
-                if not np.isnan(accuracy_matrix[i, j]):
+                if not np.isnan(accuracy_matrix[i, j]) and accuracy_matrix[i, j] > 0:
                     language = all_languages[j]
                     model = all_models[i]
-                    if (language in analysis_data and test_type in analysis_data[language] and 
-                        model in analysis_data[language][test_type]):
+                    if (language in analysis_data and test_type in analysis_data[language] and
+                            model in analysis_data[language][test_type]):
                         data = analysis_data[language][test_type][model]
                         # Defensive programming for missing fields
                         n = data.get('n', 0)
                         ci = data.get('score_ci_95', 0.0) * 100
                         text = f"{accuracy_matrix[i, j]:.0f}%\n(n={n})\n±{ci:.1f}"
-                        ax1.text(j, i, text, ha='center', va='center', 
-                                fontsize=8, color='black' if accuracy_matrix[i, j] < 50 else 'white')
-        
+                        ax1.text(j, i, text, ha='center', va='center',
+                                 fontsize=8, color='black' if accuracy_matrix[i, j] < 50 else 'white')
+                    else:
+                        # Show "N/A" for missing data
+                        ax1.text(j, i, "N/A", ha='center', va='center',
+                                 fontsize=8, color='gray')
+                elif not np.isnan(accuracy_matrix[i, j]) and accuracy_matrix[i, j] == 0:
+                    # Show "0" for zero scores
+                    ax1.text(j, i, "0%", ha='center', va='center',
+                             fontsize=8, color='black')
+
         plt.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
-        
+
         # Completeness heatmap (% of tests with good detection >= 0.8)
         im2 = ax2.imshow(completeness_matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
         ax2.set_title(f'{test_type}: Completeness % (Good Detection ≥80%)', fontweight='bold')
@@ -3390,15 +3061,18 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
         ax2.set_xticklabels(all_languages, rotation=45, ha='right')
         ax2.set_yticks(range(len(all_models)))
         ax2.set_yticklabels(all_models)
-        
+
         for i in range(len(all_models)):
             for j in range(len(all_languages)):
-                if not np.isnan(completeness_matrix[i, j]):
+                if not np.isnan(completeness_matrix[i, j]) and completeness_matrix[i, j] > 0:
                     ax2.text(j, i, f"{completeness_matrix[i, j]:.0f}%", ha='center', va='center',
-                            fontsize=9, color='black' if completeness_matrix[i, j] < 50 else 'white')
-        
+                             fontsize=9, color='black' if completeness_matrix[i, j] < 50 else 'white')
+                elif not np.isnan(completeness_matrix[i, j]) and completeness_matrix[i, j] == 0:
+                    ax2.text(j, i, "0%", ha='center', va='center',
+                             fontsize=9, color='black')
+
         plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
-        
+
         # Quality-First Score heatmap (primary ranking metric)
         im3 = ax3.imshow(qfs_matrix, cmap='viridis', aspect='auto', vmin=0, vmax=100)
         ax3.set_title(f'{test_type}: Quality-First Score (Accuracy⁰·⁵×Completeness⁰·³×Coverage⁰·¹⁵)', fontweight='bold')
@@ -3406,7 +3080,7 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
         ax3.set_xticklabels(all_languages, rotation=45, ha='right')
         ax3.set_yticks(range(len(all_models)))
         ax3.set_yticklabels(all_models)
-        
+
         # Calculate ranks for QFS and annotate
         for i in range(len(all_models)):
             for j in range(len(all_languages)):
@@ -3414,17 +3088,18 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
                     # Calculate rank within this language for this test type
                     language = all_languages[j]
                     if language in analysis_data and test_type in analysis_data[language]:
-                        lang_qfs_values = [(model, data['qfs']) for model, data in analysis_data[language][test_type].items()]
+                        lang_qfs_values = [(model, data['qfs']) for model, data in
+                                           analysis_data[language][test_type].items()]
                         lang_qfs_values.sort(key=lambda x: x[1], reverse=True)
-                        model_rank = next((idx+1 for idx, (model, _) in enumerate(lang_qfs_values) 
-                                         if model == all_models[i]), None)
-                        
+                        model_rank = next((idx + 1 for idx, (model, _) in enumerate(lang_qfs_values)
+                                           if model == all_models[i]), None)
+
                         text = f"{qfs_matrix[i, j]:.1f}%\n(#{model_rank})" if model_rank else f"{qfs_matrix[i, j]:.1f}%"
                         ax3.text(j, i, text, ha='center', va='center', fontsize=8,
-                                color='white' if qfs_matrix[i, j] < np.nanmean(qfs_matrix) else 'black')
-        
+                                 color='white' if qfs_matrix[i, j] < np.nanmean(qfs_matrix) else 'black')
+
         plt.colorbar(im3, ax=ax3, fraction=0.046, pad=0.04)
-        
+
         # Reliability heatmap (1 - empty - timeout - json_fail)
         im4 = ax4.imshow(reliability_matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
         ax4.set_title(f'{test_type}: Reliability % (1-Empty-Timeout)', fontweight='bold')
@@ -3432,109 +3107,111 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
         ax4.set_xticklabels(all_languages, rotation=45, ha='right')
         ax4.set_yticks(range(len(all_models)))
         ax4.set_yticklabels(all_models)
-        
+
         for i in range(len(all_models)):
             for j in range(len(all_languages)):
                 if not np.isnan(reliability_matrix[i, j]):
                     language = all_languages[j]
                     model = all_models[i]
                     # Show reliability with flags for problematic models
-                    if (language in analysis_data and test_type in analysis_data[language] and 
-                        model in analysis_data[language][test_type]):
+                    if (language in analysis_data and test_type in analysis_data[language] and
+                            model in analysis_data[language][test_type]):
                         data = analysis_data[language][test_type][model]
                         fail_rate = data['empty_rate'] + data['timeout_rate']
                         flag = "⚠️" if fail_rate > 0.1 else ""
                         text = f"{reliability_matrix[i, j]:.0f}%\n{flag}"
                         ax4.text(j, i, text, ha='center', va='center', fontsize=8,
-                                color='black' if reliability_matrix[i, j] < 50 else 'white')
-        
+                                 color='black' if reliability_matrix[i, j] < 50 else 'white')
+
         plt.colorbar(im4, ax=ax4, fraction=0.046, pad=0.04)
-        
+
         plt.tight_layout()
         chart_path = outdir / f"enhanced_heatmaps_{test_type.lower()}.png"
         plt.savefig(chart_path, dpi=300, bbox_inches='tight')
         plt.close()
         charts[f"heatmap_{test_type.lower()}"] = str(chart_path)
 
+
 def create_detailed_slice_charts(analysis_data: Dict, outdir: Path, charts: Dict):
     """Create detailed charts for specific language/test-type slices."""
-    
+
     # Focus on top combinations by data availability
     slice_priorities = []
     for language in analysis_data:
         for test_type in analysis_data[language]:
             total_n = sum(data['n'] for data in analysis_data[language][test_type].values())
             slice_priorities.append((total_n, language, test_type))
-    
+
     # Take top 6 slices by data volume
     top_slices = sorted(slice_priorities, reverse=True)[:6]
-    
+
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
     axes = axes.flatten()
-    
+
     for idx, (_, language, test_type) in enumerate(top_slices):
         ax = axes[idx]
         slice_data = analysis_data[language][test_type]
-        
+
         models = list(slice_data.keys())
         accuracies = [slice_data[m]['mean_score'] * 100 for m in models]
         cis = [slice_data[m]['score_ci_95'] * 100 for m in models]
         ns = [slice_data[m]['n'] for m in models]
-        
+
         # Sort by accuracy
         sorted_indices = np.argsort(accuracies)[::-1]
         models = [models[i] for i in sorted_indices]
         accuracies = [accuracies[i] for i in sorted_indices]
         cis = [cis[i] for i in sorted_indices]
         ns = [ns[i] for i in sorted_indices]
-        
+
         # Bar plot with error bars
-        bars = ax.bar(range(len(models)), accuracies, yerr=cis, capsize=5, 
-                     alpha=0.8, color=plt.cm.Set3(np.linspace(0, 1, len(models))))
-        
+        bars = ax.bar(range(len(models)), accuracies, yerr=cis, capsize=5,
+                      alpha=0.8, color=plt.cm.Set3(np.linspace(0, 1, len(models))))
+
         # Add n annotations
         for i, (bar, n, acc) in enumerate(zip(bars, ns, accuracies)):
             height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height + cis[i] + 2,
-                   f'n={n}', ha='center', va='bottom', fontsize=8, fontweight='bold')
-            ax.text(bar.get_x() + bar.get_width()/2., height/2,
-                   f'{acc:.1f}%', ha='center', va='center', fontsize=9, fontweight='bold')
-        
+            ax.text(bar.get_x() + bar.get_width() / 2., height + cis[i] + 2,
+                    f'n={n}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+            ax.text(bar.get_x() + bar.get_width() / 2., height / 2,
+                    f'{acc:.1f}%', ha='center', va='center', fontsize=9, fontweight='bold')
+
         ax.set_title(f'{language} / {test_type}\nAccuracy with 95% CI', fontweight='bold')
         ax.set_xticks(range(len(models)))
         ax.set_xticklabels([m.replace('-', '\n') for m in models], rotation=0, ha='center', fontsize=8)
         ax.set_ylabel('Accuracy (%)')
         ax.set_ylim(0, 110)
         ax.grid(True, alpha=0.3, axis='y')
-        
+
         # Flag low sample sizes
         if min(ns) < 30:
             ax.text(0.02, 0.98, f'⚠️ Low n (min={min(ns)})', transform=ax.transAxes,
-                   bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.8),
-                   verticalalignment='top', fontsize=8)
-    
+                    bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.8),
+                    verticalalignment='top', fontsize=8)
+
     plt.tight_layout()
     chart_path = outdir / "detailed_slice_analysis.png"
     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
     plt.close()
     charts["detailed_slices"] = str(chart_path)
 
+
 def create_pareto_scatter(analysis_data: Dict, outdir: Path, charts: Dict):
     """Create scatter plot with Pareto frontier."""
-    
+
     # Collect all data points
     all_points = []
     colors = plt.cm.Set3(np.linspace(0, 1, 12))  # For different models
     model_to_color = {}
     color_idx = 0
-    
+
     for language in analysis_data:
         for test_type in analysis_data[language]:
             for model, data in analysis_data[language][test_type].items():
                 if model not in model_to_color:
                     model_to_color[model] = colors[color_idx % len(colors)]
                     color_idx += 1
-                
+
                 all_points.append({
                     'model': model,
                     'language': language,
@@ -3549,315 +3226,78 @@ def create_pareto_scatter(analysis_data: Dict, outdir: Path, charts: Dict):
                     'n': data['n'],
                     'color': model_to_color[model]
                 })
-    
+
     if not all_points:
         return
-    
+
     # Create scatter plot
     fig, ax = plt.subplots(figsize=(14, 10))
-    
+
     # Plot points
     for point in all_points:
-        ax.scatter(point['latency'], point['accuracy'], 
-                  s=100 + point['cost']*50000,  # Size by cost
-                  c=[point['color']], alpha=0.7, edgecolors='black', linewidth=0.5,
-                  label=point['model'] if point['model'] not in [p.get_label() for p in ax.get_children()] else "")
-    
+        ax.scatter(point['latency'], point['accuracy'],
+                   s=100 + point['cost'] * 50000,  # Size by cost
+                   c=[point['color']], alpha=0.7, edgecolors='black', linewidth=0.5,
+                   label=point['model'] if point['model'] not in [p.get_label() for p in ax.get_children()] else "")
+
     # Calculate and plot Pareto frontier
     pareto_points = []
     for point in all_points:
         is_pareto = True
         for other in all_points:
-            if (other['accuracy'] >= point['accuracy'] and other['latency'] <= point['latency'] and 
-                not (other['accuracy'] == point['accuracy'] and other['latency'] == point['latency'])):
+            if (other['accuracy'] >= point['accuracy'] and other['latency'] <= point['latency'] and
+                    not (other['accuracy'] == point['accuracy'] and other['latency'] == point['latency'])):
                 is_pareto = False
                 break
         if is_pareto:
             pareto_points.append(point)
-    
+
     if pareto_points:
         # Sort Pareto points by latency for line drawing
         pareto_points.sort(key=lambda x: x['latency'])
         pareto_x = [p['latency'] for p in pareto_points]
         pareto_y = [p['accuracy'] for p in pareto_points]
-        
+
         ax.plot(pareto_x, pareto_y, 'r--', linewidth=2, alpha=0.8, label='Pareto Frontier')
-        
+
         # Label Pareto points
         for point in pareto_points:
-            ax.annotate(f"{point['model']}\n({point['language']}/{point['test_type']})", 
-                       (point['latency'], point['accuracy']),
-                       xytext=(5, 5), textcoords='offset points', fontsize=8,
-                       bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.7))
-    
+            ax.annotate(f"{point['model']}\n({point['language']}/{point['test_type']})",
+                        (point['latency'], point['accuracy']),
+                        xytext=(5, 5), textcoords='offset points', fontsize=8,
+                        bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.7))
+
     ax.set_xlabel('Average Response Time (seconds)')
     ax.set_ylabel('Security Detection Accuracy (%)')
     ax.set_title('Model Performance: Accuracy vs Latency with Pareto Frontier\n(Bubble size = Cost per test)')
     ax.grid(True, alpha=0.3)
-    
+
     # Create custom legend
     handles, labels = ax.get_legend_handles_labels()
     # Remove duplicates
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1), loc='upper left')
-    
+
     plt.tight_layout()
-    chart_path = outdir / "pareto_scatter_analysis.png" 
+    chart_path = outdir / "pareto_scatter_analysis.png"
     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
     plt.close()
     charts["pareto_scatter"] = str(chart_path)
 
-def generate_quality_first_executive_summary(analysis_data: Dict, outdir: Path) -> Dict[str, str]:
-    """Generate executive summary prioritizing accuracy, completeness, coverage over cost."""
-
-    executive_summary = """# 🛡️ Quality-First LLM Security Analysis Executive Summary
-
-## Methodology Overview
-**Quality-First Score (QFS)**: Accuracy⁰·⁵ × Completeness⁰·³ × Coverage⁰·¹⁵ ×
-Reliability⁰·⁰⁵ / (1 + 0.15×CostNormalized)
-
-- **Accuracy**: Mean detection score (0-1)
-- **Completeness**: % of tests achieving ≥80% detection
-- **Coverage**: % of tests achieving ≥50% detection
-- **Reliability**: 1 - (Empty + Timeout rates)
-- **Cost is secondary**: Light penalty only, never dominates quality metrics
-
----
-
-## Executive Recommendations by Programming Language
-
-"""
-
-    # Generate recommendations for each language
-    for language in sorted(analysis_data.keys()):
-        if language == 'Other':
-            continue
-
-        executive_summary += f"### {language}\n\n"
-
-        # Aggregate all test types for this language
-        all_models_lang = {}
-        for test_type in analysis_data[language]:
-            for model, data in analysis_data[language][test_type].items():
-                if model not in all_models_lang:
-                    all_models_lang[model] = {
-                        'total_n': 0, 'weighted_qfs': 0, 'weighted_accuracy': 0,
-                        'weighted_completeness': 0, 'min_reliability': 1.0, 'max_latency': 0,
-                        'avg_cost': 0, 'test_types': []
-                    }
-
-                # Weight by sample size
-                n = data['n']
-                all_models_lang[model]['total_n'] += n
-                all_models_lang[model]['weighted_qfs'] += data['qfs'] * n
-                all_models_lang[model]['weighted_accuracy'] += data['mean_score'] * n
-                all_models_lang[model]['weighted_completeness'] += data['completeness'] * n
-                min_rel = all_models_lang[model]['min_reliability']
-                all_models_lang[model]['min_reliability'] = min(min_rel, data['reliability'])
-                max_lat = all_models_lang[model]['max_latency']
-                all_models_lang[model]['max_latency'] = max(max_lat, data['mean_time'])
-                all_models_lang[model]['avg_cost'] += data['cost_per_test']
-                all_models_lang[model]['test_types'].append(test_type)
-
-        # Finalize weighted averages
-        for model in all_models_lang:
-            if all_models_lang[model]['total_n'] > 0:
-                total_n = all_models_lang[model]['total_n']
-                all_models_lang[model]['weighted_qfs'] /= total_n
-                all_models_lang[model]['weighted_accuracy'] /= total_n
-                all_models_lang[model]['weighted_completeness'] /= total_n
-                test_types_count = len(all_models_lang[model]['test_types'])
-                all_models_lang[model]['avg_cost'] /= test_types_count
-
-        # Sort models by QFS for recommendations
-        sorted_models = sorted(all_models_lang.items(),
-                              key=lambda x: x[1]['weighted_qfs'], reverse=True)
-
-        if not sorted_models:
-            continue
-
-        # Recommended (best QFS)
-        recommended = sorted_models[0]
-        executive_summary += f"**🏆 Recommended**: {recommended[0]}\n"
-        executive_summary += f"- Quality-First Score: {recommended[1]['weighted_qfs']:.3f}\n"
-        acc = recommended[1]['weighted_accuracy']
-        comp = recommended[1]['weighted_completeness']
-        executive_summary += f"- Accuracy: {acc:.1%}, Completeness: {comp:.1%}\n"
-        rel = recommended[1]['min_reliability']
-        lat = recommended[1]['max_latency']
-        executive_summary += f"- Reliability: {rel:.1%}, Max Latency: {lat:.1f}s\n"
-        executive_summary += f"- Cost: ${recommended[1]['avg_cost']:.5f}/test\n\n"
-        # Runner-up (if different and within reasonable range)
-        if len(sorted_models) > 1:
-            runner_up = sorted_models[1]
-            rec_qfs = recommended[1]['weighted_qfs']
-            run_qfs = runner_up[1]['weighted_qfs']
-            qfs_diff = (rec_qfs - run_qfs) / rec_qfs
-            if qfs_diff < 0.1:  # Within 10%
-                executive_summary += f"**🥈 Runner-up**: {runner_up[0]} (within 10% QFS)\n"
-                executive_summary += f"- Quality-First Score: {runner_up[1]['weighted_qfs']:.3f}\n"
-                run_acc = runner_up[1]['weighted_accuracy']
-                run_comp = runner_up[1]['weighted_completeness']
-                executive_summary += f"- Accuracy: {run_acc:.1%}, Completeness: {run_comp:.1%}\n\n"
-
-        # Budget option (lowest cost with acceptable quality)
-        budget_candidates = [(model, data) for model, data in sorted_models
-                            if (data['weighted_accuracy'] >= 0.6 and
-                                data['min_reliability'] >= 0.8)]
-        if budget_candidates:
-            budget_option = min(budget_candidates, key=lambda x: x[1]['avg_cost'])
-            executive_summary += f"**💰 Budget**: {budget_option[0]}\n"
-            executive_summary += f"- Lowest cost with ≥60% accuracy and ≥80% reliability\n"
-            budget_cost = budget_option[1]['avg_cost']
-            budget_acc = budget_option[1]['weighted_accuracy']
-            executive_summary += f"- Cost: ${budget_cost:.5f}/test, Accuracy: {budget_acc:.1%}\n\n"
-
-        # Fastest acceptable (lowest latency with good quality)
-        fast_candidates = [(model, data) for model, data in sorted_models
-                          if (data['weighted_accuracy'] >= 0.65 and
-                              data['min_reliability'] >= 0.85)]
-        if fast_candidates:
-            fastest_option = min(fast_candidates, key=lambda x: x[1]['max_latency'])
-            executive_summary += f"**⚡ Fastest Acceptable**: {fastest_option[0]}\n"
-            executive_summary += f"- Lowest latency with ≥65% accuracy and ≥85% reliability\n"
-            fastest_lat = fastest_option[1]['max_latency']
-            fastest_acc = fastest_option[1]['weighted_accuracy']
-            executive_summary += f"- Max Latency: {fastest_lat:.1f}s, "
-            executive_summary += f"Accuracy: {fastest_acc:.1%}\n\n"
-
-        executive_summary += "---\n\n"
-
-    # Overall conclusions
-    executive_summary += """## Key Insights
-
-### Quality-First Ranking Changes
-- **Cost-driven models** (ultra-cheap with mediocre accuracy) no longer dominate rankings
-- **High-accuracy models** now properly recognized despite higher costs
-- **Completeness metrics** reveal which models consistently deliver good detection (≥80%)
-- **Coverage metrics** identify models with broad but shallow detection capabilities
-
-### Recommendation Hierarchy
-1. **Accuracy** (50% weight): Primary security effectiveness measure
-2. **Completeness** (30% weight): Consistency of good detection
-3. **Coverage** (15% weight): Breadth of at least basic detection
-4. **Reliability** (5% weight): Operational stability
-5. **Cost** (light penalty): Secondary optimization factor
-
-### Decision Framework
-- **High-stakes security reviews**: Choose "Recommended" models regardless of cost
-- **Balanced CI/CD integration**: Consider "Runner-up" for cost savings within 10% quality
-- **High-volume scanning**: Use "Budget" options with explicit quality thresholds
-- **Real-time applications**: Select "Fastest Acceptable" with quality floors
-
----
-*Built by the Rapticore Security Research Team - Quality-first security analysis*
-"""
-
-    # Write executive summary
-    with open(outdir / "quality_first_executive_summary.md", "w", encoding="utf-8") as f:
-        f.write(executive_summary)
-
-    # 6. Accuracy and Timing Analysis  
-    # Extract all unique models from analysis_data
-    all_models_set = set()
-    model_stats = {}
-    for language in analysis_data:
-        for test_type in analysis_data[language]:
-            for model, data in analysis_data[language][test_type].items():
-                all_models_set.add(model)
-                if model not in model_stats:
-                    model_stats[model] = {'scores': [], 'times': [], 'costs': []}
-                model_stats[model]['scores'].append(data['mean_score'])
-                model_stats[model]['times'].append(data['mean_time'])
-                model_stats[model]['costs'].append(data['cost_per_test'])
-    
-    models_list = sorted(all_models_set)
-    
-    # Calculate aggregate stats per model
-    performance_by_model = {}
-    for model in models_list:
-        if model in model_stats:
-            stats = model_stats[model]
-            performance_by_model[model] = type('obj', (object,), {
-                'avg_score': np.mean(stats['scores']) if stats['scores'] else 0,
-                'avg_response_time': np.mean(stats['times']) if stats['times'] else 0,
-                'cost_per_test': np.mean(stats['costs']) if stats['costs'] else 0
-            })()
-    
-    if not performance_by_model:
-        return {}
-        
-    charts_created = {}
-    
-    try:
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
-        
-        # Accuracy Distribution
-        all_scores = [performance_by_model[m].avg_score * 100 for m in models_list]
-        ax1.hist(all_scores, bins=10, alpha=0.7, color='skyblue', edgecolor='navy')
-        ax1.axvline(np.mean(all_scores), color='red', linestyle='--', label=f'Mean: {np.mean(all_scores):.1f}%')
-        ax1.set_xlabel('Security Score (%)')
-        ax1.set_ylabel('Number of Models')
-        ax1.set_title('Security Score Distribution')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-        
-        # Timing Distribution
-        all_times = [performance_by_model[m].avg_response_time for m in models_list]
-        ax2.hist(all_times, bins=10, alpha=0.7, color='lightgreen', edgecolor='darkgreen')
-        ax2.axvline(np.mean(all_times), color='red', linestyle='--', label=f'Mean: {np.mean(all_times):.1f}s')
-        ax2.set_xlabel('Response Time (seconds)')
-        ax2.set_ylabel('Number of Models')
-        ax2.set_title('Response Time Distribution')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
-        
-        # Cost vs Performance Efficiency
-        costs = [performance_by_model[m].cost_per_test for m in models_list]
-        scores = [performance_by_model[m].avg_score for m in models_list]
-        
-        # Calculate efficiency as score per dollar
-        efficiency = [s/c if c > 0 else 0 for s, c in zip(scores, costs)]
-        
-        # Generate colors for models
-        model_colors = plt.cm.Set3(np.linspace(0, 1, len(models_list)))
-        
-        bars = ax3.bar(models_list, efficiency, color=model_colors, alpha=0.8)
-        ax3.set_ylabel('Security Points per Dollar')
-        ax3.set_title('Basic Cost Efficiency\n(Score ÷ Cost per Test)')
-        ax3.tick_params(axis='x', rotation=45)
-        ax3.grid(True, alpha=0.3, axis='y')
-        
-        # Add value labels on bars
-        for bar, eff in zip(bars, efficiency):
-            height = bar.get_height()
-            ax3.text(bar.get_x() + bar.get_width()/2., height + max(efficiency)*0.01,
-                    f'{eff:.0f}', ha='center', va='bottom', fontsize=9)
-        
-        plt.tight_layout()
-        chart_path = outdir / "accuracy_timing_analysis.png"
-        plt.savefig(chart_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        charts_created["accuracy_timing_analysis"] = str(chart_path)
-        
-    except Exception as e:
-        print(f"⚠️  Accuracy and timing analysis chart failed: {e}")
-
-    return charts_created
 
 def generate_text_performance_summary(results: List[EnhancedRunResult], models: List[str], outdir: Path) -> None:
     """Generate text-based performance summary (complements visual charts when available)."""
-    
+
     # Calculate performance by model
     performance_by_model = {}
     for model in models:
         model_results = [r for r in results if r.model == model]
         if model_results:
             performance_by_model[model] = ModelPerformance.from_results(model, model_results)
-    
+
     if not performance_by_model:
         return
-    
+
     # Create text-based performance report
     report = f"""# 📊 Performance Analysis Summary
 
@@ -3868,16 +3308,16 @@ def generate_text_performance_summary(results: List[EnhancedRunResult], models: 
 ## Model Performance Comparison
 
 """
-    
+
     # Sort models by average score
     sorted_models = sorted(performance_by_model.items(), key=lambda x: x[1].avg_score, reverse=True)
-    
+
     for i, (model, perf) in enumerate(sorted_models, 1):
         # Create simple text "bars" 
         score_bar = "█" * int(perf.avg_score * 20) + "░" * (20 - int(perf.avg_score * 20))
         cost_eff_normalized = min(perf.cost_effectiveness / 100, 20)  # Normalize for display
         cost_bar = "█" * int(cost_eff_normalized) + "░" * (20 - int(cost_eff_normalized))
-        
+
         report += f"""
 ### {i}. {model}
 
@@ -3900,7 +3340,7 @@ def generate_text_performance_summary(results: List[EnhancedRunResult], models: 
     best_accuracy = max(performance_by_model.values(), key=lambda p: p.avg_score)
     best_value = max(performance_by_model.values(), key=lambda p: p.cost_effectiveness)
     fastest = max(performance_by_model.values(), key=lambda p: p.speed_score)
-    
+
     report += f"""
 
 ## 🏆 Top Performers Summary
@@ -3930,19 +3370,20 @@ pip install matplotlib seaborn pandas numpy
 ---
 *Generated by LLM Security Benchmark - Built by Rapticore Security Research Team*
 """
-    
+
     # Write the text-based report
     with open(outdir / "performance_summary.txt", "w", encoding="utf-8") as f:
         f.write(report)
-        
+
     print(f"✓ Text-based performance summary: {outdir}/performance_summary.txt")
+
 
 # ------------------------ Enhanced Console Output -------------------------
 def print_enhanced_summary(results: List[EnhancedRunResult], models: List[str]) -> None:
     """Print enhanced console summary with business metrics."""
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"📊 ENHANCED SECURITY BENCHMARK SUMMARY")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Performance by model
     performance_by_model = {}
@@ -3956,7 +3397,8 @@ def print_enhanced_summary(results: List[EnhancedRunResult], models: List[str]) 
         return
 
     # Header
-    print(f"\n{'Model':<20} {'Tests':<8} {'Success':<9} {'Avg Score':<10} {'Time(s)':<9} {'Total Cost':<12} {'In/Out Tokens':<15} {'Good/Total':<10}")
+    print(
+        f"\n{'Model':<20} {'Tests':<8} {'Success':<9} {'Avg Score':<10} {'Time(s)':<9} {'Total Cost':<12} {'In/Out Tokens':<15} {'Good/Total':<10}")
     print("-" * 115)
 
     # Model performance
@@ -3964,7 +3406,7 @@ def print_enhanced_summary(results: List[EnhancedRunResult], models: List[str]) 
         quality_dist = f"{perf.good_scores}/{perf.total_tests}"
         token_info = f"{perf.total_input_tokens}/{perf.total_output_tokens}"
         cost_str = f"${perf.total_cost:.4f}" if perf.total_cost > 0 else "$0.0000"
-        
+
         print(f"{model:<20} {perf.successful_tests:>3}/{perf.total_tests:<3} "
               f"{perf.success_rate:>6.1%} {perf.avg_score:>9.3f} "
               f"{perf.avg_response_time:>8.2f} {cost_str:>11} "
@@ -3979,69 +3421,71 @@ def print_enhanced_summary(results: List[EnhancedRunResult], models: List[str]) 
     total_cost_all = sum(perf.total_cost for perf in performance_by_model.values())
     total_tests_all = sum(len([r for r in results if r.model == model]) for model in models)
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"🏆 Best Accuracy: {best_accuracy.model_name} (Score: {best_accuracy.avg_score:.3f})")
     print(f"💰 Best Value: {best_value.model_name} (Quality-Aware CE: {best_value.cost_effectiveness:.1f})")
     print(f"⚡ Fastest: {fastest.model_name} (Time: {fastest.avg_response_time:.2f}s)")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"")
     print(f"💰 TOTAL COST THIS RUN: ${total_cost_all:.4f}")
     print(f"📊 Total Tests Executed: {total_tests_all:,}")
-    print(f"📈 Average Cost per Test: ${total_cost_all/total_tests_all:.6f}")
+    print(f"📈 Average Cost per Test: ${total_cost_all / total_tests_all:.6f}")
     print(f"")
     print(f"⚠️  NOTE: This benchmark uses paid API services")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
+
 
 # ------------------------ Main Enhanced Benchmark Function -------------------------
 def regenerate_reports(results_dir: str, args):
     """Regenerate reports and analysis from existing benchmark results."""
     import pandas as pd
-    
+
     results_path = Path(results_dir)
     if not results_path.exists():
         print(f"❌ Results directory not found: {results_dir}")
         return
-    
+
     detailed_csv = results_path / "detailed_results.csv"
     if not detailed_csv.exists():
         print(f"❌ detailed_results.csv not found in {results_dir}")
         return
-    
+
     print(f"🔄 Regenerating reports from: {results_dir}")
-    
+
     # Load existing results
     try:
         df = pd.read_csv(detailed_csv)
         print(f"✓ Loaded {len(df)} test results")
-        
+
         # Fix duplicates issue: Remove duplicate entries for deepseek-chat and grok-3
         print(f"🔍 Checking for duplicate model entries...")
-        
+
         # Count tests per model
         model_counts = df['model_name'].value_counts()
         duplicated_models = model_counts[model_counts > 25].index.tolist()
-        
+
         if duplicated_models:
             print(f"⚠️  Found duplicated models: {duplicated_models}")
             print(f"   Removing duplicate entries to ensure each model has exactly 25 tests")
-            
+
             # Keep only first 25 tests for each duplicated model
             cleaned_rows = []
             for model in df['model_name'].unique():
                 model_data = df[df['model_name'] == model]
                 if len(model_data) > 25:
-                    print(f"   - {model}: {len(model_data)} tests → 25 tests (removing {len(model_data) - 25} duplicates)")
+                    print(
+                        f"   - {model}: {len(model_data)} tests → 25 tests (removing {len(model_data) - 25} duplicates)")
                     model_data = model_data.head(25)
                 cleaned_rows.append(model_data)
-            
+
             df = pd.concat(cleaned_rows, ignore_index=True)
             print(f"✓ Cleaned dataset: {len(df)} tests across {len(df['model_name'].unique())} models")
-            
+
             # Save cleaned results
             cleaned_csv = results_path / "detailed_results.csv"
             df.to_csv(cleaned_csv, index=False)
             print(f"✓ Saved cleaned results to: {cleaned_csv}")
-        
+
         # Convert back to EnhancedRunResult objects
         all_results = []
         for _, row in df.iterrows():
@@ -4063,42 +3507,45 @@ def regenerate_reports(results_dir: str, args):
             result.criteria_missed = int(row['criteria_missed']) if pd.notna(row['criteria_missed']) else 0
             result.must_not_violations = int(row['violations']) if pd.notna(row['violations']) else 0
             all_results.append(result)
-        
+
         # Get unique models
         models = df['model_name'].unique().tolist()
         print(f"📊 Models found: {models}")
-        
+
         # Regenerate all reports
         outdir = results_path
-        
+
         print(f"📋 Regenerating executive summary...")
         try:
-            generate_executive_summary(all_results, models, outdir)
-            print(f"✓ Executive summary: {outdir}/executive_summary.md")
+            if UNIFIED_EXECUTIVE_AVAILABLE:
+                generate_unified_executive_summary(all_results, models, "regenerated", Path(outdir))
+                print(f"✓ Executive Summary: {outdir}/executive_summary.md")
+            else:
+                print(f"⚠️ Unified executive summary not available")
         except Exception as e:
             print(f"❌ Executive summary failed: {e}")
-        
+
         print(f"📈 Regenerating performance analysis...")
         try:
             generate_performance_analysis(all_results, models, outdir)
             print(f"✓ Performance analysis: {outdir}/performance_analysis.json")
         except Exception as e:
             print(f"❌ Performance analysis failed: {e}")
-        
+
         print(f"📊 Regenerating language-specific analysis...")
         try:
             generate_language_analysis(all_results, models, outdir)
             print(f"✓ Language analysis: {outdir}/language_performance.json")
         except Exception as e:
             print(f"❌ Language analysis failed: {e}")
-        
+
         # Check if enhanced visualization is available
         try:
             import matplotlib.pyplot as plt
             enhanced_available = True
         except ImportError:
             enhanced_available = False
-        
+
         if enhanced_available:
             print(f"📈 Regenerating visualization charts...")
             try:
@@ -4108,18 +3555,19 @@ def regenerate_reports(results_dir: str, args):
                     print(f"   - {Path(chart_path).name}")
             except Exception as e:
                 print(f"❌ Chart generation failed: {e}")
-        
+
         print(f"\n🎉 Reports regenerated successfully!")
         print(f"📁 Updated reports in: {outdir}")
-        
+
     except Exception as e:
         print(f"❌ Failed to regenerate reports: {e}")
         import traceback
         traceback.print_exc()
 
+
 def generate_language_analysis(all_results: List[EnhancedRunResult], models: List[str], outdir: Path):
     """Generate analysis of model performance by test categories/languages."""
-    
+
     # Group tests by category
     test_categories = {
         "SQL Injection": ["sql_injection_simple", "sql_injection_complex", "nosql_injection"],
@@ -4132,14 +3580,14 @@ def generate_language_analysis(all_results: List[EnhancedRunResult], models: Lis
         "Business Logic": ["race_condition", "price_manipulation"],
         "OWASP Knowledge": ["owasp_top10_complete", "owasp_top3"]
     }
-    
+
     # Calculate performance by category for each model
     performance_by_category = {}
-    
+
     for model in models:
         model_results = [r for r in all_results if r.model == model]
         performance_by_category[model] = {}
-        
+
         for category, tests in test_categories.items():
             category_results = [r for r in model_results if r.suite_id in tests]
             if category_results:
@@ -4151,7 +3599,7 @@ def generate_language_analysis(all_results: List[EnhancedRunResult], models: Lis
                     "test_count": len(category_results),
                     "perfect_scores": sum(1 for r in category_results if r.score >= 1.0)
                 }
-    
+
     # Save analysis
     analysis_path = outdir / "language_performance.json"
     with open(analysis_path, 'w') as f:
@@ -4160,12 +3608,18 @@ def generate_language_analysis(all_results: List[EnhancedRunResult], models: Lis
             "performance_by_category": performance_by_category,
             "category_summary": {
                 category: {
-                    "best_model": max(models, key=lambda m: performance_by_category.get(m, {}).get(category, {}).get("avg_score", 0)),
-                    "avg_score_across_models": round(sum(performance_by_category.get(m, {}).get(category, {}).get("avg_score", 0) for m in models) / len(models), 3),
-                    "models_with_perfect_scores": [m for m in models if performance_by_category.get(m, {}).get(category, {}).get("perfect_scores", 0) > 0]
+                    "best_model": max(models, key=lambda m: performance_by_category.get(m, {}).get(category, {}).get(
+                        "avg_score", 0)),
+                    "avg_score_across_models": round(sum(
+                        performance_by_category.get(m, {}).get(category, {}).get("avg_score", 0) for m in models) / len(
+                        models), 3),
+                    "models_with_perfect_scores": [m for m in models if
+                                                   performance_by_category.get(m, {}).get(category, {}).get(
+                                                       "perfect_scores", 0) > 0]
                 } for category in test_categories.keys()
             }
         }, f, indent=2)
+
 
 def main():
     """Enhanced main function with comprehensive model support."""
@@ -4205,7 +3659,7 @@ Examples:
                         help="Custom pricing override")
     parser.add_argument("--show-responses", action="store_true",
                         help="Show detailed response analysis for manual validation")
-    parser.add_argument("--response-format", type=str, default="detailed", 
+    parser.add_argument("--response-format", type=str, default="detailed",
                         choices=["summary", "detailed", "full"],
                         help="Response display format: summary (compact), detailed (default), full (everything)")
     parser.add_argument("--concurrent", action="store_true", default=True,
@@ -4222,7 +3676,7 @@ Examples:
                         help="JSON output file path")
 
     args = parser.parse_args()
-    
+
     # Handle regenerate mode
     if args.regenerate:
         regenerate_reports(args.regenerate, args)
@@ -4291,10 +3745,10 @@ Examples:
         """Check which models are actually available based on initialized clients."""
         available_models = []
         unavailable_models = []
-        
+
         for model in models_to_check:
             is_available = False
-            
+
             # Check OpenAI models
             if model.startswith("gpt-") and "openai" in clients:
                 is_available = True
@@ -4326,12 +3780,12 @@ Examples:
                         is_available = model_name in ollama_models
                 except Exception:
                     is_available = False
-            
+
             if is_available:
                 available_models.append(model)
             else:
                 unavailable_models.append(model)
-        
+
         return available_models, unavailable_models
 
     # Parse model selection
@@ -4362,11 +3816,11 @@ Examples:
     # Check model availability and filter automatically
     print("\n🔍 Checking model availability...")
     available_models, unavailable_models = check_model_availability(models)
-    
+
     if unavailable_models:
         print(f"⚠️  Skipping unavailable models: {', '.join(unavailable_models)}")
         setup_instructions = []
-        
+
         for model in unavailable_models:
             if model.startswith("ollama/"):
                 model_name = model.split("/", 1)[1]
@@ -4377,29 +3831,33 @@ Examples:
                 setup_instructions.append("Add XAI_API_KEY to .env file (get key from https://console.x.ai/)")
             elif model.startswith("deepseek-"):
                 print(f"   - {model}: DEEPSEEK_API_KEY not configured")
-                setup_instructions.append("Add DEEPSEEK_API_KEY to .env file (get key from https://platform.deepseek.com/)")
+                setup_instructions.append(
+                    "Add DEEPSEEK_API_KEY to .env file (get key from https://platform.deepseek.com/)")
             elif model.startswith("llama-"):
                 print(f"   - {model}: LLAMA_API_KEY not configured")
                 setup_instructions.append("Add LLAMA_API_KEY to .env file")
             elif model.startswith("gpt-"):
                 print(f"   - {model}: OPENAI_API_KEY not configured")
-                setup_instructions.append("Add OPENAI_API_KEY to .env file (get key from https://platform.openai.com/api-keys)")
+                setup_instructions.append(
+                    "Add OPENAI_API_KEY to .env file (get key from https://platform.openai.com/api-keys)")
             elif model.startswith("claude-"):
-                print(f"   - {model}: ANTHROPIC_API_KEY not configured") 
-                setup_instructions.append("Add ANTHROPIC_API_KEY to .env file (get key from https://console.anthropic.com/)")
+                print(f"   - {model}: ANTHROPIC_API_KEY not configured")
+                setup_instructions.append(
+                    "Add ANTHROPIC_API_KEY to .env file (get key from https://console.anthropic.com/)")
             elif model.startswith("gemini-"):
                 print(f"   - {model}: GEMINI_API_KEY not configured")
-                setup_instructions.append("Add GEMINI_API_KEY to .env file (get key from https://aistudio.google.com/app/apikey)")
+                setup_instructions.append(
+                    "Add GEMINI_API_KEY to .env file (get key from https://aistudio.google.com/app/apikey)")
             else:
                 print(f"   - {model}: No API key configured")
-        
+
         if setup_instructions:
             print(f"\n💡 To use these models:")
             for instruction in list(set(setup_instructions))[:3]:  # Show max 3 unique instructions
                 print(f"   • {instruction}")
             if len(set(setup_instructions)) > 3:
                 print("   • See NEW_MODELS_GUIDE.md for complete setup instructions")
-    
+
     if not available_models:
         print("\n❌ No models are available for testing!")
         print("💡 To fix this:")
@@ -4407,11 +3865,11 @@ Examples:
         print("   2. Install and start Ollama for local models")
         print("   3. Pull required Ollama models (e.g., 'ollama pull llama3.3')")
         sys.exit(1)
-    
+
     # Use only available models
     models = available_models
     print(f"✅ Testing available models: {', '.join(models)}")
-    
+
     suite = load_suite(args.suite)
 
     if not suite:
@@ -4426,21 +3884,22 @@ Examples:
 
     print(f"\n🔍 Enhanced Multi-LLM Security Benchmark")
     print(f"Built by the Rapticore Security Research Team")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"Models: {', '.join(models)}")
     print(f"Suite: {args.suite} ({len(suite)} test cases)")
     print(f"Output: {outdir}")
     print(f"")
     print(f"🎯 Feature Status:")
     print(f"   ✓ Executive reporting: Always enabled")
-    print(f"   ✓ Performance analysis: Always enabled") 
-    print(f"   {'✓' if VISUALIZATION_AVAILABLE else '❌'} Visualization charts: {'Enabled' if VISUALIZATION_AVAILABLE else 'Disabled - install matplotlib'}")
+    print(f"   ✓ Performance analysis: Always enabled")
+    print(
+        f"   {'✓' if VISUALIZATION_AVAILABLE else '❌'} Visualization charts: {'Enabled' if VISUALIZATION_AVAILABLE else 'Disabled - install matplotlib'}")
     print(f"   📊 Enhanced data capture: Will be checked...")
     print(f"   📈 Enhanced reporting: Will be checked...")
     if args.show_responses:
         print(f"   🔍 Response analysis: Enabled ({args.response_format} format)")
         print(f"       Use --response-format to change: summary|detailed|full")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Run benchmark
     all_results = []
@@ -4450,7 +3909,7 @@ Examples:
     if args.concurrent:
         # Concurrent execution for faster benchmarks
         print(f"🚀 Running concurrent benchmarks with max {args.max_workers} workers...")
-        
+
         # Build list of all tasks
         tasks = []
         for i, test_case in enumerate(suite, 1):
@@ -4458,39 +3917,39 @@ Examples:
             prompt = test_case["prompt"]
             want_json = test_case.get("json", False) or args.json
             sys_msg = sys_msg_json if want_json else sys_msg_default
-            
+
             for model in models:
                 tasks.append((clients, suite_id, model, sys_msg, prompt, args.timeout, want_json, pricing))
-        
+
         print(f"📊 Total tasks to execute: {len(tasks)} ({len(models)} models × {len(suite)} tests)")
-        
+
         # Execute tasks concurrently
         completed_tasks = 0
         with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
             # Submit all tasks
             future_to_task = {
-                executor.submit(run_single_test_concurrent, *task): task 
+                executor.submit(run_single_test_concurrent, *task): task
                 for task in tasks
             }
-            
+
             # Collect results as they complete
             for future in as_completed(future_to_task):
                 try:
                     model, suite_id, result = future.result()
                     completed_tasks += 1
-                    
+
                     # Find the test case for scoring BEFORE displaying progress
                     test_case = None
                     for tc in suite:
                         if tc["id"] == suite_id:
                             test_case = tc
                             break
-                    
+
                     # Initialize variables for all paths
                     criteria_met = []
                     criteria_missed = []
                     violations = []
-                    
+
                     # Process scoring for successful results BEFORE progress display
                     if result.ok and test_case:
                         criteria = test_case.get("criteria", [])
@@ -4503,7 +3962,7 @@ Examples:
                         result.criteria_met = criteria_met
                         result.criteria_missed = criteria_missed
                         result.must_not_violations = violations
-                    
+
                     # Show progress with correct score
                     print(f"✓ {model:<15} {suite_id:<25} | {completed_tasks}/{len(tasks)} ", end="")
                     if result.ok:
@@ -4514,13 +3973,13 @@ Examples:
                         # Enhanced response display for concurrent execution
                         if args.show_responses:
                             display_response_analysis(
-                                suite_id, model, result, test_case, 
-                                criteria_met, criteria_missed, violations, 
+                                suite_id, model, result, test_case,
+                                criteria_met, criteria_missed, violations,
                                 args.response_format
                             )
-                    
+
                     all_results.append(result)
-                    
+
                 except Exception as e:
                     print(f"❌ Task execution error: {e}")
                     completed_tasks += 1
@@ -4562,8 +4021,8 @@ Examples:
 
                     if args.show_responses:
                         display_response_analysis(
-                            suite_id, model, result, test_case, 
-                            criteria_met, criteria_missed, violations, 
+                            suite_id, model, result, test_case,
+                            criteria_met, criteria_missed, violations,
                             args.response_format
                         )
 
@@ -4588,11 +4047,11 @@ Examples:
             print(f"✓ Generated {len(charts)} performance charts")
             for chart_name, chart_path in charts.items():
                 print(f"   - {chart_name}: {Path(chart_path).name}")
-            
+
             # Also generate text summary as additional analysis when charts are available
             print("📊 Generating additional text-based performance analysis...")
             generate_text_performance_summary(all_results, models, outdir)
-            
+
         else:
             if not VISUALIZATION_AVAILABLE:
                 print("⚠️  Visual charts unavailable: Missing visualization libraries")
@@ -4621,20 +4080,10 @@ Examples:
         except Exception as e:
             print(f"❌ Improved chart generation failed: {e}")
 
-    # Consolidated enhanced reporting integration
+    # Enhanced data capture integration
     try:
-        from consolidated_reporting_enhanced import (
-            ConsolidatedEnhancedReporter,
-            calculate_enhanced_cost_effectiveness, analyze_by_language,
-            analyze_by_owasp_category, export_to_csv, export_to_json
-        )
+        from data_capture import EnhancedDataCapture
 
-        # Enhanced data capture integration
-        from enhanced_data_capture import EnhancedDataCapture
-
-        # Initialize consolidated reporter
-        consolidated_reporter = ConsolidatedEnhancedReporter()
-        
         # Initialize data capture system
         data_capture = EnhancedDataCapture(outdir.parent, session_id=f"benchmark_{outdir.name.split('_')[-1]}")
         print(f"✅ Enhanced data capture: ENABLED")
@@ -4642,14 +4091,13 @@ Examples:
         print(f"   Raw data exports: JSON, CSV, Pickle, Compressed")
 
         ENHANCED_CAPTURE_AVAILABLE = True
-        print(f"✅ Consolidated enhanced reporting: ENABLED")
+        print(f"✅ Enhanced reporting: ENABLED")
         print(f"   Advanced cost-effectiveness calculations")
         print(f"   Language and OWASP category analysis")
         print(f"   Multi-format exports (CSV, JSON, Markdown)")
-        print(f"   Consolidated reporting with anti-gaming measures")
 
     except ImportError as e:
-        print(f"❌ Consolidated enhanced reporting/capture modules not available!")
+        print(f"❌ Enhanced reporting/capture modules not available!")
         print(f"   Missing dependencies: {e}")
         print(f"   Install with: pip install -r requirements.txt")
         print(f"   Running with basic reporting only...")
@@ -4659,36 +4107,74 @@ Examples:
     if 'enhanced_metrics' not in locals():
         enhanced_metrics = {}
 
-    if ENHANCED_CAPTURE_AVAILABLE:
-        # Calculate enhanced metrics for all models
+    if ENHANCED_CAPTURE_AVAILABLE and EXECUTIVE_SUMMARY_AVAILABLE:
+        # Initialize enhanced unified reporter
+        reporter = EnhancedUnifiedReporter()
+        
+        # Calculate enhanced metrics for all models using available functions
         for model in models:
-            enhanced_metrics[model] = calculate_enhanced_cost_effectiveness(all_results, model)
+            model_results = [r for r in all_results if r.model == model]
+            if model_results:
+                # Calculate basic enhanced metrics
+                perf = ModelPerformance.from_results(model, model_results)
+                enhanced_metrics[model] = {
+                    'total_tests': perf.total_tests,
+                    'successful_tests': perf.successful_tests,
+                    'avg_score': perf.avg_score,
+                    'total_cost': perf.total_cost,
+                    'cost_per_test': perf.cost_per_test
+                }
 
-        # Language and OWASP analysis
-        language_results = analyze_by_language(all_results, outdir)
-        owasp_results = analyze_by_owasp_category(all_results, outdir)
+        # Language and OWASP analysis using the reporter
+        try:
+            language_results = reporter.analyze_by_language(all_results)
+            owasp_results = reporter.analyze_by_owasp_category(all_results)
+            print(f"✓ Language analysis: {len(language_results)} languages")
+            print(f"✓ OWASP analysis: {len(owasp_results)} categories")
+        except Exception as e:
+            print(f"⚠️ Language/OWASP analysis failed: {e}")
+            language_results = {}
+            owasp_results = {}
 
-        # Generate additional charts
+        # Generate additional charts if available
         lang_chart = None
         owasp_chart = None
-        if VISUALIZATION_AVAILABLE and charts is not None:
-            lang_chart = generate_language_effectiveness_chart_from_dict(language_results, outdir)
-            owasp_chart = generate_owasp_effectiveness_chart(owasp_results, outdir)
-        if lang_chart:
-            charts['language_effectiveness'] = lang_chart
-        if owasp_chart:
-            charts['owasp_effectiveness'] = owasp_chart
+        if IMPROVED_CHARTS_AVAILABLE and charts is not None:
+            try:
+                # Generate language effectiveness chart
+                lang_chart = generate_language_effectiveness_chart_from_dict(language_results, outdir)
+                if lang_chart:
+                    charts['language_effectiveness'] = lang_chart
+            except Exception as e:
+                print(f"⚠️ Language chart generation failed: {e}")
+            
+            try:
+                # Generate OWASP effectiveness chart
+                owasp_chart = generate_owasp_effectiveness_chart(owasp_results, outdir)
+                if owasp_chart:
+                    charts['owasp_effectiveness'] = owasp_chart
+            except Exception as e:
+                print(f"⚠️ OWASP chart generation failed: {e}")
 
-        # Export to multiple formats
-        csv_path = export_to_csv(all_results, models, enhanced_metrics, outdir)
-        json_path = export_to_json(all_results, models, enhanced_metrics, language_results, owasp_results, outdir)
-        # DISABLED: Legacy enhanced_analysis_report.md uses old cost-effectiveness calculations
-        # md_path = generate_enhanced_markdown_report(all_results, models, enhanced_metrics,
-        #                                            language_results, owasp_results, outdir)
+        # Export to CSV and JSON using the reporter
+        try:
+            # Create ModelPerformance objects for each model
+            performance_by_model = {}
+            for model in models:
+                model_results = [r for r in all_results if r.model == model]
+                if model_results:
+                    performance_by_model[model] = ModelPerformance.from_results(model, model_results)
+            
+            csv_path = reporter.export_to_csv(all_results, models, performance_by_model, outdir)
+            json_path = reporter.export_to_json(all_results, models, performance_by_model, language_results, owasp_results, outdir)
+            print(f"✓ Enhanced CSV export: {Path(csv_path).name}")
+            print(f"✓ Enhanced JSON analysis: {Path(json_path).name}")
+        except Exception as e:
+            print(f"⚠️ CSV/JSON export failed: {e}")
+            import traceback
+            traceback.print_exc()
 
-        print(f"✓ Enhanced CSV export: {Path(csv_path).name}")
-        print(f"✓ Enhanced JSON analysis: {Path(json_path).name}")
-        print(f"⚠️ Legacy enhanced_analysis_report.md disabled (used problematic cost calculations)")
+        print(f"✓ Enhanced metrics calculated for {len(enhanced_metrics)} models")
 
         if VISUALIZATION_AVAILABLE:
             additional_charts = 0
@@ -4713,8 +4199,10 @@ Examples:
                     'suite': result.suite_id,
                     'category': 'security',
                     'vulnerability_type': 'unknown',  # Could be enhanced with test suite parsing
-                    'prompt': f"Test case: {result.suite_id}",  # Descriptive placeholder since original prompt not stored
-                    'criteria': (getattr(result, 'criteria_met', None) or []) + (getattr(result, 'criteria_missed', None) or []),
+                    'prompt': f"Test case: {result.suite_id}",
+                    # Descriptive placeholder since original prompt not stored
+                    'criteria': (getattr(result, 'criteria_met', None) or []) + (
+                                getattr(result, 'criteria_missed', None) or []),
                     'must_not': getattr(result, 'must_not_violations', None) or [],
                     'points': 1.0,
                     'tags': []
@@ -4782,156 +4270,56 @@ Examples:
         else:
             print("⚠ Enhanced data capture not available - install psutil for comprehensive data capture")
 
-    # Generate executive summary (always enabled)
+    # Generate executive summary
     print(f"📋 Generating executive summary...")
     try:
-        generate_executive_summary(all_results, models, args.suite, outdir, charts, enhanced_metrics)
-        print(f"✓ Executive summary: {outdir}/executive_summary.md")
+        if EXECUTIVE_SUMMARY_AVAILABLE:
+            # Calculate total cost
+            total_cost = sum(r.cost_usd for r in all_results if r.cost_usd is not None)
+
+            # Generate enhanced unified executive summary
+            summary_path = generate_enhanced_unified_executive_summary(
+                results=all_results,
+                models=models,
+                suite_name=args.suite,
+                outdir=outdir,
+                charts=charts,
+                enhanced_metrics=enhanced_metrics,
+                total_cost=total_cost
+            )
+            print(f"✓ Executive summary: {summary_path}")
+        else:
+            print(f"⚠️ Executive summary not available")
     except Exception as e:
         print(f"❌ Executive summary generation failed: {e}")
-        print(f"   Attempting to generate basic executive summary...")
-        try:
-            # Generate basic executive summary without enhanced features
-            generate_basic_executive_summary(all_results, models, args.suite, outdir)
-            print(f"✓ Basic executive summary: {outdir}/basic_executive_summary.md")
-        except Exception as e2:
-            print(f"❌ Basic executive summary also failed: {e2}")
-    
-    # Generate comprehensive executive summary (replaces all other executive summaries)
-    if AGGRESSIVE_FIXES_AVAILABLE:
-        print(f"📋 Generating comprehensive executive summary (consolidates all reporting)...")
-        try:
-            # Create ConsolidatedModelAnalysis objects for comprehensive reporting
-            from consolidated_reporting_enhanced import ConsolidatedModelAnalysis, EnhancedMetrics
-            
-            model_analyses = []
-            for model in models:
-                model_results = [r for r in all_results if r.model == model]
-                if model_results:
-                    perf = ModelPerformance.from_results(model, model_results)
-                    
-                    # Create enhanced metrics
-                    enhanced_metrics = EnhancedMetrics(
-                        total_tests=perf.total_tests,
-                        successful_tests=perf.successful_tests,
-                        failed_tests=perf.total_tests - perf.successful_tests,
-                        perfect_scores=len([r for r in model_results if r.ok and r.score == 1.0]),
-                        excellent_scores=len([r for r in model_results if r.ok and r.score >= 0.8]),
-                        good_scores=len([r for r in model_results if r.ok and r.score >= 0.6]),
-                        fair_scores=len([r for r in model_results if r.ok and r.score >= 0.4]),
-                        poor_scores=len([r for r in model_results if r.ok and r.score < 0.4]),
-                        total_cost=perf.total_cost,
-                        cost_per_test=perf.cost_per_test,
-                        cost_per_correct_answer=perf.total_cost / max(1, len([r for r in model_results if r.ok and r.score == 1.0])),
-                        cost_per_partial_answer=perf.total_cost / max(1, perf.successful_tests),
-                        traditional_effectiveness=perf.avg_score / max(0.001, perf.cost_per_test),
-                        quality_weighted_effectiveness=perf.avg_score * 0.8 / max(0.001, perf.cost_per_test),
-                        penalty_adjusted_effectiveness=perf.avg_score * 0.9 / max(0.001, perf.cost_per_test)
-                    )
-                    
-                    # Determine cost efficiency tier
-                    if perf.cost_per_test < 0.001:
-                        cost_efficiency_tier = 'budget'
-                    elif perf.cost_per_test < 0.01:
-                        cost_efficiency_tier = 'balanced'
-                    else:
-                        cost_efficiency_tier = 'premium'
-                    
-                    # Determine recommended use cases
-                    recommended_use_cases = []
-                    if perf.avg_score >= 0.9:
-                        recommended_use_cases.append('Enterprise Security')
-                    if perf.cost_per_test < 0.005:
-                        recommended_use_cases.append('High-Volume Analysis')
-                    if perf.avg_response_time < 5.0:
-                        recommended_use_cases.append('Real-Time Processing')
-                    if not recommended_use_cases:
-                        recommended_use_cases.append('General Purpose')
-                    
-                    # Determine limitations
-                    limitations = []
-                    if perf.avg_score < 0.8:
-                        limitations.append('Low accuracy')
-                    if perf.success_rate < 0.95:
-                        limitations.append('Unreliable responses')
-                    if perf.avg_response_time > 15.0:
-                        limitations.append('Slow response time')
-                    if perf.cost_per_test > 0.02:
-                        limitations.append('High cost')
-                    
-                    model_analysis = ConsolidatedModelAnalysis(
-                        model_name=model,
-                        accuracy_score=perf.avg_score,
-                        response_time=perf.avg_response_time,
-                        cost_per_test=perf.cost_per_test,
-                        total_tests=perf.total_tests,
-                        success_rate=perf.success_rate,
-                        meets_accuracy_threshold=perf.avg_score >= 0.8,
-                        cost_efficiency_tier=cost_efficiency_tier,
-                        reliability_score=perf.success_rate,  # Use success rate as reliability score
-                        evaluation_notes=[],  # Empty list for now
-                        recommended_use_cases=recommended_use_cases,
-                        limitations=limitations,
-                        enhanced_metrics=enhanced_metrics
-                    )
-                    model_analyses.append(model_analysis)
-            
-            # Calculate total cost for comprehensive summary
-            total_cost = sum(perf.total_cost for perf in 
-                           [ModelPerformance.from_results(model, [r for r in all_results if r.model == model]) 
-                            for model in models if [r for r in all_results if r.model == model]])
-            
-            # Get test types from results
-            test_types = list(set(r.suite_id for r in all_results))
-            
-            comprehensive_summary = generate_comprehensive_executive_summary(
-                model_analyses, language_results, owasp_results, total_cost, test_types, outdir
+        import traceback
+        traceback.print_exc()
+
+    # Generate technical report
+    print(f"📋 Generating technical report...")
+    try:
+        if TECHNICAL_REPORTER_AVAILABLE:
+            # Calculate total cost
+            total_cost = sum(r.cost_usd for r in all_results if r.cost_usd is not None)
+
+            # Generate engineering technical report
+            technical_path = generate_engineering_technical_report(
+                results=all_results,
+                models=models,
+                suite_name=args.suite,
+                outdir=outdir,
+                total_cost=total_cost
             )
-            
-            print(f"✓ Comprehensive executive summary: {outdir}/COMPREHENSIVE_EXECUTIVE_SUMMARY.md")
-            print("  🎯 This single report replaces all previous executive summaries")
-            print("  📁 Previous reports archived to archived_reports/ folder")
-            
-        except Exception as e:
-            print(f"❌ Comprehensive executive summary generation failed: {e}")
-            print("  📄 Falling back to standard executive summary generation")
-    
-    # Generate enhanced executive summary (quality-first methodology)
-    if ENHANCED_EXECUTIVE_SUMMARY_AVAILABLE:
-        print(f"📊 Generating enhanced executive summary (quality-first methodology)...")
-        try:
-            # Configure quality gates and thresholds
-            quality_gate = QualityGate(
-                accuracy_min=0.80,
-                success_min=0.98
-            )
-            speed_targets = SpeedTargets(
-                p95_triage_s=10.0,
-                p95_ci_s=20.0
-            )
-            cost_caps = CostCaps(
-                triage_max_usd=0.01
-            )
-            fairness = FairnessSettings(
-                require_equal_counts=True,
-                min_tests_per_slice=30
-            )
-            
-            enhanced_summary_path = create_enhanced_executive_summary(
-                all_results, models, outdir, quality_gate, speed_targets, cost_caps, fairness
-            )
-            
-            print(f"✓ Enhanced executive summary: {outdir}/ENHANCED_EXECUTIVE_SUMMARY.md")
-            print("  🎯 Quality-first methodology with strict thresholds")
-            print("  📊 Tiered recommendations with always-recommend rule")
-            print("  🔍 Comprehensive analysis with nearest-fit fallbacks")
-            
-        except Exception as e:
-            print(f"❌ Enhanced executive summary generation failed: {e}")
-            print("  📄 Using standard executive summary only")
-    else:
-        print("⚠️ Enhanced executive summary not available - using standard summary only")
-    
+            print(f"✓ Technical report: {technical_path}")
+        else:
+            print(f"⚠️ Technical reporter not available")
+    except Exception as e:
+        print(f"❌ Technical report generation failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+
     # Generate performance analysis (always enabled)
     print(f"📈 Generating performance analysis...")
     try:
@@ -4953,26 +4341,28 @@ Examples:
                     "models_tested": len(models),
                     "pass_rate": sum(1 for r in all_results if r.score > 0.5) / len(all_results) if all_results else 0,
                     "average_score": sum(r.score for r in all_results) / len(all_results) if all_results else 0,
-                    "total_cost": sum(r.cost_usd for r in all_results if r.cost_usd) if any(r.cost_usd for r in all_results) else 0
+                    "total_cost": sum(r.cost_usd for r in all_results if r.cost_usd) if any(
+                        r.cost_usd for r in all_results) else 0
                 }
             }, f, indent=2)
         print(f"✓ JSON output: {output_path}")
 
     print(f"\n📊 Generated Reports & Analysis:")
-    print(f"   📋 Executive summary: {outdir}/executive_summary.md")
+    print(f"   📋 Executive summary: {outdir}/enhanced_executive_summary.md")
+    print(f"   🔧 Technical report: {outdir}/technical_analysis_report.md")
     print(f"   📈 Performance analysis: {outdir}/performance_analysis.json")
     print(f"   📄 Detailed results: {outdir}/enhanced_benchmark_results.json")
-    
+
     if charts:
         print(f"   🎯 Visualization charts: {len(charts)} files")
         for chart_name, chart_path in charts.items():
             print(f"      - {Path(chart_path).name}")
-    
+
     if ENHANCED_CAPTURE_AVAILABLE:
         print(f"   💾 Raw data exports: Multiple formats for advanced analysis")
         print(f"   📊 Enhanced CSV/JSON reports with cost-effectiveness analysis")
         print(f"   📈 Language and OWASP category breakdowns")
-    
+
     # Generate QFS audit-compliant reports if available
     if QFS_AUDIT_AVAILABLE:
         print(f"\n🔍 Generating QFS audit-compliant analysis...")
@@ -4982,21 +4372,22 @@ Examples:
             changelog_path = outdir / "qfs_audit_changelog.md"
             with open(changelog_path, 'w') as f:
                 f.write(changelog)
-            
+
             print(f"✅ QFS audit reports generated:")
             print(f"   🔧 Audit Changelog: {changelog_path.name}")
             print(f"   📊 Methodologically consistent QFS calculations applied")
             print(f"   📈 Quality-first ranking (accuracy → completeness → coverage)")
             print(f"   💰 Cost as secondary factor (light penalty, never dominates)")
-                
+
         except Exception as e:
             print(f"⚠️  QFS audit report generation failed: {e}")
-    
+
     print(f"\n🎉 Comprehensive benchmark complete!")
     print(f"📁 All results saved to: {outdir}")
     print(f"💡 For advanced analysis, see the raw data exports and CSV files")
     if QFS_AUDIT_AVAILABLE:
         print(f"🔍 Quality-First Score methodology applied - prioritizing accuracy over cost")
+
 
 if __name__ == "__main__":
     main()
