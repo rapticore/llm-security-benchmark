@@ -21,18 +21,17 @@ Usage examples:
   python3 enhanced_multi_llm_benchmark.py --show-responses  # Show full responses in console
 """
 
-import os
-import sys
-import re
-import time
-import json
-import csv
 import argparse
-import textwrap
+import csv
+import json
+import os
+import re
+import sys
+import time
 from dataclasses import dataclass, asdict
-from typing import Optional, Any, Tuple, List, Dict
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Optional, Any, Tuple, List, Dict
 
 from dotenv import load_dotenv
 
@@ -87,7 +86,8 @@ DEFAULT_SUITE_FILES = {
     "dynamic_languages": ["python", "javascript", "ruby", "php"],
     "functional": ["haskell", "rust"],
     "enterprise": ["java", "csharp", "comprehensive"],
-    "all_languages": ["basic", "go", "cpp", "java", "csharp", "c", "ruby", "php", "rust", "haskell", "python", "javascript"]
+    "all_languages": ["basic", "go", "cpp", "java", "csharp", "c", "ruby", "php", "rust", "haskell", "python",
+                      "javascript"]
 }
 
 # Enhanced BUILTIN_SUITE for Comprehensive Security Testing
@@ -702,7 +702,7 @@ def score_text_detailed(text: str, criteria: List[str], must_not: List[str]) -> 
 def load_suite(path: Optional[str]) -> List[dict]:
     if not path:
         return BUILTIN_SUITE
-    
+
     with open(path, "r", encoding="utf-8") as f:
         if path.endswith('.yaml') or path.endswith('.yml'):
             import yaml
@@ -981,7 +981,7 @@ def main():
             best_value = max(
                 [m for m, stats in by_model.items() if stats["total_cost"] > 0],
                 key=lambda m: (by_model[m]["avg_score"] / max(by_model[m]["success"], 1)) / (
-                            by_model[m]["total_cost"] / by_model[m]["total"])
+                        by_model[m]["total_cost"] / by_model[m]["total"])
             )
 
         print(f"\n🏆 Best Accuracy: {best_accuracy}")
