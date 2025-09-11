@@ -38,7 +38,7 @@ DEEPSEEK_API_KEY=your_deepseek_key_here
 ### 3. Verify Installation
 
 ```bash
-python3 enhanced_multi_llm_benchmark.py --models gpt-4o-mini --suite basic
+python3 run_llm_benchmark.py --models gpt-4o-mini --suite basic
 ```
 
 You should see:

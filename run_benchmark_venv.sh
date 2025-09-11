@@ -25,7 +25,7 @@ echo "📦 Running benchmark with consolidated modules..."
 echo ""
 
 # Run the benchmark with all arguments passed through
-python enhanced_multi_llm_benchmark.py "$@"
+python run_llm_benchmark.py "$@"
 
 echo ""
 echo "🎉 Benchmark completed!"

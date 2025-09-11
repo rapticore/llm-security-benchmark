@@ -15,7 +15,7 @@ The `--show-responses` command provides detailed visibility into model responses
 ### Quick Summary View
 ```bash
 # Compact view for overview
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --show-responses --response-format summary
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini --show-responses --response-format summary
 ```
 
 **Output:**
@@ -28,7 +28,7 @@ python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --show
 ### Detailed Analysis (Default)
 ```bash
 # Balanced view with key details
-python3 enhanced_multi_llm_benchmark.py --suite basic --models claude-sonnet-4 --show-responses --response-format detailed
+python3 run_llm_benchmark.py --suite basic --models claude-sonnet-4 --show-responses --response-format detailed
 ```
 
 **Output:**
@@ -63,7 +63,7 @@ python3 enhanced_multi_llm_benchmark.py --suite basic --models claude-sonnet-4 -
 ### Complete Full Analysis  
 ```bash
 # Maximum detail for thorough review
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4 --show-responses --response-format full
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4 --show-responses --response-format full
 ```
 
 **Output:**
@@ -108,14 +108,14 @@ python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini,claude
 
 ### 1. **Run with Summary for Overview**
 ```bash
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4 --show-responses --response-format summary
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4 --show-responses --response-format summary
 ```
 - Quickly identify scores and obvious issues
 - Spot models with unexpected performance
 
 ### 2. **Detailed Analysis for Investigation**
 ```bash  
-python3 enhanced_multi_llm_benchmark.py --suite basic --models claude-sonnet-4 --show-responses --response-format detailed
+python3 run_llm_benchmark.py --suite basic --models claude-sonnet-4 --show-responses --response-format detailed
 ```
 - Review specific test cases with unusual scores
 - Understand model reasoning patterns
@@ -123,7 +123,7 @@ python3 enhanced_multi_llm_benchmark.py --suite basic --models claude-sonnet-4 -
 
 ### 3. **Full Analysis for Deep Dive**
 ```bash
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --show-responses --response-format full --timeout 15
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini --show-responses --response-format full --timeout 15
 ```
 - Complete audit of specific model responses
 - Debug scoring criteria effectiveness
@@ -156,25 +156,25 @@ python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --show
 ### **High Score Validation** ✅
 ```bash
 # Check if high scores are actually justified
-python3 enhanced_multi_llm_benchmark.py --suite basic --models gpt-4o --show-responses --response-format detailed | grep -A 20 "SCORE: [0-9]\.[8-9]"
+python3 run_llm_benchmark.py --suite basic --models gpt-4o --show-responses --response-format detailed | grep -A 20 "SCORE: [0-9]\.[8-9]"
 ```
 
 ### **Low Score Investigation** ❌
 ```bash  
 # Understand why scores are low
-python3 enhanced_multi_llm_benchmark.py --suite comprehensive --models claude-sonnet-4 --show-responses --response-format full | grep -A 30 "SCORE: 0\.[0-3]"
+python3 run_llm_benchmark.py --suite comprehensive --models claude-sonnet-4 --show-responses --response-format full | grep -A 30 "SCORE: 0\.[0-3]"
 ```
 
 ### **Must Not Violations** ⚠️
 ```bash
 # Find dangerous advice patterns
-python3 enhanced_multi_llm_benchmark.py --suite all --models premium --show-responses --response-format detailed | grep -B 5 -A 10 "VIOLATIONS"
+python3 run_llm_benchmark.py --suite all --models premium --show-responses --response-format detailed | grep -B 5 -A 10 "VIOLATIONS"
 ```
 
 ### **Model Comparison** 🤖
 ```bash
 # Compare responses for same test
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4,gemini-2.5-flash --show-responses --response-format detailed
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4,gemini-2.5-flash --show-responses --response-format detailed
 ```
 
 ## Advanced Usage
@@ -182,19 +182,19 @@ python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini,claude
 ### **Performance Monitoring**
 ```bash
 # Track model speed and cost efficiency
-python3 enhanced_multi_llm_benchmark.py --suite comprehensive --models fast --show-responses --response-format summary | grep "⏱️\|💰"
+python3 run_llm_benchmark.py --suite comprehensive --models fast --show-responses --response-format summary | grep "⏱️\|💰"
 ```
 
 ### **Criteria Effectiveness Analysis**
 ```bash
 # Identify poorly designed test criteria
-python3 enhanced_multi_llm_benchmark.py --suite all --models balanced --show-responses --response-format full | grep -B 2 -A 10 "CRITERIA MISSED"
+python3 run_llm_benchmark.py --suite all --models balanced --show-responses --response-format full | grep -B 2 -A 10 "CRITERIA MISSED"
 ```
 
 ### **Educational Review**
 ```bash  
 # Study security analysis patterns
-python3 enhanced_multi_llm_benchmark.py --suite owasp --models premium --show-responses --response-format detailed --timeout 20
+python3 run_llm_benchmark.py --suite owasp --models premium --show-responses --response-format detailed --timeout 20
 ```
 
 ## Tips for Effective Manual Validation

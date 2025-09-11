@@ -245,19 +245,19 @@ DEEPSEEK_API_KEY=sk-your_deepseek_key_here
 #### ⚡ Ultra-Fast Test (10-15 seconds)
 ```bash
 # Minimal viable benchmark - perfect for CI/CD
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini
 ```
 
 #### 🚀 Quick Quality Check (20-30 seconds)
 ```bash
 # Two models, essential security tests
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4
 ```
 
 #### ⚖️ Balanced Analysis (45-60 seconds)
 ```bash
 # More comprehensive with basic test suite
-python3 enhanced_multi_llm_benchmark.py --suite basic --models gpt-4o-mini,claude-sonnet-4
+python3 run_llm_benchmark.py --suite basic --models gpt-4o-mini,claude-sonnet-4
 ```
 
 ## 📊 Test Suites
@@ -305,7 +305,7 @@ python3 enhanced_multi_llm_benchmark.py --suite basic --models gpt-4o-mini,claud
 #### Ultra-Fast Development Testing
 ```bash
 # Perfect for development workflow
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite fast \
     --models gpt-4o-mini \
     --timeout 8 \
@@ -317,7 +317,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Test All X.AI Grok Models (Comprehensive)
 ```bash
 # Test all X.AI models with OWASP security suite
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models grok-4,grok-3,grok-3-mini,grok-code-fast-1 \
     --suite owasp \
     --show-responses \
@@ -332,7 +332,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Compare New Model Providers
 ```bash
 # Compare X.AI, DeepSeek, and traditional models
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models grok-3-mini,deepseek-chat,gpt-4o-mini,claude-sonnet-4 \
     --suite basic \
     --show-responses \
@@ -345,14 +345,14 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Local Models (Advanced Users)
 ```bash
 # Test local models (requires Ollama setup and model pulling)
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models local \
     --suite basic \
     --timeout 60 \
     --max-workers 1
 
 # Include both API and local models
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models all+local \
     --suite fast \
     --timeout 45
@@ -363,7 +363,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### CI/CD Pipeline Integration  
 ```bash
 # Optimized for continuous integration
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite basic \
     --models gpt-4o-mini,claude-sonnet-4 \
     --timeout 10 \
@@ -376,7 +376,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Quality Assurance Benchmark
 ```bash
 # Comprehensive but time-efficient
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite comprehensive \
     --models balanced \
     --timeout 12 \
@@ -390,7 +390,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Quick Response Overview
 ```bash
 # Compact summary for rapid validation
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite fast \
     --models gpt-4o-mini,claude-sonnet-4 \
     --show-responses \
@@ -400,7 +400,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Detailed Analysis
 ```bash
 # Standard manual validation workflow
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite basic \
     --models claude-sonnet-4 \
     --show-responses \
@@ -410,7 +410,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Deep Investigation
 ```bash
 # Complete response analysis for debugging
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite fast \
     --models gpt-4o-mini \
     --show-responses \
@@ -423,26 +423,26 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Language-Specific Security Testing
 ```bash
 # Test Python security knowledge
-python3 enhanced_multi_llm_benchmark.py --suite python --models premium
+python3 run_llm_benchmark.py --suite python --models premium
 
 # Compare web security across models
-python3 enhanced_multi_llm_benchmark.py --suite web_languages --models gpt-4o,claude-sonnet-4
+python3 run_llm_benchmark.py --suite web_languages --models gpt-4o,claude-sonnet-4
 
 # Systems programming security
-python3 enhanced_multi_llm_benchmark.py --suite systems_languages --models fast
+python3 run_llm_benchmark.py --suite systems_languages --models fast
 ```
 
 #### Cost Optimization
 ```bash
 # Minimum cost benchmark
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite fast \
     --models gpt-4o-mini \
     --timeout 5 \
     --max-workers 8
 
 # Balance cost and quality
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite basic \
     --models fast \
     --timeout 8
@@ -451,7 +451,7 @@ python3 enhanced_multi_llm_benchmark.py \
 #### Maximum Performance 
 ```bash
 # Fastest possible execution
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite fast \
     --models gpt-4o-mini \
     --timeout 5 \
@@ -601,7 +601,7 @@ The enhanced executive summary now includes:
 
 ### 🎯 Core Options
 ```bash
-python3 enhanced_multi_llm_benchmark.py [OPTIONS]
+python3 run_llm_benchmark.py [OPTIONS]
 
 # Model Selection
 --models MODEL_LIST          # gpt-4o-mini,claude-sonnet-4 (default)
@@ -708,7 +708,7 @@ Create `custom_tests.yaml`:
 
 Run with custom suite:
 ```bash
-python3 enhanced_multi_llm_benchmark.py --suite custom_tests.yaml --models fast
+python3 run_llm_benchmark.py --suite custom_tests.yaml --models fast
 ```
 
 ### 🔧 Environment Variables
@@ -733,13 +733,13 @@ ENABLE_CHARTS=true
 ### ✅ Functionality Tests
 ```bash
 # Test API connectivity
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --timeout 30
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini --timeout 30
 
 # Validate scoring system
-python3 enhanced_multi_llm_benchmark.py --suite basic --models gpt-4o-mini --show-responses --response-format detailed
+python3 run_llm_benchmark.py --suite basic --models gpt-4o-mini --show-responses --response-format detailed
 
 # Performance test
-time python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --max-workers 8
+time python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini --max-workers 8
 ```
 
 ### 🔍 Manual Validation Workflow
@@ -859,22 +859,22 @@ cat .env
 **❌ "Timeout errors"**
 ```bash  
 # Increase timeout for slow responses
-python3 enhanced_multi_llm_benchmark.py --timeout 20
+python3 run_llm_benchmark.py --timeout 20
 
 # Or use faster models
-python3 enhanced_multi_llm_benchmark.py --models fast
+python3 run_llm_benchmark.py --models fast
 ```
 
 **❌ "High API costs"**
 ```bash
 # Use optimized settings
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --timeout 8
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini --timeout 8
 ```
 
 **❌ "Slow execution"**
 ```bash
 # Enable maximum concurrency  
-python3 enhanced_multi_llm_benchmark.py --max-workers 8 --concurrent
+python3 run_llm_benchmark.py --max-workers 8 --concurrent
 ```
 
 ### Performance Tips

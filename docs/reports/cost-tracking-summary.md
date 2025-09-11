@@ -62,13 +62,13 @@ gpt-4o-mini         162/162  100.0%     0.592      8.40 $  0.0525
 **Cost-Aware Usage Examples:**
 ```bash
 # RECOMMENDED: Start with basic suite to estimate costs (~$0.01-1.00)
-python enhanced_multi_llm_benchmark.py --suite basic
+python run_llm_benchmark.py --suite basic
 
 # Test budget models first (~$0.05-2.00)
-python enhanced_multi_llm_benchmark.py --models "gpt-4o-mini,gemini-2.5-flash-lite" --suite basic
+python run_llm_benchmark.py --models "gpt-4o-mini,gemini-2.5-flash-lite" --suite basic
 
 # EXPENSIVE: Full comprehensive benchmark (~$50-200+)
-python enhanced_multi_llm_benchmark.py --models all --suite all
+python run_llm_benchmark.py --models all --suite all
 ```
 
 ### 4. Cost Monitoring Section

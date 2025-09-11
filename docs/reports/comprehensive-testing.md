@@ -49,7 +49,7 @@ This guide ensures objective, unbiased benchmarking by testing ALL available mod
 ### Full Model Comprehensive Test (Recommended for Research)
 ```bash
 # Test ALL available models - expect 30-60 minutes runtime
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models all \
     --suite comprehensive \
     --timeout 60 \
@@ -65,7 +65,7 @@ python3 enhanced_multi_llm_benchmark.py \
 ### Specific Provider Deep Dive
 ```bash
 # Test all X.AI Grok models comprehensively
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models grok-4,grok-3,grok-3-mini,grok-code-fast-1 \
     --suite comprehensive \
     --timeout 60 \
@@ -73,7 +73,7 @@ python3 enhanced_multi_llm_benchmark.py \
     --response-format detailed
 
 # Test all DeepSeek models
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models deepseek-reasoner,deepseek-chat \
     --suite comprehensive \
     --timeout 60 \
@@ -84,7 +84,7 @@ python3 enhanced_multi_llm_benchmark.py \
 ### Quick All-Model Comparison
 ```bash
 # Fast comparison across all models
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --models all \
     --suite fast \
     --timeout 45 \

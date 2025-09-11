@@ -18,7 +18,7 @@ Features:
 - Multi-dimensional benchmarking
 
 Usage:
-    python enhanced_multi_llm_benchmark.py --models "gpt-5,claude-opus-4,gemini-2.5-pro"
+    python run_llm_benchmark.py --models "gpt-5,claude-opus-4,gemini-2.5-pro"
 """
 import argparse
 import json
@@ -3697,19 +3697,19 @@ def main():
         epilog="""
 Examples:
   # Test all models on all test suites (comprehensive benchmark)
-  python enhanced_multi_llm_benchmark.py --models all --suite all
+  python run_llm_benchmark.py --models all --suite all
 
   # Test premium models on all available tests
-  python enhanced_multi_llm_benchmark.py --models premium --suite all
+  python run_llm_benchmark.py --models premium --suite all
 
   # Test balanced models on OWASP Top 10
-  python enhanced_multi_llm_benchmark.py --models balanced --suite owasp
+  python run_llm_benchmark.py --models balanced --suite owasp
 
   # Test fast/budget models on basic security tests
-  python enhanced_multi_llm_benchmark.py --models fast --suite basic
+  python run_llm_benchmark.py --models fast --suite basic
 
   # Custom model and suite selection with JSON export
-  python enhanced_multi_llm_benchmark.py --models "gpt-5,claude-opus-4" --suite web_dev --output results.json
+  python run_llm_benchmark.py --models "gpt-5,claude-opus-4" --suite web_dev --output results.json
         """
     )
 

@@ -50,7 +50,7 @@ The LLM Security Benchmark now supports additional model providers:
 
 3. **Test Connection:**
    ```bash
-   python3 enhanced_multi_llm_benchmark.py --models grok-4 --suite fast
+   python3 run_llm_benchmark.py --models grok-4 --suite fast
    ```
 
 ### DeepSeek Setup
@@ -68,10 +68,10 @@ The LLM Security Benchmark now supports additional model providers:
 3. **Test Connection:**
    ```bash
    # Test non-thinking mode (faster, cheaper)
-   python3 enhanced_multi_llm_benchmark.py --models deepseek-chat --suite fast --timeout 45
+   python3 run_llm_benchmark.py --models deepseek-chat --suite fast --timeout 45
    
    # Test thinking mode (advanced reasoning)
-   python3 enhanced_multi_llm_benchmark.py --models deepseek-reasoner --suite fast --timeout 45
+   python3 run_llm_benchmark.py --models deepseek-reasoner --suite fast --timeout 45
    ```
 
 4. **Model Details:**
@@ -94,7 +94,7 @@ The LLM Security Benchmark now supports additional model providers:
 
 3. **Test Connection:**
    ```bash
-   python3 enhanced_multi_llm_benchmark.py --models llama-3.3-70b --suite fast
+   python3 run_llm_benchmark.py --models llama-3.3-70b --suite fast
    ```
 
 ### Ollama Local Setup
@@ -133,7 +133,7 @@ The LLM Security Benchmark now supports additional model providers:
 
 5. **Test Connection:**
    ```bash
-   python3 enhanced_multi_llm_benchmark.py --models ollama/llama3.3 --suite fast
+   python3 run_llm_benchmark.py --models ollama/llama3.3 --suite fast
    ```
 
 ## 🚀 Usage Examples
@@ -141,37 +141,37 @@ The LLM Security Benchmark now supports additional model providers:
 ### Quick Model Category Tests
 ```bash
 # Test all new model categories
-python3 enhanced_multi_llm_benchmark.py --models premium --suite fast
+python3 run_llm_benchmark.py --models premium --suite fast
 
 # Test only local models (no API costs)
-python3 enhanced_multi_llm_benchmark.py --models local --suite basic
+python3 run_llm_benchmark.py --models local --suite basic
 
 # Test specific new models
-python3 enhanced_multi_llm_benchmark.py --models grok-beta,deepseek-v3,llama-3.3-70b --suite fast
+python3 run_llm_benchmark.py --models grok-beta,deepseek-v3,llama-3.3-70b --suite fast
 ```
 
 ### Local Model Benchmarks
 ```bash
 # Ultra-fast local testing (no API costs)
-python3 enhanced_multi_llm_benchmark.py --models ollama/llama3.3,ollama/deepseek-r1 --suite fast
+python3 run_llm_benchmark.py --models ollama/llama3.3,ollama/deepseek-r1 --suite fast
 
 # Comprehensive local analysis
-python3 enhanced_multi_llm_benchmark.py --models local --suite comprehensive --timeout 30
+python3 run_llm_benchmark.py --models local --suite comprehensive --timeout 30
 
 # Compare local vs API models
-python3 enhanced_multi_llm_benchmark.py --models gpt-4o-mini,ollama/llama3.3 --suite basic
+python3 run_llm_benchmark.py --models gpt-4o-mini,ollama/llama3.3 --suite basic
 ```
 
 ### Advanced Configurations
 ```bash
 # High-timeout for local models
-python3 enhanced_multi_llm_benchmark.py --models local --suite comprehensive --timeout 60
+python3 run_llm_benchmark.py --models local --suite comprehensive --timeout 60
 
 # Mixed API and local models
-python3 enhanced_multi_llm_benchmark.py --models gpt-4o-mini,claude-sonnet-4,ollama/llama3.3,deepseek-v3 --suite fast
+python3 run_llm_benchmark.py --models gpt-4o-mini,claude-sonnet-4,ollama/llama3.3,deepseek-v3 --suite fast
 
 # Cost comparison (free vs paid)
-python3 enhanced_multi_llm_benchmark.py --models ollama/llama3.3,gpt-4o-mini --suite basic --show-responses
+python3 run_llm_benchmark.py --models ollama/llama3.3,gpt-4o-mini --suite basic --show-responses
 ```
 
 ## 💰 Cost Analysis
@@ -216,25 +216,25 @@ python3 enhanced_multi_llm_benchmark.py --models ollama/llama3.3,gpt-4o-mini --s
 **🔬 Research & Development:**
 ```bash
 # Free experimentation
-python3 enhanced_multi_llm_benchmark.py --models local --suite comprehensive
+python3 run_llm_benchmark.py --models local --suite comprehensive
 ```
 
 **🏢 Production Security Scanning:**
 ```bash  
 # High accuracy with cost control
-python3 enhanced_multi_llm_benchmark.py --models deepseek-v3,grok-4 --suite comprehensive
+python3 run_llm_benchmark.py --models deepseek-v3,grok-4 --suite comprehensive
 ```
 
 **🚀 CI/CD Integration:**
 ```bash
 # Fast, reliable, low cost
-python3 enhanced_multi_llm_benchmark.py --models deepseek-chat,gpt-4o-mini --suite fast
+python3 run_llm_benchmark.py --models deepseek-chat,gpt-4o-mini --suite fast
 ```
 
 **🎓 Educational/Learning:**
 ```bash
 # Free local models with detailed analysis
-python3 enhanced_multi_llm_benchmark.py --models local --suite basic --show-responses --response-format full
+python3 run_llm_benchmark.py --models local --suite basic --show-responses --response-format full
 ```
 
 ## 🔧 Troubleshooting

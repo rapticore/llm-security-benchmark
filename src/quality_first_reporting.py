@@ -598,7 +598,7 @@ def main():
     """Run quality-first reporting on latest benchmark results."""
 
     # Find latest results
-    results_base = Path("benchmark_results")
+    results_base = Path("../benchmark_results")
     result_dirs = [d for d in results_base.iterdir() if d.is_dir() and d.name.startswith("enhanced_")]
     if not result_dirs:
         print("❌ No enhanced benchmark results found")

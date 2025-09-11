@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-enhanced_multi_llm_benchmark.py
+run_llm_benchmark.py
 Benchmark multiple LLM models (OpenAI GPT + Anthropic Claude) over a suite of security prompts.
 
 Built by the Rapticore Security Research Team.
@@ -13,12 +13,12 @@ Built by the Rapticore Security Research Team.
 - Outputs: JSON (raw+results), CSV, and Markdown summary in ./benchmark_results/<timestamp>/
 
 Usage examples:
-  python3 enhanced_multi_llm_benchmark.py
-  python3 enhanced_multi_llm_benchmark.py --json      # enforce JSON outputs in prompts
-  python3 enhanced_multi_llm_benchmark.py --models gpt-5,claude-sonnet-4,gpt-4o
-  python3 enhanced_multi_llm_benchmark.py --suite prompts.json
-  python3 enhanced_multi_llm_benchmark.py --pricing "gpt-4o:in=0.0025,out=0.01;claude-sonnet-4:in=0.003,out=0.015"
-  python3 enhanced_multi_llm_benchmark.py --show-responses  # Show full responses in console
+  python3 run_llm_benchmark.py
+  python3 run_llm_benchmark.py --json      # enforce JSON outputs in prompts
+  python3 run_llm_benchmark.py --models gpt-5,claude-sonnet-4,gpt-4o
+  python3 run_llm_benchmark.py --suite prompts.json
+  python3 run_llm_benchmark.py --pricing "gpt-4o:in=0.0025,out=0.01;claude-sonnet-4:in=0.003,out=0.015"
+  python3 run_llm_benchmark.py --show-responses  # Show full responses in console
 """
 
 import argparse

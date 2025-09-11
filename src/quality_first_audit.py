@@ -446,7 +446,7 @@ def run_quality_first_audit(results_dir: str = None) -> Dict[str, Any]:
 
     if not results_dir:
         # Find latest results
-        results_base = Path("benchmark_results")
+        results_base = Path("../benchmark_results")
         if not results_base.exists():
             raise ValueError("No benchmark_results directory found")
 

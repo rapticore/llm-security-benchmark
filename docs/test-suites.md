@@ -149,22 +149,22 @@ The LLM Security Benchmark includes a comprehensive collection of **226 security
 
 ```bash
 # Run basic security suite
-python enhanced_multi_llm_benchmark.py --suite basic
+python run_llm_benchmark.py --suite basic
 
 # Run language-specific suite
-python enhanced_multi_llm_benchmark.py --suite python
+python run_llm_benchmark.py --suite python
 
 # Run comprehensive assessment
-python enhanced_multi_llm_benchmark.py --suite comprehensive
+python run_llm_benchmark.py --suite comprehensive
 
 # Run OWASP Top 10 evaluation
-python enhanced_multi_llm_benchmark.py --suite owasp
+python run_llm_benchmark.py --suite owasp
 
 # Run custom suite file
-python enhanced_multi_llm_benchmark.py --suite test_suites/security_custom.yaml
+python run_llm_benchmark.py --suite test_suites/security_custom.yaml
 
 # Multiple models with specific suite
-python enhanced_multi_llm_benchmark.py --models gpt-4o,claude-sonnet-4 --suite comprehensive
+python run_llm_benchmark.py --models gpt-4o,claude-sonnet-4 --suite comprehensive
 ```
 
 ### **Predefined Suite Aliases**
@@ -275,10 +275,10 @@ must_not:
 python standardized_benchmark_runner.py --suite comprehensive
 
 # Quality validation with multiple models
-python enhanced_multi_llm_benchmark.py --models gpt-4o,claude-sonnet-4,deepseek-chat --suite basic
+python run_llm_benchmark.py --models gpt-4o,claude-sonnet-4,deepseek-chat --suite basic
 
 # Performance testing with fast suite
-python enhanced_multi_llm_benchmark.py --suite fast --timeout 10
+python run_llm_benchmark.py --suite fast --timeout 10
 ```
 
 ### **Quality Metrics**
@@ -316,28 +316,28 @@ python enhanced_multi_llm_benchmark.py --suite fast --timeout 10
 **Development Teams:**
 ```bash
 # Quick CI/CD security check
-python enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini
+python run_llm_benchmark.py --suite fast --models gpt-4o-mini
 
 # Comprehensive pre-release audit  
-python enhanced_multi_llm_benchmark.py --suite comprehensive --models claude-opus-4
+python run_llm_benchmark.py --suite comprehensive --models claude-opus-4
 ```
 
 **Security Teams:**
 ```bash
 # OWASP compliance validation
-python enhanced_multi_llm_benchmark.py --suite owasp --models gpt-5,claude-opus-4
+python run_llm_benchmark.py --suite owasp --models gpt-5,claude-opus-4
 
 # Multi-language security assessment
-python enhanced_multi_llm_benchmark.py --suite python,javascript,java --models multiple
+python run_llm_benchmark.py --suite python,javascript,java --models multiple
 ```
 
 **Research Teams:**
 ```bash
 # Model capability analysis
-python enhanced_multi_llm_benchmark.py --suite comprehensive --models all_available
+python run_llm_benchmark.py --suite comprehensive --models all_available
 
 # Vulnerability pattern studies
-python enhanced_multi_llm_benchmark.py --suite custom_research_suite --show-responses
+python run_llm_benchmark.py --suite custom_research_suite --show-responses
 ```
 
 ## 🔧 Technical Implementation

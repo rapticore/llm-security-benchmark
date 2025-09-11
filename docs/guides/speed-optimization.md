@@ -37,25 +37,25 @@
 ### Ultra-Fast (10-15 seconds)
 ```bash
 # Fast suite, single model, aggressive timeout
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini --timeout 8 --max-workers 4
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini --timeout 8 --max-workers 4
 ```
 
 ### Balanced Speed (20-30 seconds)
 ```bash
 # Fast suite, 2 models, default settings
-python3 enhanced_multi_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4
+python3 run_llm_benchmark.py --suite fast --models gpt-4o-mini,claude-sonnet-4
 ```
 
 ### Quick Quality Check (45-60 seconds)
 ```bash
 # Basic suite with optimizations
-python3 enhanced_multi_llm_benchmark.py --suite basic --models gpt-4o-mini,claude-sonnet-4 --timeout 8
+python3 run_llm_benchmark.py --suite basic --models gpt-4o-mini,claude-sonnet-4 --timeout 8
 ```
 
 ### Maximum Speed Settings
 ```bash
 # Minimal viable benchmark
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite fast \
     --models gpt-4o-mini \
     --timeout 5 \
@@ -110,7 +110,7 @@ python3 enhanced_multi_llm_benchmark.py \
 
 To use original slower but more comprehensive settings:
 ```bash
-python3 enhanced_multi_llm_benchmark.py \
+python3 run_llm_benchmark.py \
     --suite comprehensive \
     --models premium \
     --timeout 30 \

@@ -59,7 +59,7 @@ def run_standardized_benchmark(models=None, suite="comprehensive", timeout=300):
     models_str = ",".join(models)
 
     cmd = [
-        "python3", "enhanced_multi_llm_benchmark.py",
+        "python3", "run_llm_benchmark.py",
         "--models", models_str,
         "--suite", suite,
         "--timeout", str(timeout),
@@ -86,7 +86,7 @@ def run_standardized_benchmark(models=None, suite="comprehensive", timeout=300):
             print("\n✅ BENCHMARK COMPLETED SUCCESSFULLY")
 
             # Find the latest results directory
-            results_dirs = list(Path("benchmark_results").glob("enhanced_*"))
+            results_dirs = list(Path("../benchmark_results").glob("enhanced_*"))
             if results_dirs:
                 latest_dir = max(results_dirs, key=lambda x: x.stat().st_mtime)
                 print(f"📁 Results saved to: {latest_dir}")
