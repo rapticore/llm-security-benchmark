@@ -67,6 +67,20 @@ except ImportError as e:
     print(f"⚠️ Enhanced cost-effectiveness not available: {e}")
     print("   Using traditional cost-effectiveness calculations")
 
+# Import simplified policy modules
+try:
+    from simplified_config import get_config, update_config
+    from simplified_metrics import (
+        encode_row_simple, aggregate_slice_simple, 
+        calculate_percentages, breadth_coverage
+    )
+    SIMPLIFIED_POLICY_AVAILABLE = True
+    print("✅ Simplified policy modules loaded - using enhanced assessment framework")
+except ImportError as e:
+    SIMPLIFIED_POLICY_AVAILABLE = False
+    print(f"⚠️ Simplified policy modules not available: {e}")
+    print("   Using legacy assessment framework")
+
 # Import chart generation
 try:
     from chart_generation import (
@@ -2865,7 +2879,36 @@ def create_language_analysis(results: List[EnhancedRunResult], models: List[str]
                 # Calculate Quality-First Score (QFS) using audit-compliant methodology
                 cost_per_test = np.mean(costs) if len(costs) > 0 else 0.0
 
-                if QFS_AUDIT_AVAILABLE:
+                # Use simplified metrics if available and enabled
+                if SIMPLIFIED_POLICY_AVAILABLE and get_config().simple_mode:
+                    # Use simplified policy metrics
+                    from simplified_metrics import smoothed_rate, reliability_fixed, qfs_hybrid
+                    
+                    # Completeness with smoothing
+                    threshold = get_config().completeness_threshold
+                    k_complete = int(np.sum(scores >= threshold))
+                    completeness = smoothed_rate(
+                        k_complete, n,
+                        prior=get_config().completeness_prior,
+                        prior_total=get_config().completeness_prior_total
+                    )
+                    
+                    # Reliability with simplified calculation
+                    reliability = reliability_fixed(successes, times, get_config().get_timeout(test_type))
+                    
+                    # QFS without coverage (breadth coverage handled separately)
+                    qfs = qfs_hybrid(
+                        mean_score, completeness, 1.0, reliability,  # coverage = 1.0 (neutral)
+                        get_config().qfs_weights, epsilon=0.05
+                    )
+                    
+                    # Breadth coverage (optional)
+                    breadth_cov = np.nan  # Will be calculated separately if needed
+                    
+                    # Set coverage for compatibility with existing code
+                    coverage = 1.0  # Neutral coverage in simplified mode
+                    
+                elif QFS_AUDIT_AVAILABLE:
                     # Use centralized QFS configuration and functions
                     completeness = sum(1 for s in scores if s is not None and s >= CONFIG.COMPLETENESS_THRESHOLD) / n if n > 0 else 0
                     coverage = sum(1 for s in scores if s is not None and s >= CONFIG.COVERAGE_THRESHOLD) / n if n > 0 else 0
@@ -3009,16 +3052,32 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
                         reliability_matrix[i, j] = data.get('reliability', 0.0) * 100
                     else:
                         # Model has no data for this language/test_type combination
+                        # In simplified mode, show 0 instead of NaN
+                        if SIMPLIFIED_POLICY_AVAILABLE and get_config().simple_mode:
+                            accuracy_matrix[i, j] = 0.0
+                            completeness_matrix[i, j] = 0.0
+                            qfs_matrix[i, j] = 0.0
+                            reliability_matrix[i, j] = 0.0
+                        else:
+                            # Legacy mode - keep NaN for missing data
+                            accuracy_matrix[i, j] = np.nan
+                            completeness_matrix[i, j] = np.nan
+                            qfs_matrix[i, j] = np.nan
+                            reliability_matrix[i, j] = np.nan
+                else:
+                    # Language/test_type combination doesn't exist
+                    # In simplified mode, show 0 instead of NaN
+                    if SIMPLIFIED_POLICY_AVAILABLE and get_config().simple_mode:
                         accuracy_matrix[i, j] = 0.0
                         completeness_matrix[i, j] = 0.0
                         qfs_matrix[i, j] = 0.0
                         reliability_matrix[i, j] = 0.0
-                else:
-                    # Language/test_type combination doesn't exist
-                    accuracy_matrix[i, j] = 0.0
-                    completeness_matrix[i, j] = 0.0
-                    qfs_matrix[i, j] = 0.0
-                    reliability_matrix[i, j] = 0.0
+                    else:
+                        # Legacy mode - keep NaN for missing data
+                        accuracy_matrix[i, j] = np.nan
+                        completeness_matrix[i, j] = np.nan
+                        qfs_matrix[i, j] = np.nan
+                        reliability_matrix[i, j] = np.nan
 
         # Accuracy heatmap
         im1 = ax1.imshow(accuracy_matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
@@ -3040,13 +3099,22 @@ def create_language_test_heatmaps(analysis_data: Dict, outdir: Path, charts: Dic
                         # Defensive programming for missing fields
                         n = data.get('n', 0)
                         ci = data.get('score_ci_95', 0.0) * 100
-                        text = f"{accuracy_matrix[i, j]:.0f}%\n(n={n})\n±{ci:.1f}"
+                        
+                        # Add timeout indicator if enabled
+                        timeout_indicator = ""
+                        if SIMPLIFIED_POLICY_AVAILABLE and get_config().show_timeout_glyph:
+                            timeout_rate = data.get('timeout_rate', 0.0)
+                            if timeout_rate > 0:
+                                timeout_indicator = f"\n{get_config().timeout_glyph}"
+                        
+                        text = f"{accuracy_matrix[i, j]:.0f}%\n(n={n})\n±{ci:.1f}{timeout_indicator}"
                         ax1.text(j, i, text, ha='center', va='center',
                                  fontsize=8, color='black' if accuracy_matrix[i, j] < 50 else 'white')
                     else:
-                        # Show "N/A" for missing data
-                        ax1.text(j, i, "N/A", ha='center', va='center',
-                                 fontsize=8, color='gray')
+                        # Show "N/A" for missing data (only in legacy mode)
+                        if not (SIMPLIFIED_POLICY_AVAILABLE and get_config().simple_mode):
+                            ax1.text(j, i, "N/A", ha='center', va='center',
+                                     fontsize=8, color='gray')
                 elif not np.isnan(accuracy_matrix[i, j]) and accuracy_matrix[i, j] == 0:
                     # Show "0" for zero scores
                     ax1.text(j, i, "0%", ha='center', va='center',
@@ -3674,8 +3742,19 @@ Examples:
                         help="Regenerate reports from existing results directory")
     parser.add_argument("--output", type=str, default=None,
                         help="JSON output file path")
+    parser.add_argument("--simplified-mode", action="store_true", default=False,
+                        help="Enable simplified policy mode (treat all records as attempted, no N/A cells)")
 
     args = parser.parse_args()
+
+    # Configure simplified mode if requested
+    if args.simplified_mode and SIMPLIFIED_POLICY_AVAILABLE:
+        update_config(simple_mode=True)
+        print("✅ Simplified policy mode enabled - treating all records as attempted")
+    elif args.simplified_mode and not SIMPLIFIED_POLICY_AVAILABLE:
+        print("⚠️ Simplified policy mode requested but modules not available. Using legacy mode.")
+    elif SIMPLIFIED_POLICY_AVAILABLE:
+        print("ℹ️ Simplified policy modules available. Use --simplified-mode to enable.")
 
     # Handle regenerate mode
     if args.regenerate:
