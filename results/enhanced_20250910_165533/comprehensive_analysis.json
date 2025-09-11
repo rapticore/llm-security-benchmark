@@ -1,0 +1,1956 @@
+{
+  "metadata": {
+    "analysis_date": "2025-09-10T18:22:00.158390",
+    "total_models": 18,
+    "total_tests": 3798,
+    "analysis_type": "enhanced_unified_reporting_with_tiers",
+    "quality_framework": "graduated_tiers"
+  },
+  "quality_tier_summary": {
+    "below_standards": 13,
+    "minimum_viable": 3
+  },
+  "model_analysis": {
+    "gpt-5": {
+      "total_tests": 211,
+      "successful_tests": 205,
+      "avg_score": 0.39454976303317535,
+      "quality_tier": "below_standards",
+      "avg_response_time": 15.53844338005753,
+      "total_cost": 1.665594,
+      "cost_per_test": 0.007893810426540285,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 0.9715639810426541
+    },
+    "claude-opus-4": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.7273696682464454,
+      "quality_tier": "minimum_viable",
+      "avg_response_time": 20.687959280059236,
+      "total_cost": 22.129875,
+      "cost_per_test": 0.1048809241706161,
+      "meets_accuracy_threshold": true,
+      "cost_efficiency_tier": "Specialized Use Case",
+      "reliability_score": 1.0
+    },
+    "gemini-2.5-flash": {
+      "total_tests": 211,
+      "successful_tests": 20,
+      "avg_score": 0.05501579778830964,
+      "quality_tier": "below_standards",
+      "avg_response_time": 1.2515776462464536,
+      "total_cost": 0.0027903,
+      "cost_per_test": 1.3224170616113743e-05,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 0.0947867298578199
+    },
+    "grok-4": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.4218009478672986,
+      "quality_tier": "below_standards",
+      "avg_response_time": 20.25776903437212,
+      "total_cost": 1.672194,
+      "cost_per_test": 0.007925090047393364,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 1.0
+    },
+    "grok-3": {
+      "total_tests": 422,
+      "successful_tests": 422,
+      "avg_score": 0.6567535545023696,
+      "quality_tier": "below_standards",
+      "avg_response_time": 22.64158842857415,
+      "total_cost": 5.100453,
+      "cost_per_test": 0.012086381516587677,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Specialized Use Case",
+      "reliability_score": 1.0
+    },
+    "deepseek-reasoner": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.2947077409162717,
+      "quality_tier": "below_standards",
+      "avg_response_time": 25.71643038722576,
+      "total_cost": 0.28907415999999997,
+      "cost_per_test": 0.0013700197156398103,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 1.0
+    },
+    "deepseek-chat": {
+      "total_tests": 422,
+      "successful_tests": 422,
+      "avg_score": 0.4703593996840443,
+      "quality_tier": "below_standards",
+      "avg_response_time": 8.622727674895554,
+      "total_cost": 0.03106516,
+      "cost_per_test": 7.361412322274882e-05,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 1.0
+    },
+    "gpt-4o": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.663783570300158,
+      "quality_tier": "below_standards",
+      "avg_response_time": 10.877413060427841,
+      "total_cost": 1.48658,
+      "cost_per_test": 0.007045402843601896,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Specialized Use Case",
+      "reliability_score": 1.0
+    },
+    "claude-sonnet-4": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.7136848341232228,
+      "quality_tier": "minimum_viable",
+      "avg_response_time": 20.784221029959582,
+      "total_cost": 4.458165,
+      "cost_per_test": 0.021128744075829386,
+      "meets_accuracy_threshold": true,
+      "cost_efficiency_tier": "Specialized Use Case",
+      "reliability_score": 1.0
+    },
+    "gemini-2.0-flash": {
+      "total_tests": 211,
+      "successful_tests": 0,
+      "avg_score": 0.0,
+      "quality_tier": "below_standards",
+      "avg_response_time": 0.09725713051890875,
+      "total_cost": 0,
+      "cost_per_test": 0.0,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 0.0
+    },
+    "gpt-5-mini": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.5197867298578199,
+      "quality_tier": "below_standards",
+      "avg_response_time": 8.861642465772222,
+      "total_cost": 0.457135,
+      "cost_per_test": 0.0021665165876777253,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 1.0
+    },
+    "gpt-4o-mini": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.6617101105845182,
+      "quality_tier": "below_standards",
+      "avg_response_time": 14.465257957648326,
+      "total_cost": 0.1104498,
+      "cost_per_test": 0.0005234587677725119,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Budget Option (Cost-Conscious)",
+      "reliability_score": 1.0
+    },
+    "gemini-2.5-flash-lite": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.7132898894154818,
+      "quality_tier": "minimum_viable",
+      "avg_response_time": 5.6123621893155065,
+      "total_cost": 0.06838657499999999,
+      "cost_per_test": 0.00032410699052132696,
+      "meets_accuracy_threshold": true,
+      "cost_efficiency_tier": "Minimum Viable (Balanced Performance)",
+      "reliability_score": 1.0
+    },
+    "gemini-2.0-flash-lite": {
+      "total_tests": 211,
+      "successful_tests": 1,
+      "avg_score": 0.002843601895734597,
+      "quality_tier": "below_standards",
+      "avg_response_time": 0.1650565698813488,
+      "total_cost": 0.00032073749999999993,
+      "cost_per_test": 1.5200829383886253e-06,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 0.004739336492890996
+    },
+    "grok-3-mini": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.17511848341232228,
+      "quality_tier": "below_standards",
+      "avg_response_time": 12.634537650510598,
+      "total_cost": 0.0291037,
+      "cost_per_test": 0.00013793222748815167,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 1.0
+    },
+    "grok-code-fast-1": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "avg_score": 0.42731042654028434,
+      "quality_tier": "below_standards",
+      "avg_response_time": 6.097055295067376,
+      "total_cost": 0.1301284,
+      "cost_per_test": 0.0006167222748815166,
+      "meets_accuracy_threshold": false,
+      "cost_efficiency_tier": "Below Quality Standards",
+      "reliability_score": 1.0
+    }
+  },
+  "language_analysis": {
+    "General Security": {
+      "total_tests": 1241,
+      "avg_score": 0.5699973139940907,
+      "success_rate": 1.0,
+      "avg_cost": 0.011681998291700241,
+      "effectiveness": 48.79279210296231,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.5097052845528456,
+          "avg_cost": 8.849536585365854e-05,
+          "test_count": 164
+        },
+        "claude-opus-4": {
+          "avg_score": 0.7637195121951219,
+          "avg_cost": 0.1029951219512195,
+          "test_count": 82
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.7596036585365854,
+          "avg_cost": 0.020819634146341463,
+          "test_count": 82
+        },
+        "gpt-5": {
+          "avg_score": 0.4932098765432098,
+          "avg_cost": 0.007991222222222224,
+          "test_count": 81
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.6643939393939394,
+          "avg_cost": 0.00014650909090909093,
+          "test_count": 11
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7317581300813009,
+          "avg_cost": 0.00031977393292682924,
+          "test_count": 82
+        },
+        "grok-4": {
+          "avg_score": 0.4780487804878048,
+          "avg_cost": 0.008519890243902439,
+          "test_count": 82
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.5661585365853659,
+          "avg_cost": 0.002214548780487805,
+          "test_count": 82
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.6923272357723576,
+          "avg_cost": 0.0005166567073170731,
+          "test_count": 82
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.45685975609756097,
+          "avg_cost": 0.0006515731707317073,
+          "test_count": 82
+        },
+        "grok-3-mini": {
+          "avg_score": 0.2097560975609756,
+          "avg_cost": 0.00017290487804878048,
+          "test_count": 82
+        },
+        "grok-3": {
+          "avg_score": 0.6753048780487805,
+          "avg_cost": 0.011978579268292683,
+          "test_count": 164
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.2991869918699187,
+          "avg_cost": 0.0013923449999999997,
+          "test_count": 82
+        },
+        "gpt-4o": {
+          "avg_score": 0.7153455284552845,
+          "avg_cost": 0.007143140243902439,
+          "test_count": 82
+        },
+        "gemini-2.0-flash-lite": {
+          "avg_score": 0.6,
+          "avg_cost": 0.00032073749999999993,
+          "test_count": 1
+        }
+      }
+    },
+    "C/C++": {
+      "total_tests": 350,
+      "avg_score": 0.4794285714285715,
+      "success_rate": 1.0,
+      "avg_cost": 0.00984689642857143,
+      "effectiveness": 48.68829228643833,
+      "models": {
+        "gpt-5": {
+          "avg_score": 0.33478260869565224,
+          "avg_cost": 0.007873304347826088,
+          "test_count": 23
+        },
+        "deepseek-chat": {
+          "avg_score": 0.40652173913043477,
+          "avg_cost": 4.802608695652174e-05,
+          "test_count": 46
+        },
+        "gpt-4o": {
+          "avg_score": 0.6239130434782608,
+          "avg_cost": 0.007089021739130434,
+          "test_count": 23
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.19782608695652176,
+          "avg_cost": 0.0013202021739130434,
+          "test_count": 23
+        },
+        "claude-opus-4": {
+          "avg_score": 0.6608695652173913,
+          "avg_cost": 0.08173434782608695,
+          "test_count": 23
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.5173913043478261,
+          "avg_cost": 0.002145391304347826,
+          "test_count": 23
+        },
+        "grok-4": {
+          "avg_score": 0.28913043478260875,
+          "avg_cost": 0.007717434782608696,
+          "test_count": 23
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7,
+          "avg_cost": 0.00032024347826086955,
+          "test_count": 23
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.34347826086956523,
+          "avg_cost": 0.0004942739130434782,
+          "test_count": 23
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.6108695652173913,
+          "avg_cost": 0.016111434782608697,
+          "test_count": 23
+        },
+        "grok-3": {
+          "avg_score": 0.6858695652173913,
+          "avg_cost": 0.012135260869565217,
+          "test_count": 46
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.6260869565217392,
+          "avg_cost": 0.0005376978260869565,
+          "test_count": 23
+        },
+        "grok-3-mini": {
+          "avg_score": 0.08913043478260871,
+          "avg_cost": 0.00010621739130434784,
+          "test_count": 23
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.5399999999999999,
+          "avg_cost": 0.00012848999999999998,
+          "test_count": 5
+        }
+      }
+    },
+    "Python": {
+      "total_tests": 240,
+      "avg_score": 0.45604166666666673,
+      "success_rate": 1.0,
+      "avg_cost": 0.0146300710625,
+      "effectiveness": 31.171527788104804,
+      "models": {
+        "gpt-4o": {
+          "avg_score": 0.684375,
+          "avg_cost": 0.0073871875000000005,
+          "test_count": 16
+        },
+        "gpt-5": {
+          "avg_score": 0.35,
+          "avg_cost": 0.008416875,
+          "test_count": 16
+        },
+        "deepseek-chat": {
+          "avg_score": 0.41718750000000004,
+          "avg_cost": 8.412250000000001e-05,
+          "test_count": 32
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.190625,
+          "avg_cost": 0.0015503725,
+          "test_count": 16
+        },
+        "grok-4": {
+          "avg_score": 0.27187500000000003,
+          "avg_cost": 0.0072703125,
+          "test_count": 16
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.64375,
+          "avg_cost": 0.0003233109375,
+          "test_count": 16
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.27812500000000007,
+          "avg_cost": 0.002145125,
+          "test_count": 16
+        },
+        "grok-3": {
+          "avg_score": 0.528125,
+          "avg_cost": 0.01218,
+          "test_count": 32
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.38750000000000007,
+          "avg_cost": 0.0007173,
+          "test_count": 16
+        },
+        "claude-opus-4": {
+          "avg_score": 0.6875,
+          "avg_cost": 0.13888125,
+          "test_count": 16
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.6375,
+          "avg_cost": 0.0005202562500000001,
+          "test_count": 16
+        },
+        "grok-3-mini": {
+          "avg_score": 0.15000000000000002,
+          "avg_cost": 0.00011176875,
+          "test_count": 16
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.66875,
+          "avg_cost": 0.0275990625,
+          "test_count": 16
+        }
+      }
+    },
+    "JavaScript": {
+      "total_tests": 269,
+      "avg_score": 0.5157992565055762,
+      "success_rate": 1.0,
+      "avg_cost": 0.01318620720260223,
+      "effectiveness": 39.11657450701866,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.4722222222222222,
+          "avg_cost": 8.256111111111113e-05,
+          "test_count": 36
+        },
+        "gpt-5": {
+          "avg_score": 0.365625,
+          "avg_cost": 0.0084080625,
+          "test_count": 16
+        },
+        "claude-opus-4": {
+          "avg_score": 0.7972222222222222,
+          "avg_cost": 0.12115166666666664,
+          "test_count": 18
+        },
+        "gpt-4o": {
+          "avg_score": 0.6222222222222222,
+          "avg_cost": 0.00742986111111111,
+          "test_count": 18
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.5027777777777778,
+          "avg_cost": 0.002196333333333333,
+          "test_count": 18
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.40833333333333344,
+          "avg_cost": 0.0006725666666666666,
+          "test_count": 18
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7277777777777777,
+          "avg_cost": 0.00033155624999999997,
+          "test_count": 18
+        },
+        "grok-4": {
+          "avg_score": 0.33055555555555555,
+          "avg_cost": 0.007049,
+          "test_count": 18
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.65,
+          "avg_cost": 0.0005482916666666665,
+          "test_count": 18
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.7138888888888889,
+          "avg_cost": 0.0239495,
+          "test_count": 18
+        },
+        "grok-3": {
+          "avg_score": 0.5680555555555555,
+          "avg_cost": 0.012259,
+          "test_count": 36
+        },
+        "grok-3-mini": {
+          "avg_score": 0.23333333333333334,
+          "avg_cost": 0.00014231111111111112,
+          "test_count": 18
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.2944444444444444,
+          "avg_cost": 0.0014226611111111112,
+          "test_count": 18
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.4,
+          "avg_cost": 0.00017707499999999998,
+          "test_count": 1
+        }
+      }
+    },
+    "Go": {
+      "total_tests": 180,
+      "avg_score": 0.5519444444444445,
+      "success_rate": 1.0,
+      "avg_cost": 0.01060972961111111,
+      "effectiveness": 52.022479806310706,
+      "models": {
+        "gpt-5": {
+          "avg_score": 0.325,
+          "avg_cost": 0.0074025,
+          "test_count": 12
+        },
+        "deepseek-chat": {
+          "avg_score": 0.4208333333333334,
+          "avg_cost": 3.914166666666667e-05,
+          "test_count": 24
+        },
+        "gpt-4o": {
+          "avg_score": 0.6416666666666666,
+          "avg_cost": 0.006375416666666667,
+          "test_count": 12
+        },
+        "claude-opus-4": {
+          "avg_score": 0.7333333333333334,
+          "avg_cost": 0.091555,
+          "test_count": 12
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.5541666666666668,
+          "avg_cost": 0.0020615000000000004,
+          "test_count": 12
+        },
+        "grok-4": {
+          "avg_score": 0.4583333333333333,
+          "avg_cost": 0.007360749999999998,
+          "test_count": 12
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7666666666666666,
+          "avg_cost": 0.0003119125,
+          "test_count": 12
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.39583333333333326,
+          "avg_cost": 0.0005552666666666666,
+          "test_count": 12
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.7583333333333333,
+          "avg_cost": 0.0176335,
+          "test_count": 12
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.6875,
+          "avg_cost": 0.00048777499999999997,
+          "test_count": 12
+        },
+        "grok-3-mini": {
+          "avg_score": 0.25,
+          "avg_cost": 0.00011837499999999999,
+          "test_count": 12
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.33749999999999997,
+          "avg_cost": 0.0013866649999999998,
+          "test_count": 12
+        },
+        "grok-3": {
+          "avg_score": 0.7645833333333334,
+          "avg_cost": 0.011909500000000002,
+          "test_count": 24
+        }
+      }
+    },
+    "Rust": {
+      "total_tests": 150,
+      "avg_score": 0.47633333333333344,
+      "success_rate": 1.0,
+      "avg_cost": 0.012510285066666666,
+      "effectiveness": 38.07533807542974,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.45,
+          "avg_cost": 8.043000000000003e-05,
+          "test_count": 20
+        },
+        "grok-4": {
+          "avg_score": 0.35,
+          "avg_cost": 0.0071127,
+          "test_count": 10
+        },
+        "gpt-5": {
+          "avg_score": 0.28,
+          "avg_cost": 0.0084861,
+          "test_count": 10
+        },
+        "claude-opus-4": {
+          "avg_score": 0.645,
+          "avg_cost": 0.11352150000000001,
+          "test_count": 10
+        },
+        "gpt-4o": {
+          "avg_score": 0.6000000000000001,
+          "avg_cost": 0.006712,
+          "test_count": 10
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.625,
+          "avg_cost": 0.0220788,
+          "test_count": 10
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7300000000000001,
+          "avg_cost": 0.00033253499999999996,
+          "test_count": 10
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.48500000000000015,
+          "avg_cost": 0.0022194,
+          "test_count": 10
+        },
+        "grok-3": {
+          "avg_score": 0.6375,
+          "avg_cost": 0.0123477,
+          "test_count": 20
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.26,
+          "avg_cost": 0.00043598,
+          "test_count": 10
+        },
+        "grok-3-mini": {
+          "avg_score": 0.06000000000000001,
+          "avg_cost": 9.641999999999999e-05,
+          "test_count": 10
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.625,
+          "avg_cost": 0.00055266,
+          "test_count": 10
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.31,
+          "avg_cost": 0.001249921,
+          "test_count": 10
+        }
+      }
+    },
+    "Java": {
+      "total_tests": 150,
+      "avg_score": 0.4683333333333333,
+      "success_rate": 1.0,
+      "avg_cost": 0.011019753916666666,
+      "effectiveness": 42.4994366366938,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.39499999999999996,
+          "avg_cost": 5.3326000000000004e-05,
+          "test_count": 20
+        },
+        "grok-4": {
+          "avg_score": 0.35,
+          "avg_cost": 0.0081513,
+          "test_count": 10
+        },
+        "gpt-4o": {
+          "avg_score": 0.505,
+          "avg_cost": 0.0067062499999999995,
+          "test_count": 10
+        },
+        "gpt-5": {
+          "avg_score": 0.32499999999999996,
+          "avg_cost": 0.0075845999999999995,
+          "test_count": 10
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.43499999999999994,
+          "avg_cost": 0.0020767,
+          "test_count": 10
+        },
+        "claude-opus-4": {
+          "avg_score": 0.7049999999999998,
+          "avg_cost": 0.0931575,
+          "test_count": 10
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.67,
+          "avg_cost": 0.00034510875,
+          "test_count": 10
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.595,
+          "avg_cost": 0.0005056949999999999,
+          "test_count": 10
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.31999999999999995,
+          "avg_cost": 0.00065067,
+          "test_count": 10
+        },
+        "grok-3-mini": {
+          "avg_score": 0.12,
+          "avg_cost": 0.00012338,
+          "test_count": 10
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.685,
+          "avg_cost": 0.020238,
+          "test_count": 10
+        },
+        "grok-3": {
+          "avg_score": 0.5974999999999999,
+          "avg_cost": 0.012060300000000005,
+          "test_count": 20
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.33,
+          "avg_cost": 0.001529853,
+          "test_count": 10
+        }
+      }
+    },
+    "C#": {
+      "total_tests": 153,
+      "avg_score": 0.5000000000000001,
+      "success_rate": 1.0,
+      "avg_cost": 0.011235263496732026,
+      "effectiveness": 44.50273908978048,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.4125000000000001,
+          "avg_cost": 6.1684e-05,
+          "test_count": 20
+        },
+        "grok-3": {
+          "avg_score": 0.605,
+          "avg_cost": 0.0121095,
+          "test_count": 20
+        },
+        "gpt-5": {
+          "avg_score": 0.37000000000000005,
+          "avg_cost": 0.0085737,
+          "test_count": 10
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.39999999999999997,
+          "avg_cost": 0.000119725,
+          "test_count": 3
+        },
+        "claude-opus-4": {
+          "avg_score": 0.74,
+          "avg_cost": 0.09967200000000001,
+          "test_count": 10
+        },
+        "gpt-4o": {
+          "avg_score": 0.605,
+          "avg_cost": 0.00676675,
+          "test_count": 10
+        },
+        "grok-4": {
+          "avg_score": 0.325,
+          "avg_cost": 0.007306499999999999,
+          "test_count": 10
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.67,
+          "avg_cost": 0.00033421499999999996,
+          "test_count": 10
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.475,
+          "avg_cost": 0.0021292999999999998,
+          "test_count": 10
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.41000000000000003,
+          "avg_cost": 0.00061285,
+          "test_count": 10
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.7599999999999999,
+          "avg_cost": 0.020562900000000002,
+          "test_count": 10
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.5850000000000001,
+          "avg_cost": 0.0005212649999999999,
+          "test_count": 10
+        },
+        "grok-3-mini": {
+          "avg_score": 0.19999999999999998,
+          "avg_cost": 0.00011745,
+          "test_count": 10
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.355,
+          "avg_cost": 0.000924316,
+          "test_count": 10
+        }
+      }
+    },
+    "PHP": {
+      "total_tests": 163,
+      "avg_score": 0.5343558282208588,
+      "success_rate": 1.0,
+      "avg_cost": 0.012000000291411043,
+      "effectiveness": 44.52965127036889,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.4704545454545455,
+          "avg_cost": 5.827818181818182e-05,
+          "test_count": 22
+        },
+        "grok-3": {
+          "avg_score": 0.6795454545454546,
+          "avg_cost": 0.012098181818181815,
+          "test_count": 22
+        },
+        "gpt-5": {
+          "avg_score": 0.29444444444444445,
+          "avg_cost": 0.008876000000000002,
+          "test_count": 9
+        },
+        "gpt-4o": {
+          "avg_score": 0.6045454545454544,
+          "avg_cost": 0.006731818181818181,
+          "test_count": 11
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.5863636363636364,
+          "avg_cost": 0.0021506363636363637,
+          "test_count": 11
+        },
+        "claude-opus-4": {
+          "avg_score": 0.6636363636363637,
+          "avg_cost": 0.10420363636363636,
+          "test_count": 11
+        },
+        "grok-4": {
+          "avg_score": 0.5772727272727273,
+          "avg_cost": 0.007521818181818182,
+          "test_count": 11
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.6499999999999999,
+          "avg_cost": 0.00032532613636363633,
+          "test_count": 11
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.46818181818181814,
+          "avg_cost": 0.0006016636363636364,
+          "test_count": 11
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.6681818181818182,
+          "avg_cost": 0.0005253818181818182,
+          "test_count": 11
+        },
+        "grok-3-mini": {
+          "avg_score": 0.14545454545454548,
+          "avg_cost": 9.448181818181816e-05,
+          "test_count": 11
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.6818181818181818,
+          "avg_cost": 0.022767545454545457,
+          "test_count": 11
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.3318181818181818,
+          "avg_cost": 0.0013207763636363635,
+          "test_count": 11
+        }
+      }
+    },
+    "Ruby": {
+      "total_tests": 150,
+      "avg_score": 0.5913333333333334,
+      "success_rate": 1.0,
+      "avg_cost": 0.0128258598,
+      "effectiveness": 46.104771341203445,
+      "models": {
+        "grok-3": {
+          "avg_score": 0.7925000000000001,
+          "avg_cost": 0.012060000000000005,
+          "test_count": 20
+        },
+        "grok-4": {
+          "avg_score": 0.58,
+          "avg_cost": 0.008671499999999999,
+          "test_count": 10
+        },
+        "gpt-5": {
+          "avg_score": 0.40499999999999997,
+          "avg_cost": 0.008271,
+          "test_count": 10
+        },
+        "deepseek-chat": {
+          "avg_score": 0.525,
+          "avg_cost": 5.749800000000001e-05,
+          "test_count": 20
+        },
+        "gpt-4o": {
+          "avg_score": 0.74,
+          "avg_cost": 0.006500250000000001,
+          "test_count": 10
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.315,
+          "avg_cost": 0.001361071,
+          "test_count": 10
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.63,
+          "avg_cost": 0.0006445,
+          "test_count": 10
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.74,
+          "avg_cost": 0.00031576499999999997,
+          "test_count": 10
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.635,
+          "avg_cost": 0.0020092,
+          "test_count": 10
+        },
+        "claude-opus-4": {
+          "avg_score": 0.71,
+          "avg_cost": 0.11708400000000001,
+          "test_count": 10
+        },
+        "grok-3-mini": {
+          "avg_score": 0.125,
+          "avg_cost": 0.00010530000000000001,
+          "test_count": 10
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.6199999999999999,
+          "avg_cost": 0.0004935149999999999,
+          "test_count": 10
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.735,
+          "avg_cost": 0.022696799999999996,
+          "test_count": 10
+        }
+      }
+    },
+    "Haskell": {
+      "total_tests": 134,
+      "avg_score": 0.5716417910447762,
+      "success_rate": 1.0,
+      "avg_cost": 0.01187390223880597,
+      "effectiveness": 48.14270654650935,
+      "models": {
+        "grok-3": {
+          "avg_score": 0.6416666666666667,
+          "avg_cost": 0.012395666666666668,
+          "test_count": 18
+        },
+        "deepseek-chat": {
+          "avg_score": 0.5416666666666667,
+          "avg_cost": 7.768444444444446e-05,
+          "test_count": 18
+        },
+        "gpt-4o": {
+          "avg_score": 0.6722222222222223,
+          "avg_cost": 0.007606111111111111,
+          "test_count": 9
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.49444444444444446,
+          "avg_cost": 0.002177888888888889,
+          "test_count": 9
+        },
+        "claude-opus-4": {
+          "avg_score": 0.6888888888888889,
+          "avg_cost": 0.10247833333333332,
+          "test_count": 9
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7277777777777777,
+          "avg_cost": 0.0003400833333333333,
+          "test_count": 9
+        },
+        "grok-4": {
+          "avg_score": 0.55,
+          "avg_cost": 0.007707333333333333,
+          "test_count": 9
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.5722222222222223,
+          "avg_cost": 0.0005585111111111111,
+          "test_count": 9
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.7444444444444444,
+          "avg_cost": 0.0005732999999999999,
+          "test_count": 9
+        },
+        "grok-3-mini": {
+          "avg_score": 0.16111111111111112,
+          "avg_cost": 0.00013858888888888885,
+          "test_count": 9
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.6722222222222222,
+          "avg_cost": 0.021100666666666667,
+          "test_count": 9
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.4388888888888889,
+          "avg_cost": 0.0013670255555555553,
+          "test_count": 9
+        },
+        "gpt-5": {
+          "avg_score": 0.47500000000000003,
+          "avg_cost": 0.008768999999999999,
+          "test_count": 8
+        }
+      }
+    }
+  },
+  "owasp_analysis": {
+    "A03: Injection": {
+      "total_tests": 665,
+      "avg_score": 0.5021052631578947,
+      "success_rate": 1.0,
+      "avg_cost": 0.011730011112781954,
+      "effectiveness": 42.805182222782456,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.3460227272727273,
+          "avg_cost": 5.670954545454546e-05,
+          "test_count": 88
+        },
+        "claude-opus-4": {
+          "avg_score": 0.6988636363636365,
+          "avg_cost": 0.10441193181818181,
+          "test_count": 44
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.678409090909091,
+          "avg_cost": 0.02090113636363636,
+          "test_count": 44
+        },
+        "gpt-5": {
+          "avg_score": 0.32727272727272727,
+          "avg_cost": 0.00781459090909091,
+          "test_count": 44
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.5599999999999999,
+          "avg_cost": 0.00013821,
+          "test_count": 5
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7238636363636364,
+          "avg_cost": 0.0003191318181818182,
+          "test_count": 44
+        },
+        "grok-4": {
+          "avg_score": 0.4147727272727273,
+          "avg_cost": 0.007687431818181819,
+          "test_count": 44
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.5295454545454547,
+          "avg_cost": 0.0021211136363636367,
+          "test_count": 44
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.5988636363636364,
+          "avg_cost": 0.0005069215909090909,
+          "test_count": 44
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.47727272727272735,
+          "avg_cost": 0.0006814090909090909,
+          "test_count": 44
+        },
+        "grok-3-mini": {
+          "avg_score": 0.13636363636363635,
+          "avg_cost": 0.00011661136363636363,
+          "test_count": 44
+        },
+        "grok-3": {
+          "avg_score": 0.6539772727272727,
+          "avg_cost": 0.012118227272727272,
+          "test_count": 88
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.27386363636363636,
+          "avg_cost": 0.0013899352272727272,
+          "test_count": 44
+        },
+        "gpt-4o": {
+          "avg_score": 0.6659090909090909,
+          "avg_cost": 0.006967329545454546,
+          "test_count": 44
+        }
+      }
+    },
+    "A01: Broken Access Control": {
+      "total_tests": 45,
+      "avg_score": 0.47388888888888886,
+      "success_rate": 1.0,
+      "avg_cost": 0.00850898,
+      "effectiveness": 55.69279618578125,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.35000000000000003,
+          "avg_cost": 2.618e-05,
+          "test_count": 6
+        },
+        "claude-opus-4": {
+          "avg_score": 0.48333333333333334,
+          "avg_cost": 0.0626,
+          "test_count": 3
+        },
+        "gpt-5": {
+          "avg_score": 0.35000000000000003,
+          "avg_cost": 0.007036,
+          "test_count": 3
+        },
+        "grok-4": {
+          "avg_score": 0.65,
+          "avg_cost": 0.008754,
+          "test_count": 3
+        },
+        "gpt-4o": {
+          "avg_score": 0.4666666666666666,
+          "avg_cost": 0.0064800000000000005,
+          "test_count": 3
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.45,
+          "avg_cost": 0.002035,
+          "test_count": 3
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.5499999999999999,
+          "avg_cost": 0.00031509999999999996,
+          "test_count": 3
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.5041666666666667,
+          "avg_cost": 0.013955,
+          "test_count": 3
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.5666666666666667,
+          "avg_cost": 0.0006058999999999999,
+          "test_count": 3
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.4708333333333334,
+          "avg_cost": 0.00047339999999999996,
+          "test_count": 3
+        },
+        "grok-3-mini": {
+          "avg_score": 0.3833333333333333,
+          "avg_cost": 0.00011786666666666668,
+          "test_count": 3
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.25,
+          "avg_cost": 0.0015520733333333333,
+          "test_count": 3
+        },
+        "grok-3": {
+          "avg_score": 0.6416666666666667,
+          "avg_cost": 0.011829000000000001,
+          "test_count": 6
+        }
+      }
+    },
+    "A02: Cryptographic Failures": {
+      "total_tests": 31,
+      "avg_score": 0.6516129032258065,
+      "success_rate": 1.0,
+      "avg_cost": 0.007859168387096776,
+      "effectiveness": 82.91117725580584,
+      "models": {
+        "gemini-2.5-flash": {
+          "avg_score": 0.6,
+          "avg_cost": 0.00015225000000000001,
+          "test_count": 1
+        },
+        "gpt-5": {
+          "avg_score": 0.9,
+          "avg_cost": 0.0061815,
+          "test_count": 2
+        },
+        "claude-opus-4": {
+          "avg_score": 0.9,
+          "avg_cost": 0.06399,
+          "test_count": 2
+        },
+        "deepseek-chat": {
+          "avg_score": 0.625,
+          "avg_cost": 3.829e-05,
+          "test_count": 4
+        },
+        "gpt-4o": {
+          "avg_score": 0.75,
+          "avg_cost": 0.0058175,
+          "test_count": 2
+        },
+        "grok-3": {
+          "avg_score": 0.8,
+          "avg_cost": 0.011850000000000001,
+          "test_count": 4
+        },
+        "grok-4": {
+          "avg_score": 0.25,
+          "avg_cost": 0.007845000000000001,
+          "test_count": 2
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.825,
+          "avg_cost": 0.001954,
+          "test_count": 2
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.85,
+          "avg_cost": 0.009295499999999998,
+          "test_count": 2
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.75,
+          "avg_cost": 0.0003015,
+          "test_count": 2
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.25,
+          "avg_cost": 0.0005933,
+          "test_count": 2
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.85,
+          "avg_cost": 0.00047234999999999996,
+          "test_count": 2
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.325,
+          "avg_cost": 0.0014369550000000002,
+          "test_count": 2
+        },
+        "grok-3-mini": {
+          "avg_score": 0.30000000000000004,
+          "avg_cost": 7.68e-05,
+          "test_count": 2
+        }
+      }
+    },
+    "A10: Server-Side Request Forgery": {
+      "total_tests": 62,
+      "avg_score": 0.7268817204301073,
+      "success_rate": 1.0,
+      "avg_cost": 0.008273591814516128,
+      "effectiveness": 87.85564199031231,
+      "models": {
+        "gpt-5": {
+          "avg_score": 0.7625000000000001,
+          "avg_cost": 0.00807,
+          "test_count": 4
+        },
+        "claude-opus-4": {
+          "avg_score": 0.95,
+          "avg_cost": 0.07333124999999999,
+          "test_count": 4
+        },
+        "deepseek-chat": {
+          "avg_score": 0.6083333333333334,
+          "avg_cost": 3.8955e-05,
+          "test_count": 8
+        },
+        "gpt-4o": {
+          "avg_score": 0.6458333333333334,
+          "avg_cost": 0.0042562500000000005,
+          "test_count": 4
+        },
+        "grok-4": {
+          "avg_score": 0.8500000000000001,
+          "avg_cost": 0.007183500000000001,
+          "test_count": 4
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.5458333333333334,
+          "avg_cost": 0.00030277500000000003,
+          "test_count": 4
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.8999999999999999,
+          "avg_cost": 0.0015785,
+          "test_count": 4
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.43333333333333335,
+          "avg_cost": 0.0011142225,
+          "test_count": 4
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.8666666666666667,
+          "avg_cost": 0.000290353125,
+          "test_count": 4
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.6666666666666666,
+          "avg_cost": 0.000255375,
+          "test_count": 2
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.95,
+          "avg_cost": 0.012993750000000002,
+          "test_count": 4
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.75,
+          "avg_cost": 0.000610575,
+          "test_count": 4
+        },
+        "grok-3-mini": {
+          "avg_score": 0.25,
+          "avg_cost": 0.00013815000000000002,
+          "test_count": 4
+        },
+        "grok-3": {
+          "avg_score": 0.90625,
+          "avg_cost": 0.009082875,
+          "test_count": 8
+        }
+      }
+    },
+    "A03: Injection (XSS)": {
+      "total_tests": 76,
+      "avg_score": 0.5697368421052631,
+      "success_rate": 1.0,
+      "avg_cost": 0.009279663585526315,
+      "effectiveness": 61.39628197232209,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.5050000000000001,
+          "avg_cost": 4.41e-05,
+          "test_count": 10
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.8,
+          "avg_cost": 0.00016830000000000003,
+          "test_count": 1
+        },
+        "gpt-5": {
+          "avg_score": 0.61,
+          "avg_cost": 0.007188600000000001,
+          "test_count": 5
+        },
+        "claude-opus-4": {
+          "avg_score": 0.77,
+          "avg_cost": 0.07337099999999999,
+          "test_count": 5
+        },
+        "gpt-4o": {
+          "avg_score": 0.7,
+          "avg_cost": 0.0062534999999999995,
+          "test_count": 5
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.44000000000000006,
+          "avg_cost": 0.001028494,
+          "test_count": 5
+        },
+        "grok-4": {
+          "avg_score": 0.5599999999999999,
+          "avg_cost": 0.0086862,
+          "test_count": 5
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.67,
+          "avg_cost": 0.0020796,
+          "test_count": 5
+        },
+        "grok-3": {
+          "avg_score": 0.685,
+          "avg_cost": 0.011983200000000001,
+          "test_count": 10
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.63,
+          "avg_cost": 0.00033446250000000006,
+          "test_count": 5
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.43999999999999995,
+          "avg_cost": 0.00067688,
+          "test_count": 5
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.6200000000000001,
+          "avg_cost": 0.0167772,
+          "test_count": 5
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.64,
+          "avg_cost": 0.00047756999999999997,
+          "test_count": 5
+        },
+        "grok-3-mini": {
+          "avg_score": 0.04,
+          "avg_cost": 8.912e-05,
+          "test_count": 5
+        }
+      }
+    },
+    "General Security": {
+      "total_tests": 2088,
+      "avg_score": 0.538852969348659,
+      "success_rate": 1.0,
+      "avg_cost": 0.012163648746408046,
+      "effectiveness": 44.300273756900744,
+      "models": {
+        "claude-opus-4": {
+          "avg_score": 0.7360611510791367,
+          "avg_cost": 0.10809809352517986,
+          "test_count": 139
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.534375,
+          "avg_cost": 0.0001243875,
+          "test_count": 8
+        },
+        "grok-3": {
+          "avg_score": 0.6556654676258993,
+          "avg_cost": 0.012164136690647483,
+          "test_count": 278
+        },
+        "gpt-4o": {
+          "avg_score": 0.6764388489208634,
+          "avg_cost": 0.0072426798561151095,
+          "test_count": 139
+        },
+        "gpt-5": {
+          "avg_score": 0.41353383458646614,
+          "avg_cost": 0.008378616541353384,
+          "test_count": 133
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.6940647482014388,
+          "avg_cost": 0.000543544964028777,
+          "test_count": 139
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.7253597122302159,
+          "avg_cost": 0.00032610485611510786,
+          "test_count": 139
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.7274280575539569,
+          "avg_cost": 0.021738107913669064,
+          "test_count": 139
+        },
+        "deepseek-chat": {
+          "avg_score": 0.5075539568345324,
+          "avg_cost": 8.317208633093526e-05,
+          "test_count": 278
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.5054856115107913,
+          "avg_cost": 0.0022097553956834533,
+          "test_count": 139
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.39685251798561155,
+          "avg_cost": 0.0005889690647482014,
+          "test_count": 139
+        },
+        "grok-4": {
+          "avg_score": 0.40431654676258993,
+          "avg_cost": 0.007912985611510793,
+          "test_count": 139
+        },
+        "grok-3-mini": {
+          "avg_score": 0.18992805755395684,
+          "avg_cost": 0.000148436690647482,
+          "test_count": 139
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.28129496402877696,
+          "avg_cost": 0.0013875444604316545,
+          "test_count": 139
+        },
+        "gemini-2.0-flash-lite": {
+          "avg_score": 0.6,
+          "avg_cost": 0.00032073749999999993,
+          "test_count": 1
+        }
+      }
+    },
+    "A01: Broken Access Control (CSRF)": {
+      "total_tests": 46,
+      "avg_score": 0.2434782608695652,
+      "success_rate": 1.0,
+      "avg_cost": 0.010955301467391303,
+      "effectiveness": 22.224697475855287,
+      "models": {
+        "gemini-2.5-flash": {
+          "avg_score": 0.2,
+          "avg_cost": 8.219999999999999e-05,
+          "test_count": 1
+        },
+        "gpt-5": {
+          "avg_score": 0.3666666666666667,
+          "avg_cost": 0.007688,
+          "test_count": 3
+        },
+        "grok-4": {
+          "avg_score": 0.06666666666666667,
+          "avg_cost": 0.006954999999999999,
+          "test_count": 3
+        },
+        "deepseek-chat": {
+          "avg_score": 0.26666666666666666,
+          "avg_cost": 4.4006666666666667e-05,
+          "test_count": 6
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.20000000000000004,
+          "avg_cost": 0.0005723466666666667,
+          "test_count": 3
+        },
+        "claude-opus-4": {
+          "avg_score": 0.5666666666666668,
+          "avg_cost": 0.09584999999999999,
+          "test_count": 3
+        },
+        "gpt-4o": {
+          "avg_score": 0.18333333333333335,
+          "avg_cost": 0.006418333333333334,
+          "test_count": 3
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.2833333333333334,
+          "avg_cost": 0.002062333333333333,
+          "test_count": 3
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.16666666666666666,
+          "avg_cost": 0.0003430625,
+          "test_count": 3
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.06666666666666667,
+          "avg_cost": 0.0005601333333333334,
+          "test_count": 3
+        },
+        "grok-3": {
+          "avg_score": 0.27499999999999997,
+          "avg_cost": 0.011975,
+          "test_count": 6
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.18333333333333335,
+          "avg_cost": 0.0004887,
+          "test_count": 3
+        },
+        "grok-3-mini": {
+          "avg_score": 0.06666666666666667,
+          "avg_cost": 9.796666666666666e-05,
+          "test_count": 3
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.43333333333333335,
+          "avg_cost": 0.022879999999999998,
+          "test_count": 3
+        }
+      }
+    },
+    "A08: Software and Data Integrity Failures": {
+      "total_tests": 167,
+      "avg_score": 0.5580838323353294,
+      "success_rate": 1.0,
+      "avg_cost": 0.01248179369760479,
+      "effectiveness": 44.7118295539866,
+      "models": {
+        "deepseek-chat": {
+          "avg_score": 0.4920454545454546,
+          "avg_cost": 7.390727272727273e-05,
+          "test_count": 22
+        },
+        "gemini-2.5-flash": {
+          "avg_score": 0.8,
+          "avg_cost": 9.5325e-05,
+          "test_count": 2
+        },
+        "gpt-5": {
+          "avg_score": 0.34545454545454546,
+          "avg_cost": 0.007512545454545455,
+          "test_count": 11
+        },
+        "grok-4": {
+          "avg_score": 0.5181818181818182,
+          "avg_cost": 0.009005454545454546,
+          "test_count": 11
+        },
+        "claude-opus-4": {
+          "avg_score": 0.7102272727272728,
+          "avg_cost": 0.11332772727272727,
+          "test_count": 11
+        },
+        "grok-3": {
+          "avg_score": 0.6602272727272727,
+          "avg_cost": 0.012259090909090909,
+          "test_count": 22
+        },
+        "gpt-4o": {
+          "avg_score": 0.6545454545454545,
+          "avg_cost": 0.006787500000000001,
+          "test_count": 11
+        },
+        "gpt-5-mini": {
+          "avg_score": 0.4829545454545455,
+          "avg_cost": 0.0021579999999999998,
+          "test_count": 11
+        },
+        "gpt-4o-mini": {
+          "avg_score": 0.7045454545454546,
+          "avg_cost": 0.0004693227272727272,
+          "test_count": 11
+        },
+        "grok-code-fast-1": {
+          "avg_score": 0.5818181818181819,
+          "avg_cost": 0.0007062090909090909,
+          "test_count": 11
+        },
+        "gemini-2.5-flash-lite": {
+          "avg_score": 0.6875000000000001,
+          "avg_cost": 0.00032772613636363634,
+          "test_count": 11
+        },
+        "grok-3-mini": {
+          "avg_score": 0.1272727272727273,
+          "avg_cost": 0.00014007272727272724,
+          "test_count": 11
+        },
+        "claude-sonnet-4": {
+          "avg_score": 0.7465909090909091,
+          "avg_cost": 0.022905545454545453,
+          "test_count": 11
+        },
+        "deepseek-reasoner": {
+          "avg_score": 0.4636363636363636,
+          "avg_cost": 0.0014728909090909092,
+          "test_count": 11
+        }
+      }
+    }
+  },
+  "enhanced_metrics": {
+    "gpt-5": {
+      "total_tests": 211,
+      "successful_tests": 205,
+      "failed_tests": 6,
+      "perfect_scores": 14,
+      "excellent_scores": 27,
+      "good_scores": 62,
+      "fair_scores": 117,
+      "poor_scores": 88,
+      "total_cost": 1.665594,
+      "cost_per_test": 0.008124848780487805,
+      "cost_per_correct_answer": 0.11897100000000001,
+      "cost_per_partial_answer": 0.008124848780487805,
+      "traditional_effectiveness": 49.982168523661834,
+      "quality_weighted_effectiveness": 57.21682474840809,
+      "penalty_adjusted_effectiveness": 0.0
+    },
+    "claude-opus-4": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 30,
+      "excellent_scores": 100,
+      "good_scores": 180,
+      "fair_scores": 204,
+      "poor_scores": 7,
+      "total_cost": 22.129875,
+      "cost_per_test": 0.1048809241706161,
+      "cost_per_correct_answer": 0.7376625,
+      "cost_per_partial_answer": 0.1048809241706161,
+      "traditional_effectiveness": 6.935195070012822,
+      "quality_weighted_effectiveness": 7.338496037596237,
+      "penalty_adjusted_effectiveness": 7.338496037596237
+    },
+    "gemini-2.5-flash": {
+      "total_tests": 211,
+      "successful_tests": 20,
+      "failed_tests": 191,
+      "perfect_scores": 2,
+      "excellent_scores": 5,
+      "good_scores": 13,
+      "fair_scores": 16,
+      "poor_scores": 4,
+      "total_cost": 0.0027903,
+      "cost_per_test": 0.000139515,
+      "cost_per_correct_answer": 0.00139515,
+      "cost_per_partial_answer": 0.000139515,
+      "traditional_effectiveness": 4160.245612777598,
+      "quality_weighted_effectiveness": 4515.643479195786,
+      "penalty_adjusted_effectiveness": 0.0
+    },
+    "grok-4": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 12,
+      "excellent_scores": 38,
+      "good_scores": 79,
+      "fair_scores": 128,
+      "poor_scores": 83,
+      "total_cost": 1.672194,
+      "cost_per_test": 0.007925090047393364,
+      "cost_per_correct_answer": 0.1393495,
+      "cost_per_partial_answer": 0.007925090047393364,
+      "traditional_effectiveness": 53.22348961902746,
+      "quality_weighted_effectiveness": 62.91136076316506,
+      "penalty_adjusted_effectiveness": 62.91136076316506
+    },
+    "grok-3": {
+      "total_tests": 422,
+      "successful_tests": 422,
+      "failed_tests": 0,
+      "perfect_scores": 45,
+      "excellent_scores": 160,
+      "good_scores": 303,
+      "fair_scores": 389,
+      "poor_scores": 33,
+      "total_cost": 5.100453,
+      "cost_per_test": 0.012086381516587677,
+      "cost_per_correct_answer": 0.1133434,
+      "cost_per_partial_answer": 0.012086381516587677,
+      "traditional_effectiveness": 54.338310734360256,
+      "quality_weighted_effectiveness": 58.46539513255001,
+      "penalty_adjusted_effectiveness": 58.46539513255001
+    },
+    "deepseek-reasoner": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 6,
+      "excellent_scores": 11,
+      "good_scores": 52,
+      "fair_scores": 99,
+      "poor_scores": 112,
+      "total_cost": 0.28907415999999997,
+      "cost_per_test": 0.0013700197156398103,
+      "cost_per_correct_answer": 0.04817902666666666,
+      "cost_per_partial_answer": 0.0013700197156398103,
+      "traditional_effectiveness": 215.1120436822625,
+      "quality_weighted_effectiveness": 294.38812517867393,
+      "penalty_adjusted_effectiveness": 294.38812517867393
+    },
+    "deepseek-chat": {
+      "total_tests": 422,
+      "successful_tests": 422,
+      "failed_tests": 0,
+      "perfect_scores": 27,
+      "excellent_scores": 64,
+      "good_scores": 162,
+      "fair_scores": 298,
+      "poor_scores": 124,
+      "total_cost": 0.03106516,
+      "cost_per_test": 7.361412322274882e-05,
+      "cost_per_correct_answer": 0.0011505614814814815,
+      "cost_per_partial_answer": 7.361412322274882e-05,
+      "traditional_effectiveness": 6389.526616526896,
+      "quality_weighted_effectiveness": 7136.612204797914,
+      "penalty_adjusted_effectiveness": 7136.612204797914
+    },
+    "gpt-4o": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 27,
+      "excellent_scores": 87,
+      "good_scores": 150,
+      "fair_scores": 189,
+      "poor_scores": 22,
+      "total_cost": 1.48658,
+      "cost_per_test": 0.007045402843601896,
+      "cost_per_correct_answer": 0.05505851851851852,
+      "cost_per_partial_answer": 0.007045402843601896,
+      "traditional_effectiveness": 94.21513361765484,
+      "quality_weighted_effectiveness": 100.23005825451708,
+      "penalty_adjusted_effectiveness": 100.23005825451708
+    },
+    "claude-sonnet-4": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 32,
+      "excellent_scores": 93,
+      "good_scores": 166,
+      "fair_scores": 204,
+      "poor_scores": 7,
+      "total_cost": 4.458165,
+      "cost_per_test": 0.021128744075829386,
+      "cost_per_correct_answer": 0.13931765625,
+      "cost_per_partial_answer": 0.021128744075829386,
+      "traditional_effectiveness": 33.77791086691497,
+      "quality_weighted_effectiveness": 35.53031348099498,
+      "penalty_adjusted_effectiveness": 35.53031348099498
+    },
+    "gemini-2.0-flash": {
+      "total_tests": 0,
+      "successful_tests": 0,
+      "failed_tests": 0,
+      "perfect_scores": 0,
+      "excellent_scores": 0,
+      "good_scores": 0,
+      "fair_scores": 0,
+      "poor_scores": 0,
+      "total_cost": 0.0,
+      "cost_per_test": 0.0,
+      "cost_per_correct_answer": 0.0,
+      "cost_per_partial_answer": 0.0,
+      "traditional_effectiveness": 0.0,
+      "quality_weighted_effectiveness": 0.0,
+      "penalty_adjusted_effectiveness": 0.0
+    },
+    "gpt-5-mini": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 15,
+      "excellent_scores": 43,
+      "good_scores": 99,
+      "fair_scores": 166,
+      "poor_scores": 45,
+      "total_cost": 0.457135,
+      "cost_per_test": 0.0021665165876777253,
+      "cost_per_correct_answer": 0.030475666666666668,
+      "cost_per_partial_answer": 0.0021665165876777253,
+      "traditional_effectiveness": 239.91818609382346,
+      "quality_weighted_effectiveness": 266.6608332330712,
+      "penalty_adjusted_effectiveness": 266.6608332330712
+    },
+    "gpt-4o-mini": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 26,
+      "excellent_scores": 84,
+      "good_scores": 150,
+      "fair_scores": 192,
+      "poor_scores": 19,
+      "total_cost": 0.1104498,
+      "cost_per_test": 0.0005234587677725119,
+      "cost_per_correct_answer": 0.004248069230769231,
+      "cost_per_partial_answer": 0.0005234587677725119,
+      "traditional_effectiveness": 1264.1112372619352,
+      "quality_weighted_effectiveness": 1350.8399290899576,
+      "penalty_adjusted_effectiveness": 1350.8399290899576
+    },
+    "gemini-2.5-flash-lite": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 25,
+      "excellent_scores": 92,
+      "good_scores": 179,
+      "fair_scores": 201,
+      "poor_scores": 10,
+      "total_cost": 0.06838657499999999,
+      "cost_per_test": 0.00032410699052132696,
+      "cost_per_correct_answer": 0.0027354629999999996,
+      "cost_per_partial_answer": 0.00032410699052132696,
+      "traditional_effectiveness": 2200.7852662114847,
+      "quality_weighted_effectiveness": 2327.9422898427074,
+      "penalty_adjusted_effectiveness": 2327.9422898427074
+    },
+    "gemini-2.0-flash-lite": {
+      "total_tests": 211,
+      "successful_tests": 1,
+      "failed_tests": 210,
+      "perfect_scores": 0,
+      "excellent_scores": 0,
+      "good_scores": 1,
+      "fair_scores": 1,
+      "poor_scores": 0,
+      "total_cost": 0.00032073749999999993,
+      "cost_per_test": 0.00032073749999999993,
+      "cost_per_correct_answer": 0.0,
+      "cost_per_partial_answer": 0.00032073749999999993,
+      "traditional_effectiveness": 1870.6886472582723,
+      "quality_weighted_effectiveness": 2182.470088467984,
+      "penalty_adjusted_effectiveness": 0.0
+    },
+    "grok-3-mini": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 3,
+      "excellent_scores": 5,
+      "good_scores": 17,
+      "fair_scores": 51,
+      "poor_scores": 160,
+      "total_cost": 0.0291037,
+      "cost_per_test": 0.00013793222748815167,
+      "cost_per_correct_answer": 0.009701233333333333,
+      "cost_per_partial_answer": 0.00013793222748815167,
+      "traditional_effectiveness": 1269.59802361899,
+      "quality_weighted_effectiveness": 2137.18530633562,
+      "penalty_adjusted_effectiveness": 2137.18530633562
+    },
+    "grok-code-fast-1": {
+      "total_tests": 211,
+      "successful_tests": 211,
+      "failed_tests": 0,
+      "perfect_scores": 9,
+      "excellent_scores": 28,
+      "good_scores": 85,
+      "fair_scores": 134,
+      "poor_scores": 77,
+      "total_cost": 0.1301284,
+      "cost_per_test": 0.0006167222748815166,
+      "cost_per_correct_answer": 0.014458711111111112,
+      "cost_per_partial_answer": 0.0006167222748815166,
+      "traditional_effectiveness": 692.8733466330178,
+      "quality_weighted_effectiveness": 813.8115891688517,
+      "penalty_adjusted_effectiveness": 813.8115891688517
+    }
+  }
+}
