@@ -4,6 +4,14 @@ A comprehensive, enterprise-grade security testing framework for evaluating Larg
 
 **Built by the Rapticore Security Research Team**
 
+<img width="1140" height="850" alt="Screenshot 2025-09-11 at 1 02 28 PM" src="https://github.com/user-attachments/assets/ab8ab82f-d1cf-429c-bd63-2c467aeda27f" />
+
+<img width="1186" height="847" alt="Screenshot 2025-09-11 at 1 05 41 PM" src="https://github.com/user-attachments/assets/74d2990f-03ae-45bc-a997-9944471659e0" />
+
+
+
+
+
 ## 🎯 Framework Mission
 
 This framework is designed to advance the understanding of how Large Language Models can be effectively utilized to improve security outcomes. We provide this as an open testing platform for:
