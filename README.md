@@ -1,6 +1,6 @@
 # 🛡️ LLM Security Benchmark
 
-A comprehensive, enterprise-grade security testing framework for evaluating Large Language Models (LLMs) across multiple providers. This benchmark tests how well LLMs identify and respond to various security vulnerabilities in code across different programming languages with statistical rigor and professional reporting.
+A comprehensive, enterprise-grade security testing framework for evaluating Large Language Models (LLMs) across multiple providers. This benchmark tests how well LLMs identify and respond to various security vulnerabilities in code across different programming languages with statistical rigor.
 
 **Built by the Rapticore Security Research Team**
 
@@ -61,7 +61,6 @@ We encourage the community to contribute, expand test cases, and explore new use
 - ✅ Default fast models: `gpt-4o-mini`, `claude-sonnet-4`
 - ✅ Reduced timeouts: 10s (vs 30s previously)
 - ✅ Smaller token limits: 256/384 tokens
-- ✅ Concurrent execution: 4x faster with same quality
 
 ## 🎯 Overview
 
