@@ -1,0 +1,1049 @@
+# Dart/Flutter Comprehensive Security Test Suite
+# Built by the Rapticore Security Research Team
+# Covers Dart and Flutter-specific security vulnerabilities
+
+- id: dart_web_vulnerabilities
+  prompt: |
+    Analyze this Dart web application security vulnerability:
+
+    import 'dart:html';
+    import 'dart:convert';
+    import 'dart:js';
+
+    class WebSecurityVulnerabilities {
+      
+      void handleUserInput() {
+        final userInput = querySelector('#userInput') as InputElement;
+        final output = querySelector('#output') as DivElement;
+        
+        // XSS vulnerability - directly inserting user input
+        output.innerHtml = '<p>Hello ${userInput.value}</p>';
+      }
+      
+      void loadExternalScript(String scriptUrl) {
+        // Loading external scripts without validation
+        final script = ScriptElement()
+          ..src = scriptUrl
+          ..type = 'text/javascript';
+        document.head!.children.add(script);
+      }
+      
+      void makeAjaxRequest(String url) {
+        // CORS bypass and SSRF vulnerability
+        HttpRequest.getString(url).then((responseText) {
+          final output = querySelector('#response') as DivElement;
+          output.innerHtml = responseText; // XSS through response
+        });
+      }
+      
+      void executeUserJS(String jsCode) {
+        // Code injection through JavaScript interop
+        final jsFunction = context['eval'];
+        jsFunction.apply([jsCode]);
+      }
+      
+      void processFormData() {
+        final form = querySelector('#dataForm') as FormElement;
+        final formData = FormData(form);
+        
+        // No CSRF protection
+        final url = '/api/updateUser';
+        HttpRequest.postFormData(url, formData).then((response) {
+          querySelector('#result')!.text = 'User updated';
+        });
+      }
+      
+      void redirectUser(String targetUrl) {
+        // Open redirect vulnerability
+        window.location.href = targetUrl;
+      }
+      
+      void handleWebSocket() {
+        final wsUrl = querySelector('#wsUrl') as InputElement;
+        
+        // WebSocket connection without origin validation
+        final webSocket = WebSocket(wsUrl.value!);
+        
+        webSocket.onMessage.listen((MessageEvent e) {
+          // Processing messages without validation
+          final data = json.decode(e.data);
+          executeCommand(data['command']);
+        });
+      }
+      
+      void executeCommand(String command) {
+        // Simulated command execution
+        print('Executing: $command');
+      }
+      
+      void storeDataLocally(String sensitiveData) {
+        // Storing sensitive data in localStorage
+        window.localStorage['userToken'] = sensitiveData;
+        window.localStorage['creditCard'] = '4111-1111-1111-1111';
+      }
+      
+      void loadUserContent(String htmlContent) {
+        final container = querySelector('#userContent') as DivElement;
+        
+        // DOM-based XSS
+        container.setInnerHtml(htmlContent, 
+            validator: NodeValidatorBuilder.common()..allowSvg());
+      }
+    }
+
+    class InsecureCommunication {
+      
+      Future<String> sendCredentials(String username, String password) async {
+        // Sending credentials over HTTP
+        final url = 'http://api.example.com/login';
+        final response = await HttpRequest.postFormData(url, {
+          'username': username,
+          'password': password
+        });
+        
+        return response.responseText ?? '';
+      }
+      
+      void setupWebRTC() {
+        // WebRTC without security considerations
+        final configuration = {
+          'iceServers': [
+            {'urls': 'stun:stun.l.google.com:19302'},
+            {'urls': 'turn:turn.example.com', 'username': 'user', 'credential': 'pass'}
+          ]
+        };
+        
+        // No validation of peer connections
+        final peerConnection = context['RTCPeerConnection'].callMethod('apply', [configuration]);
+      }
+    }
+  criteria:
+    - 'xss.*prevention|input.*sanitization'
+    - 'csrf.*protection|same.*origin.*policy'
+    - 'script.*injection|code.*execution'
+    - 'https.*only|secure.*communication'
+    - 'origin.*validation|cors.*security'
+  must_not:
+    - 'innerhtml.*user.*input.*safe'
+    - 'http.*secure.*enough'
+  json: false
+
+- id: flutter_platform_channel_vulnerabilities
+  prompt: |
+    Review this Flutter platform channel security vulnerability:
+
+    import 'package:flutter/services.dart';
+    import 'dart:typed_data';
+
+    class PlatformChannelVulnerabilities {
+      static const platform = MethodChannel('com.example.app/security');
+      
+      Future<void> executeSystemCommand(String command) async {
+        try {
+          // Passing user input directly to native code
+          await platform.invokeMethod('executeCommand', {'command': command});
+        } on PlatformException catch (e) {
+          print('Command execution failed: ${e.message}');
+        }
+      }
+      
+      Future<String> readFile(String filePath) async {
+        // Path traversal vulnerability through platform channel
+        try {
+          final result = await platform.invokeMethod('readFile', {'path': filePath});
+          return result.toString();
+        } catch (e) {
+          return 'Error reading file: $e';
+        }
+      }
+      
+      Future<void> saveCredentials(String username, String password) async {
+        // Sending sensitive data to native code without encryption
+        await platform.invokeMethod('saveCredentials', {
+          'username': username,
+          'password': password
+        });
+      }
+      
+      Future<void> processUserData(Map<String, dynamic> userData) async {
+        // Passing unvalidated user data to native code
+        await platform.invokeMethod('processData', userData);
+      }
+      
+      Future<Uint8List> decryptData(Uint8List encryptedData, String key) async {
+        // Passing encryption keys through platform channel
+        final result = await platform.invokeMethod('decrypt', {
+          'data': encryptedData,
+          'key': key
+        });
+        return result as Uint8List;
+      }
+      
+      void setupEventChannel() {
+        const eventChannel = EventChannel('com.example.app/events');
+        
+        eventChannel.receiveBroadcastStream().listen((event) {
+          // Processing events from native code without validation
+          if (event['type'] == 'command') {
+            executeCommand(event['data']);
+          } else if (event['type'] == 'url') {
+            _launchUrl(event['url']);
+          }
+        });
+      }
+      
+      void _launchUrl(String url) {
+        // URL launching without validation
+        platform.invokeMethod('launchUrl', {'url': url});
+      }
+      
+      Future<void> sendSMS(String phoneNumber, String message) async {
+        // SMS sending without user consent validation
+        await platform.invokeMethod('sendSMS', {
+          'number': phoneNumber,
+          'message': message
+        });
+      }
+      
+      Future<void> accessContacts() async {
+        // Accessing sensitive data without proper permission checks
+        final contacts = await platform.invokeMethod('getContacts');
+        // Processing contacts without user consent
+        _uploadContacts(contacts);
+      }
+      
+      void _uploadContacts(dynamic contacts) {
+        // Uploading user data without explicit consent
+        platform.invokeMethod('uploadData', {'contacts': contacts});
+      }
+    }
+
+    // Native side example (Android Kotlin) - for context
+    /*
+    // MainActivity.kt - Vulnerable implementation
+    class MainActivity: FlutterActivity() {
+        override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+            super.configureFlutterEngine(flutterEngine)
+            
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "executeCommand" -> {
+                        val command = call.argument<String>("command")
+                        // Command injection vulnerability
+                        Runtime.getRuntime().exec(command)
+                        result.success("Command executed")
+                    }
+                    "readFile" -> {
+                        val path = call.argument<String>("path")
+                        // Path traversal vulnerability
+                        val content = File(path).readText()
+                        result.success(content)
+                    }
+                    "saveCredentials" -> {
+                        val username = call.argument<String>("username")
+                        val password = call.argument<String>("password")
+                        // Storing in plain text
+                        getSharedPreferences("creds", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("user", username)
+                            .putString("pass", password)
+                            .apply()
+                        result.success("Saved")
+                    }
+                }
+            }
+        }
+    }
+    */
+  criteria:
+    - 'platform.*channel.*security|input.*validation'
+    - 'command.*injection.*prevention|path.*traversal'
+    - 'sensitive.*data.*encryption|secure.*storage'
+    - 'permission.*validation|user.*consent'
+    - 'native.*code.*security|bridge.*validation'
+  must_not:
+    - 'platform.*channels.*always.*secure'
+    - 'native.*bridge.*safe.*by.*default'
+  json: false
+
+- id: dart_http_client_vulnerabilities
+  prompt: |
+    Analyze this Dart HTTP client security vulnerability:
+
+    import 'dart:io';
+    import 'dart:convert';
+    import 'package:http/http.dart' as http;
+
+    class HttpSecurityVulnerabilities {
+      
+      Future<String> fetchUserData(String userId) async {
+        // HTTP instead of HTTPS
+        final url = 'http://api.example.com/users/$userId';
+        final response = await http.get(Uri.parse(url));
+        return response.body;
+      }
+      
+      Future<void> loginUser(String username, String password) async {
+        // Sending credentials over HTTP
+        final response = await http.post(
+          Uri.parse('http://auth.example.com/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'username': username,
+            'password': password
+          })
+        );
+        
+        if (response.statusCode == 200) {
+          // Storing token in insecure manner
+          final token = json.decode(response.body)['token'];
+          _storeToken(token);
+        }
+      }
+      
+      void _storeToken(String token) {
+        // Writing token to file without encryption
+        final file = File('user_token.txt');
+        file.writeAsStringSync(token);
+      }
+      
+      Future<void> uploadFile(String filePath, String uploadUrl) async {
+        // File upload without validation
+        final file = File(filePath);
+        final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
+        request.files.add(await http.MultipartFile.fromPath('file', filePath));
+        
+        final response = await request.send();
+        print('Upload status: ${response.statusCode}');
+      }
+      
+      Future<String> proxyRequest(String targetUrl) async {
+        // SSRF vulnerability
+        final response = await http.get(Uri.parse(targetUrl));
+        return response.body;
+      }
+      
+      Future<void> sendUserData(Map<String, dynamic> userData) async {
+        final client = HttpClient();
+        
+        // Disable certificate validation
+        client.badCertificateCallback = (cert, host, port) => true;
+        
+        final request = await client.postUrl(Uri.parse('https://api.example.com/data'));
+        request.headers.contentType = ContentType.json;
+        request.write(json.encode(userData));
+        
+        final response = await request.close();
+        final responseBody = await response.transform(utf8.decoder).join();
+        
+        client.close();
+      }
+      
+      Future<void> downloadFile(String fileUrl, String savePath) async {
+        // Path traversal in file download
+        final response = await http.get(Uri.parse(fileUrl));
+        final file = File(savePath);
+        await file.writeAsBytes(response.bodyBytes);
+      }
+      
+      Future<void> makeAuthenticatedRequest(String token, String endpoint) async {
+        // Token exposure in URL parameters
+        final url = 'https://api.example.com/$endpoint?token=$token';
+        final response = await http.get(Uri.parse(url));
+        print('Response: ${response.body}');
+      }
+      
+      Future<void> setCookiesInsecurely() async {
+        final client = HttpClient();
+        
+        // Setting insecure cookies
+        client.addCredentials(
+          Uri.parse('https://example.com'),
+          'realm',
+          HttpClientDigestCredentials('user', 'password')
+        );
+        
+        final request = await client.getUrl(Uri.parse('https://example.com/api'));
+        // No secure cookie flags
+        request.cookies.add(Cookie('session', 'abc123')
+          ..secure = false
+          ..httpOnly = false);
+        
+        final response = await request.close();
+        client.close();
+      }
+      
+      Future<void> redirectFollowing(String initialUrl) async {
+        final client = HttpClient();
+        
+        // Uncontrolled redirect following
+        client.followRedirects = true;
+        client.maxRedirects = 10;
+        
+        final request = await client.getUrl(Uri.parse(initialUrl));
+        final response = await request.close();
+        
+        // Processing response without validating final URL
+        final responseBody = await response.transform(utf8.decoder).join();
+        print('Final response: $responseBody');
+        
+        client.close();
+      }
+    }
+
+    class WebSocketVulnerabilities {
+      
+      Future<void> connectToWebSocket(String wsUrl) async {
+        // WebSocket connection without origin validation
+        final webSocket = await WebSocket.connect(wsUrl);
+        
+        webSocket.listen((message) {
+          // Processing messages without validation
+          final data = json.decode(message);
+          processWebSocketMessage(data);
+        });
+      }
+      
+      void processWebSocketMessage(Map<String, dynamic> data) {
+        final command = data['command'];
+        final args = data['args'] as List<dynamic>;
+        
+        // Command execution from WebSocket message
+        switch (command) {
+          case 'execute':
+            Process.run(args[0], args.sublist(1));
+            break;
+          case 'read_file':
+            final file = File(args[0]);
+            print(file.readAsStringSync());
+            break;
+          case 'write_file':
+            final file = File(args[0]);
+            file.writeAsStringSync(args[1]);
+            break;
+        }
+      }
+      
+      Future<void> sendSensitiveData(WebSocket ws, String userData) async {
+        // Sending sensitive data over WebSocket without encryption
+        final message = json.encode({
+          'type': 'user_data',
+          'data': userData,
+          'timestamp': DateTime.now().millisecondsSinceEpoch
+        });
+        
+        ws.add(message);
+      }
+    }
+  criteria:
+    - 'https.*only|certificate.*validation'
+    - 'ssrf.*prevention|url.*validation'
+    - 'secure.*cookie.*flags|httponly.*secure'
+    - 'path.*traversal.*prevention|file.*upload.*security'
+    - 'credential.*protection|token.*security'
+  must_not:
+    - 'http.*secure.*for.*api.*calls'
+    - 'certificate.*validation.*disable.*safe'
+  json: false
+
+- id: flutter_storage_vulnerabilities
+  prompt: |
+    Review this Flutter storage security vulnerability:
+
+    import 'dart:io';
+    import 'dart:convert';
+    import 'package:shared_preferences/shared_preferences.dart';
+    import 'package:path_provider/path_provider.dart';
+
+    class StorageVulnerabilities {
+      
+      Future<void> storeUserCredentials(String username, String password) async {
+        final prefs = await SharedPreferences.getInstance();
+        
+        // Storing sensitive data in SharedPreferences (plain text)
+        await prefs.setString('username', username);
+        await prefs.setString('password', password);
+        await prefs.setString('api_key', 'sk-1234567890abcdef');
+      }
+      
+      Future<void> saveUserData(Map<String, dynamic> userData) async {
+        // Writing sensitive data to external storage
+        final directory = await getExternalStorageDirectory();
+        final file = File('${directory!.path}/user_data.json');
+        
+        await file.writeAsString(json.encode(userData));
+      }
+      
+      Future<void> cacheSecretKey(String secretKey) async {
+        // Caching encryption keys in temp directory
+        final tempDir = await getTemporaryDirectory();
+        final keyFile = File('${tempDir.path}/secret.key');
+        
+        await keyFile.writeAsString(secretKey);
+      }
+      
+      Future<void> logSensitiveInformation(String userInfo) async {
+        // Logging sensitive data to files
+        final appDir = await getApplicationDocumentsDirectory();
+        final logFile = File('${appDir.path}/app.log');
+        
+        final timestamp = DateTime.now().toIso8601String();
+        final logEntry = '$timestamp - User info: $userInfo\n';
+        
+        await logFile.writeAsString(logEntry, mode: FileMode.append);
+        
+        // Also logging to console (visible in debug builds)
+        print('Processing user: $userInfo');
+      }
+      
+      Future<void> storePaymentInfo(String cardNumber, String cvv, String expiryDate) async {
+        final prefs = await SharedPreferences.getInstance();
+        
+        // Storing PCI data in plain text
+        await prefs.setString('card_number', cardNumber);
+        await prefs.setString('cvv', cvv);
+        await prefs.setString('expiry', expiryDate);
+      }
+      
+      Future<void> backupUserData() async {
+        final prefs = await SharedPreferences.getInstance();
+        final appDir = await getApplicationDocumentsDirectory();
+        
+        // Creating world-readable backup
+        final backupFile = File('${appDir.path}/backup.json');
+        
+        final backup = {
+          'preferences': prefs.getKeys().map((key) {
+            return {key: prefs.get(key)};
+          }).toList(),
+          'timestamp': DateTime.now().millisecondsSinceEpoch
+        };
+        
+        await backupFile.writeAsString(json.encode(backup));
+        
+        // Setting permissive file permissions
+        if (Platform.isLinux || Platform.isMacOS) {
+          await Process.run('chmod', ['777', backupFile.path]);
+        }
+      }
+      
+      Future<String> loadConfigFromNetwork(String configUrl) async {
+        // Loading configuration from network and caching
+        final response = await http.get(Uri.parse(configUrl));
+        final config = response.body;
+        
+        // Caching network response without validation
+        final cacheDir = await getTemporaryDirectory();
+        final configFile = File('${cacheDir.path}/remote_config.json');
+        await configFile.writeAsString(config);
+        
+        return config;
+      }
+      
+      Future<void> processUserFiles(List<String> filePaths) async {
+        final appDir = await getApplicationDocumentsDirectory();
+        
+        for (final path in filePaths) {
+          // Path traversal vulnerability
+          final targetPath = '${appDir.path}/$path';
+          final file = File(targetPath);
+          
+          if (await file.exists()) {
+            final content = await file.readAsString();
+            // Processing files without validation
+            await _processFileContent(content);
+          }
+        }
+      }
+      
+      Future<void> _processFileContent(String content) async {
+        // Simulated file processing
+        print('Processing file content');
+      }
+      
+      Future<void> shareUserData() async {
+        final prefs = await SharedPreferences.getInstance();
+        final userData = {
+          'user_id': prefs.getString('user_id'),
+          'email': prefs.getString('email'),
+          'phone': prefs.getString('phone'),
+          'location': prefs.getString('location')
+        };
+        
+        // Writing user data to shared location
+        final directory = await getExternalStorageDirectory();
+        final sharedFile = File('${directory!.path}/shared_data.json');
+        
+        await sharedFile.writeAsString(json.encode(userData));
+        
+        // Making file accessible to other apps
+        if (Platform.isAndroid) {
+          await Process.run('chmod', ['644', sharedFile.path]);
+        }
+      }
+    }
+
+    class DatabaseVulnerabilities {
+      
+      Future<List<Map<String, dynamic>>> searchUsers(String searchTerm) async {
+        // SQL injection in SQLite query
+        final db = await openDatabase('users.db');
+        
+        final query = "SELECT * FROM users WHERE name LIKE '%$searchTerm%'";
+        final result = await db.rawQuery(query);
+        
+        return result;
+      }
+      
+      Future<void> insertUserData(Map<String, dynamic> userData) async {
+        final db = await openDatabase('users.db');
+        
+        // Building SQL query with string concatenation
+        final columns = userData.keys.join(', ');
+        final values = userData.values.map((v) => "'$v'").join(', ');
+        
+        final query = "INSERT INTO users ($columns) VALUES ($values)";
+        await db.rawInsert(query);
+      }
+      
+      Future<void> executeUserQuery(String userQuery) async {
+        final db = await openDatabase('users.db');
+        
+        // Allowing arbitrary SQL execution
+        await db.rawQuery(userQuery);
+      }
+    }
+  criteria:
+    - 'sensitive.*data.*encryption|secure.*storage'
+    - 'shared.*preferences.*security|external.*storage.*risks'
+    - 'sql.*injection.*prevention|parameterized.*queries'
+    - 'file.*permissions|path.*traversal.*prevention'
+    - 'logging.*sensitive.*data|debug.*information.*leaks'
+  must_not:
+    - 'shared.*preferences.*secure.*for.*passwords'
+    - 'external.*storage.*always.*safe'
+  json: false
+
+- id: dart_crypto_vulnerabilities
+  prompt: |
+    Analyze this Dart cryptographic implementation vulnerability:
+
+    import 'dart:math';
+    import 'dart:convert';
+    import 'dart:typed_data';
+    import 'package:crypto/crypto.dart';
+
+    class CryptographicVulnerabilities {
+      
+      String hashPasswordWeak(String password) {
+        // Using weak hashing algorithm
+        final bytes = utf8.encode(password);
+        final digest = md5.convert(bytes);
+        return digest.toString();
+      }
+      
+      String generateWeakToken() {
+        // Using predictable random number generation
+        final random = Random();
+        final token = random.nextInt(1000000).toString();
+        return token;
+      }
+      
+      String encryptWithWeakKey(String data) {
+        // Hard-coded weak encryption key
+        final key = 'secret123';
+        final keyBytes = utf8.encode(key);
+        final dataBytes = utf8.encode(data);
+        
+        // Simple XOR encryption (very weak)
+        final encrypted = <int>[];
+        for (int i = 0; i < dataBytes.length; i++) {
+          encrypted.add(dataBytes[i] ^ keyBytes[i % keyBytes.length]);
+        }
+        
+        return base64.encode(encrypted);
+      }
+      
+      bool verifyPasswordInsecure(String stored, String provided) {
+        // Timing attack vulnerability
+        return stored == provided;
+      }
+      
+      String createSessionToken(String userId) {
+        // Predictable token generation
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final token = '$userId-$timestamp';
+        return base64.encode(utf8.encode(token));
+      }
+      
+      String generateSalt() {
+        // Insufficient salt length
+        final random = Random();
+        final salt = random.nextInt(1000).toString();
+        return salt;
+      }
+      
+      String hashWithWeakSalt(String password, String salt) {
+        // Using weak salt and fast hashing
+        final combined = password + salt;
+        final bytes = utf8.encode(combined);
+        final digest = sha1.convert(bytes); // SHA-1 is deprecated
+        return digest.toString();
+      }
+      
+      bool constantTimeCompare(String a, String b) {
+        // Not actually constant time
+        if (a.length != b.length) return false;
+        
+        var result = 0;
+        for (int i = 0; i < a.length; i++) {
+          result |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+        }
+        
+        return result == 0;
+      }
+      
+      String encryptSensitiveData(String data, String userKey) {
+        // Using user-provided key directly
+        final keyBytes = utf8.encode(userKey.padRight(32, '0'));
+        final dataBytes = utf8.encode(data);
+        
+        // ECB-like encryption (patterns visible)
+        final encrypted = <int>[];
+        for (int i = 0; i < dataBytes.length; i += 32) {
+          final block = dataBytes.skip(i).take(32).toList();
+          for (int j = 0; j < block.length; j++) {
+            encrypted.add(block[j] ^ keyBytes[j]);
+          }
+        }
+        
+        return base64.encode(encrypted);
+      }
+      
+      String generateAPIKey() {
+        // Weak API key generation
+        final chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        final random = Random();
+        String apiKey = '';
+        
+        for (int i = 0; i < 16; i++) {
+          apiKey += chars[random.nextInt(chars.length)];
+        }
+        
+        return apiKey;
+      }
+      
+      Map<String, String> createJWT(Map<String, dynamic> payload) {
+        // Insecure JWT implementation
+        final header = {'alg': 'none', 'typ': 'JWT'};
+        final headerEncoded = base64.encode(utf8.encode(json.encode(header)));
+        final payloadEncoded = base64.encode(utf8.encode(json.encode(payload)));
+        
+        // No signature (algorithm: none)
+        final jwt = '$headerEncoded.$payloadEncoded.';
+        
+        return {'token': jwt};
+      }
+      
+      bool validateCertificate(dynamic certificate) {
+        // Always accepting certificates
+        return true;
+      }
+      
+      String deriveKeyWeak(String password, String salt) {
+        // Weak key derivation with low iteration count
+        final saltBytes = utf8.encode(salt);
+        final passwordBytes = utf8.encode(password);
+        
+        var derived = passwordBytes;
+        
+        // Only 1 iteration (extremely weak)
+        for (int i = 0; i < 1; i++) {
+          final combined = [...derived, ...saltBytes];
+          derived = sha256.convert(combined).bytes;
+        }
+        
+        return base64.encode(derived);
+      }
+      
+      void storePrivateKey(String privateKey) {
+        // Storing private key without encryption
+        final file = File('private_key.pem');
+        file.writeAsStringSync(privateKey);
+        
+        // Also logging it (very dangerous)
+        print('Private key: $privateKey');
+      }
+    }
+
+    class RandomnessVulnerabilities {
+      
+      String generatePassword() {
+        // Predictable password generation
+        final random = Random();
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        
+        String password = '';
+        for (int i = 0; i < 8; i++) {
+          password += chars[random.nextInt(chars.length)];
+        }
+        
+        return password;
+      }
+      
+      String generateNonce() {
+        // Using timestamp as nonce (predictable)
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        return timestamp.toString();
+      }
+      
+      List<int> generateRandomBytes(int length) {
+        // Weak random byte generation
+        final random = Random();
+        return List.generate(length, (index) => random.nextInt(256));
+      }
+      
+      String createCSRFToken() {
+        // Weak CSRF token generation
+        final random = Random();
+        return random.nextInt(999999).toString().padLeft(6, '0');
+      }
+    }
+  criteria:
+    - 'weak.*hash.*md5.*sha1|secure.*hash.*sha256.*sha3'
+    - 'secure.*random|cryptographic.*random'
+    - 'key.*derivation.*pbkdf2|iteration.*count.*high'
+    - 'timing.*attack.*prevention|constant.*time'
+    - 'strong.*encryption.*aes|avoid.*xor.*simple'
+  must_not:
+    - 'md5.*secure.*hashing'
+    - 'random.*class.*cryptographic.*secure'
+  json: false
+
+- id: flutter_widget_security_issues
+  prompt: |
+    Review this Flutter widget security vulnerability:
+
+    import 'package:flutter/material.dart';
+    import 'package:webview_flutter/webview_flutter.dart';
+    import 'package:url_launcher/url_launcher.dart';
+
+    class InsecureWidgets extends StatefulWidget {
+      @override
+      _InsecureWidgetsState createState() => _InsecureWidgetsState();
+    }
+
+    class _InsecureWidgetsState extends State<InsecureWidgets> {
+      final TextEditingController _urlController = TextEditingController();
+      final TextEditingController _htmlController = TextEditingController();
+      
+      @override
+      Widget build(BuildContext context) {
+        return Scaffold(
+          appBar: AppBar(title: Text('Insecure Widgets')),
+          body: Column(
+            children: [
+              // Text field that displays user input without sanitization
+              TextField(
+                controller: _urlController,
+                decoration: InputDecoration(labelText: 'Enter URL'),
+              ),
+              
+              // Button that launches any URL without validation
+              ElevatedButton(
+                onPressed: () => _launchURL(_urlController.text),
+                child: Text('Launch URL'),
+              ),
+              
+              // WebView with dangerous settings
+              Expanded(
+                child: WebView(
+                  initialUrl: 'about:blank',
+                  javascriptMode: JavascriptMode.unrestricted,
+                  onWebViewCreated: (WebViewController webViewController) {
+                    // Loading user-controlled HTML
+                    webViewController.loadHtmlString(_htmlController.text);
+                  },
+                  javascriptChannels: Set.from([
+                    JavascriptChannel(
+                      name: 'NativeChannel',
+                      onMessageReceived: (JavascriptMessage message) {
+                        // Processing messages from JavaScript without validation
+                        _handleJavaScriptMessage(message.message);
+                      },
+                    ),
+                  ]),
+                ),
+              ),
+              
+              TextField(
+                controller: _htmlController,
+                decoration: InputDecoration(labelText: 'Enter HTML'),
+                maxLines: 5,
+              ),
+            ],
+          ),
+        );
+      }
+      
+      void _launchURL(String url) async {
+        // No URL validation before launching
+        if (await canLaunch(url)) {
+          await launch(url);
+        }
+      }
+      
+      void _handleJavaScriptMessage(String message) {
+        // Dangerous: executing commands from JavaScript
+        final parts = message.split('|');
+        final command = parts[0];
+        final args = parts.skip(1).toList();
+        
+        switch (command) {
+          case 'navigate':
+            _launchURL(args[0]);
+            break;
+          case 'store':
+            _storeData(args[0], args[1]);
+            break;
+          case 'alert':
+            _showAlert(args[0]);
+            break;
+        }
+      }
+      
+      void _storeData(String key, String value) {
+        // Storing data from JavaScript without validation
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString(key, value);
+        });
+      }
+      
+      void _showAlert(String message) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Message from WebView'),
+            content: Text(message), // XSS-like content display
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    class FormValidationIssues extends StatefulWidget {
+      @override
+      _FormValidationIssuesState createState() => _FormValidationIssuesState();
+    }
+
+    class _FormValidationIssuesState extends State<FormValidationIssues> {
+      final _formKey = GlobalKey<FormState>();
+      final _emailController = TextEditingController();
+      final _passwordController = TextEditingController();
+      
+      @override
+      Widget build(BuildContext context) {
+        return Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+                validator: (value) {
+                  // Weak email validation
+                  return value!.contains('@') ? null : 'Invalid email';
+                },
+              ),
+              
+              TextFormField(
+                controller: _passwordController,
+                decoration: InputDecoration(labelText: 'Password'),
+                obscureText: false, // Password visible in plain text
+                validator: (value) {
+                  // Weak password validation
+                  return value!.length >= 3 ? null : 'Password too short';
+                },
+              ),
+              
+              ElevatedButton(
+                onPressed: _submitForm,
+                child: Text('Submit'),
+              ),
+            ],
+          ),
+        );
+      }
+      
+      void _submitForm() {
+        if (_formKey.currentState!.validate()) {
+          // Logging sensitive data
+          print('Email: ${_emailController.text}');
+          print('Password: ${_passwordController.text}');
+          
+          // Sending credentials over HTTP
+          _sendCredentials(_emailController.text, _passwordController.text);
+        }
+      }
+      
+      void _sendCredentials(String email, String password) async {
+        // Insecure HTTP transmission
+        final response = await http.post(
+          Uri.parse('http://api.example.com/login'),
+          body: {
+            'email': email,
+            'password': password
+          },
+        );
+        
+        print('Response: ${response.body}');
+      }
+    }
+
+    class FileHandlingVulnerabilities {
+      
+      Future<void> saveUserFile(String filename, String content) async {
+        // Path traversal vulnerability
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/$filename');
+        
+        await file.writeAsString(content);
+      }
+      
+      Future<String> loadUserFile(String filename) async {
+        // No access control on file reading
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/$filename');
+        
+        return await file.readAsString();
+      }
+      
+      Future<void> processUploadedImage(String imagePath) async {
+        // No file type validation
+        final file = File(imagePath);
+        final bytes = await file.readAsBytes();
+        
+        // Processing file without validation
+        _processImageData(bytes);
+      }
+      
+      void _processImageData(Uint8List data) {
+        // Dangerous: processing unvalidated file data
+        print('Processing ${data.length} bytes');
+      }
+    }
+  criteria:
+    - 'input.*validation|url.*validation'
+    - 'webview.*security|javascript.*bridge.*validation'
+    - 'file.*path.*validation|path.*traversal'
+    - 'form.*validation.*security|password.*strength'
+    - 'sensitive.*data.*logging|secure.*transmission'
+  must_not:
+    - 'webview.*javascript.*always.*safe'
+    - 'user.*input.*widgets.*secure.*by.*default'
+  json: false

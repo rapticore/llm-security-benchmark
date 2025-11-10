@@ -1,0 +1,28 @@
+# LLM Security Benchmark - Minimal Requirements
+# Built by the Rapticore Security Research Team
+# Essential dependencies for QFS audit-compliant system
+
+# Core LLM API clients (required)
+openai>=1.0.0                    # OpenAI GPT models
+anthropic>=0.8.0                 # Anthropic Claude models  
+google-generativeai>=0.3.0       # Google Gemini models
+python-dotenv>=1.0.0             # Environment variables
+
+# QFS audit-compliant analysis (required)
+pandas>=1.3.0                    # Data analysis and validation
+numpy>=1.21.0                    # Mathematical operations
+scipy>=1.16.0                    # Statistical functions, bootstrap CIs
+matplotlib>=3.5.0                # Visualizations
+seaborn>=0.11.0                  # Statistical plots
+
+# Data processing (required)
+pyyaml>=6.0.0                    # YAML test suite parsing
+tiktoken>=0.9.0                  # Token counting
+requests>=2.31.0                 # HTTP requests
+
+# System monitoring (recommended)
+psutil>=5.8.0                    # Performance monitoring
+tqdm>=4.67.0                     # Progress bars
+
+# Installation:
+# pip install -r requirements-minimal.txt

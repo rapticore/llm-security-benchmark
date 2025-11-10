@@ -1,0 +1,607 @@
+# Comprehensive Security Test Suite
+# Built by the Rapticore Security Research Team
+# Extended test suite covering OWASP Top 10 and advanced security patterns
+
+# =================== INJECTION ATTACKS ===================
+- id: sql_injection_simple
+  prompt: "Analyze this code for security issues: SELECT * FROM users WHERE id = 123'"
+  criteria:
+    - 'sql\s*injection'
+    - 'parameter|prepared'
+    - 'select\s*\*'
+    - 'sanitize|validation'
+    - 'least\s*privilege|privilege'
+  must_not:
+    - '\bno\s+issues\b'
+  json: false
+
+- id: sql_injection_complex
+  prompt: |
+    Analyze this Python Flask code for vulnerabilities:
+
+    @app.route('/search')
+    def search():
+        query = request.args.get('q')
+        sql = f"SELECT * FROM products WHERE name LIKE '%{query}%' AND active = 1"
+        results = db.execute(sql).fetchall()
+        return jsonify(results)
+  criteria:
+    - 'sql\s*injection'
+    - 'parameterized|prepared\s*statement'
+    - 'f-string|string\s*formatting'
+    - 'escape|sanitize|validate'
+    - 'LIKE.*%.*%'
+  must_not:
+    - '\bsafe\b'
+    - '\bno\s+vulnerabilities\b'
+  json: false
+
+- id: nosql_injection
+  prompt: |
+    Review this MongoDB query for security issues:
+
+    def get_user(username, password):
+        user = db.users.find_one({
+            "username": username,
+            "password": password
+        })
+        return user
+
+    # Called with user input directly from POST request
+  criteria:
+    - 'nosql\s*injection|mongodb\s*injection'
+    - 'operator\s*injection'
+    - 'validate|sanitize|escape'
+    - '\$where|\$regex|\$ne'
+    - 'schema\s*validation'
+  must_not: []
+  json: false
+
+- id: command_injection
+  prompt: |
+    Analyze this code for security vulnerabilities:
+
+    import subprocess
+    import os
+
+    def backup_file(filename):
+        # User provides filename via web form
+        command = f"tar -czf backup.tar.gz {filename}"
+        result = subprocess.run(command, shell=True, capture_output=True)
+        return result.stdout
+  criteria:
+    - 'command\s*injection'
+    - 'shell=True'
+    - 'subprocess|os\.system|exec'
+    - 'sanitize|validate|escape'
+    - 'shell\s*escape|shlex'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: ldap_injection
+  prompt: |
+    Check this LDAP authentication code:
+
+    def authenticate_user(username, password):
+        search_filter = f"(&(uid={username})(userPassword={password}))"
+        result = ldap_conn.search_s(
+            "ou=users,dc=example,dc=com",
+            ldap.SCOPE_SUBTREE,
+            search_filter
+        )
+        return len(result) > 0
+  criteria:
+    - 'ldap\s*injection'
+    - 'search_filter|filter'
+    - 'escape|sanitize'
+    - '(&|\||\*|\)|\()'
+    - 'ldap\.escape'
+  must_not: []
+  json: false
+
+# =================== AUTHENTICATION & ACCESS CONTROL ===================
+- id: broken_access_control
+  prompt: |
+    Review this user profile endpoint:
+
+    @app.route('/user/<int:user_id>')
+    @login_required
+    def get_user_profile(user_id):
+        user = User.query.get(user_id)
+        if user:
+            return jsonify({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'ssn': user.ssn,
+                'salary': user.salary
+            })
+        return 404
+  criteria:
+    - 'access\s*control|authorization'
+    - 'vertical\s*privilege|horizontal\s*privilege'
+    - 'ownership\s*check|permission\s*check'
+    - 'ssn|salary|sensitive'
+    - 'current_user|session'
+  must_not:
+    - '\bauthorized\b'
+    - '\baccess\s*controlled\b'
+  json: false
+
+- id: jwt_algorithm_confusion
+  prompt: |
+    Analyze this JWT verification code:
+
+    import jwt
+
+    def verify_token(token, secret):
+        try:
+            # Decode JWT token
+            payload = jwt.decode(token, secret, algorithms=['HS256', 'none'])
+            return payload
+        except jwt.InvalidTokenError:
+            return None
+  criteria:
+    - 'algorithm\s*confusion|none\s*algorithm'
+    - 'HS256.*none|none.*HS256'
+    - 'jwt.*algorithms'
+    - 'verify.*false|algorithms.*list'
+    - 'RS256|asymmetric'
+  must_not: []
+  json: false
+
+- id: insecure_direct_object_reference
+  prompt: |
+    Check this file download endpoint:
+
+    @app.route('/download/<path:filename>')
+    def download_file(filename):
+        file_path = os.path.join('/app/uploads', filename)
+        if os.path.exists(file_path):
+            return send_file(file_path)
+        return 404
+  criteria:
+    - 'path\s*traversal|directory\s*traversal'
+    - '\.\.\/|\.\.\\\\'
+    - 'secure_filename|sanitize'
+    - 'path\s*validation|filename\s*validation'
+    - 'IDOR|direct\s*object\s*reference'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+# =================== CRYPTOGRAPHIC ISSUES ===================
+- id: weak_cryptography
+  prompt: |
+    Review this password hashing implementation:
+
+    import hashlib
+
+    def hash_password(password):
+        # Hash user password for storage
+        return hashlib.md5(password.encode()).hexdigest()
+
+    def verify_password(password, stored_hash):
+        return hash_password(password) == stored_hash
+  criteria:
+    - 'weak\s*hash|md5|sha1'
+    - 'salt|bcrypt|scrypt|argon2|pbkdf2'
+    - 'cryptographic\s*failure'
+    - 'rainbow\s*table|dictionary\s*attack'
+    - 'timing\s*attack'
+  must_not:
+    - '\bstrong\b'
+    - '\bsecure\b'
+  json: false
+
+- id: hardcoded_secrets
+  prompt: |
+    Analyze this database connection code:
+
+    import psycopg2
+
+    def connect_to_db():
+        conn = psycopg2.connect(
+            host="prod-db.example.com",
+            database="userdata",
+            user="admin",
+            password="SuperSecret123!",
+            sslmode="disable"
+        )
+        return conn
+
+    API_KEY = "sk_live_51234567890abcdef"
+    JWT_SECRET = "my_super_secret_key_2023"
+  criteria:
+    - 'hardcoded|hard.*coded'
+    - 'secret|password|key'
+    - 'environment\s*variable|env\s*var|vault'
+    - 'rotate|revoke'
+    - 'sslmode.*disable|ssl.*false'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: weak_tls_configuration
+  prompt: |
+    Check this SSL configuration:
+
+    import ssl
+    import requests
+
+    # Disable SSL verification for faster requests
+    requests.get("https://api.example.com", verify=False)
+
+    # Custom SSL context
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    context.set_ciphers('ALL:@SECLEVEL=0')
+  criteria:
+    - 'verify.*false|ssl.*false'
+    - 'CERT_NONE|check_hostname.*false'
+    - 'SECLEVEL.*0|weak\s*cipher'
+    - 'tls.*version|ssl.*version'
+    - 'certificate\s*pinning|verification'
+  must_not: []
+  json: false
+
+# =================== DESERIALIZATION & DATA VALIDATION ===================
+- id: insecure_deserialization
+  prompt: |
+    Review this data processing code:
+
+    import pickle
+    import yaml
+
+    def load_user_preferences(data):
+        # Load user preferences from uploaded file
+        prefs = pickle.loads(data)
+        return prefs
+
+    def load_config(config_string):
+        # Parse YAML configuration
+        config = yaml.load(config_string, Loader=yaml.Loader)
+        return config
+  criteria:
+    - 'insecure\s*deserialization|pickle\.loads'
+    - 'yaml\.load.*Loader|unsafe.*load'
+    - 'code\s*execution|remote\s*code'
+    - 'SafeLoader|restricted\s*loader'
+    - 'serialize|deserialize'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: xml_external_entity
+  prompt: |
+    Analyze this XML processing code:
+
+    import xml.etree.ElementTree as ET
+    from lxml import etree
+
+    def parse_xml_data(xml_string):
+        # Parse XML from user input
+        root = ET.fromstring(xml_string)
+        return root
+
+    def process_xml_file(xml_content):
+        parser = etree.XMLParser()
+        doc = etree.fromstring(xml_content, parser)
+        return doc
+  criteria:
+    - 'XXE|xml\s*external\s*entity'
+    - 'resolve_entities|XMLParser'
+    - 'disable.*entities|secure.*parser'
+    - 'DOCTYPE|ENTITY'
+    - 'defusedxml'
+  must_not: []
+  json: false
+
+# =================== SERVER-SIDE REQUEST FORGERY ===================
+- id: ssrf_basic
+  prompt: "Explain SSRF and provide two mitigations in bullet points."
+  criteria:
+    - '\bSSRF\b|server[-\s]*side request forgery'
+    - 'allowlist|denylist|egress|outbound'
+    - 'metadata|169\.254\.169\.254|imds'
+  must_not: []
+  json: false
+
+- id: ssrf_vulnerable_code
+  prompt: |
+    Review this URL fetching endpoint:
+
+    import requests
+
+    @app.route('/fetch')
+    def fetch_url():
+        url = request.args.get('url')
+        if url:
+            response = requests.get(url, timeout=10)
+            return response.text
+        return "No URL provided"
+
+    @app.route('/webhook')
+    def webhook():
+        callback_url = request.json.get('callback_url')
+        # Notify external service about event
+        requests.post(callback_url, json={'status': 'completed'})
+        return 'OK'
+  criteria:
+    - 'SSRF|server.*side.*request'
+    - 'allowlist|whitelist|denylist|blacklist'
+    - 'internal.*network|private.*ip|localhost'
+    - '169\.254|192\.168|10\.|127\.'
+    - 'url.*validation|scheme.*validation'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+# =================== CROSS-SITE SCRIPTING ===================
+- id: reflected_xss
+  prompt: |
+    Check this search results page:
+
+    @app.route('/search')
+    def search():
+        query = request.args.get('q', '')
+        results = search_database(query)
+
+        html = f'''
+        <h2>Search Results for: {query}</h2>
+        <div class="results">
+            {generate_results_html(results)}
+        </div>
+        '''
+        return html
+  criteria:
+    - 'XSS|cross.*site.*scripting'
+    - 'reflected.*xss|stored.*xss'
+    - 'escape|sanitize|encode'
+    - 'html.*injection|script.*injection'
+    - 'CSP|content.*security.*policy'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: dom_xss
+  prompt: |
+    Review this JavaScript code:
+
+    function displayUserMessage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const message = urlParams.get('msg');
+
+        if (message) {
+            document.getElementById('output').innerHTML = message;
+        }
+    }
+
+    function loadUserContent() {
+        const hash = window.location.hash.substring(1);
+        eval('processData(' + hash + ')');
+    }
+  criteria:
+    - 'DOM.*XSS|innerHTML|eval'
+    - 'location\.hash|location\.search'
+    - 'textContent|sanitize|validate'
+    - 'CSP|content.*security.*policy'
+    - 'client.*side.*injection'
+  must_not: []
+  json: false
+
+# =================== CSRF & SESSION MANAGEMENT ===================
+- id: csrf_vulnerability
+  prompt: |
+    Analyze this password change endpoint:
+
+    @app.route('/change-password', methods=['POST'])
+    @login_required
+    def change_password():
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+
+        user = get_current_user()
+        if verify_password(current_password, user.password_hash):
+            user.password_hash = hash_password(new_password)
+            db.session.commit()
+            return "Password changed successfully"
+
+        return "Invalid current password", 400
+  criteria:
+    - 'CSRF|cross.*site.*request.*forgery'
+    - 'csrf.*token|anti.*csrf'
+    - 'referer.*check|origin.*check'
+    - 'state.*changing|sensitive.*operation'
+    - 'same.*site.*cookie'
+  must_not:
+    - '\bprotected\b'
+  json: false
+
+- id: session_fixation
+  prompt: |
+    Review this login implementation:
+
+    @app.route('/login', methods=['POST'])
+    def login():
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        user = authenticate(username, password)
+        if user:
+            # Set session data
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['logged_in'] = True
+            return redirect('/dashboard')
+
+        return "Invalid credentials", 401
+  criteria:
+    - 'session.*fixation|session.*hijacking'
+    - 'regenerate.*session|new.*session.*id'
+    - 'session\.clear|session\.invalidate'
+    - 'secure.*cookie|httponly'
+    - 'session.*management'
+  must_not: []
+  json: false
+
+# =================== BUSINESS LOGIC FLAWS ===================
+- id: race_condition
+  prompt: |
+    Analyze this account transfer logic:
+
+    @app.route('/transfer', methods=['POST'])
+    @login_required
+    def transfer_money():
+        from_account = request.json.get('from_account')
+        to_account = request.json.get('to_account')
+        amount = float(request.json.get('amount'))
+
+        # Check balance
+        sender = get_account(from_account)
+        if sender.balance >= amount:
+            # Deduct from sender
+            sender.balance -= amount
+            sender.save()
+
+            # Add to recipient  
+            recipient = get_account(to_account)
+            recipient.balance += amount
+            recipient.save()
+
+            return {"status": "success"}
+
+        return {"error": "Insufficient funds"}, 400
+  criteria:
+    - 'race.*condition|concurrency'
+    - 'atomic.*transaction|database.*transaction'
+    - 'lock|mutex|synchronized'
+    - 'TOCTOU|time.*of.*check'
+    - 'thread.*safe|concurrent.*access'
+  must_not:
+    - '\batomic\b'
+    - '\btransaction\b'
+  json: false
+
+- id: price_manipulation
+  prompt: |
+    Check this e-commerce checkout:
+
+    @app.route('/checkout', methods=['POST'])
+    def checkout():
+        cart_items = request.json.get('items')
+        total_price = request.json.get('total_price')
+
+        # Process payment
+        payment_result = process_payment(total_price)
+
+        if payment_result.success:
+            # Create order
+            order = Order(
+                items=cart_items,
+                total=total_price,
+                user_id=get_current_user().id
+            )
+            order.save()
+            return {"status": "success", "order_id": order.id}
+
+        return {"error": "Payment failed"}, 400
+  criteria:
+    - 'price.*manipulation|business.*logic'
+    - 'server.*side.*validation|recalculate'
+    - 'trust.*client|client.*side.*validation'
+    - 'total.*price|price.*calculation'
+    - 'validate.*cart|verify.*items'
+  must_not:
+    - '\bvalidated\b'
+    - '\bverified\b'
+  json: false
+
+# =================== API SECURITY ===================
+- id: api_rate_limiting
+  prompt: |
+    Check this API endpoint for security issues:
+
+    @app.route('/api/send-email', methods=['POST'])
+    def send_email_api():
+        recipient = request.json.get('recipient')
+        message = request.json.get('message')
+
+        # Send email
+        send_email(recipient, message)
+        return {"status": "sent"}
+
+    @app.route('/api/upload', methods=['POST'])
+    def upload_file():
+        file = request.files['file']
+        filename = file.filename
+        file.save(f"/uploads/{filename}")
+        return {"uploaded": filename}
+  criteria:
+    - 'rate.*limiting|throttling|abuse'
+    - 'denial.*of.*service|DoS|resource.*exhaustion'
+    - 'email.*spam|bulk.*operations'
+    - 'file.*size|upload.*limits|virus.*scan'
+    - 'authentication|authorization|api.*key'
+  must_not:
+    - '\bprotected\b'
+    - '\blimited\b'
+  json: false
+
+# =================== OWASP & COMPLIANCE KNOWLEDGE ===================
+- id: owasp_top3
+  prompt: "Return the top 3 OWASP Top 10 (2021) items with id,name,risk as a JSON array."
+  criteria:
+    - 'A0?1|Broken Access Control'
+    - 'A0?2|Cryptographic Failures'
+    - 'A0?3|Injection'
+    - 'High'  # risk hint
+  must_not: []
+  json: true
+
+- id: owasp_top10_complete
+  prompt: "List all OWASP Top 10 2021 vulnerabilities with their risk ratings and brief descriptions in JSON format."
+  criteria:
+    - 'A01.*Broken Access Control'
+    - 'A02.*Cryptographic Failures'
+    - 'A03.*Injection'
+    - 'A04.*Insecure Design'
+    - 'A05.*Security Misconfiguration'
+    - 'A06.*Vulnerable.*Components'
+    - 'A07.*Authentication Failures'
+    - 'A08.*Software.*Data.*Integrity'
+    - 'A09.*Security Logging.*Monitoring'
+    - 'A10.*Server.*Side.*Request.*Forgery'
+  must_not: []
+  json: true
+
+- id: gdpr_compliance
+  prompt: |
+    Analyze this user data collection for GDPR compliance:
+
+    @app.route('/register', methods=['POST'])
+    def register_user():
+        user_data = {
+            'email': request.form.get('email'),
+            'password': hash_password(request.form.get('password')),
+            'full_name': request.form.get('name'),
+            'phone': request.form.get('phone'),
+            'address': request.form.get('address'),
+            'ip_address': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent'),
+            'registration_date': datetime.now(),
+            'marketing_consent': False  # Default to no consent
+        }
+
+        save_user(user_data)
+        return "Registration successful"
+  criteria:
+    - 'GDPR|data.*protection|privacy'
+    - 'consent|explicit.*consent|opt.*in'
+    - 'lawful.*basis|legitimate.*interest'
+    - 'data.*minimization|necessary.*data'
+    - 'right.*erasure|right.*portability|data.*subject.*rights'
+  must_not: []
+  json: false

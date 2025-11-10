@@ -1,0 +1,292 @@
+# 📊 Performance Analysis Summary
+
+**Analysis Date:** September 10, 2025 18:15:11
+**Models Analyzed:** 18
+**Total Test Results:** 3798
+
+## Model Performance Comparison
+
+
+### 1. claude-opus-4
+
+**Performance Metrics:**
+- Accuracy Score: 0.727 ██████████████░░░░░░ (72.7%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 4.0 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 20.69 seconds
+- Total Cost: $22.1299
+- Cost per Test: $0.10488
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 180
+- Poor Quality Responses: 7
+
+---
+### 2. claude-sonnet-4
+
+**Performance Metrics:**
+- Accuracy Score: 0.714 ██████████████░░░░░░ (71.4%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 19.0 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 20.78 seconds
+- Total Cost: $4.4582
+- Cost per Test: $0.02113
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 166
+- Poor Quality Responses: 7
+
+---
+### 3. gemini-2.5-flash-lite
+
+**Performance Metrics:**
+- Accuracy Score: 0.713 ██████████████░░░░░░ (71.3%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 1245.6 ████████████░░░░░░░░ (points/$)
+- Average Response Time: 5.61 seconds
+- Total Cost: $0.0684
+- Cost per Test: $0.00032
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 179
+- Poor Quality Responses: 10
+
+---
+### 4. gpt-4o
+
+**Performance Metrics:**
+- Accuracy Score: 0.664 █████████████░░░░░░░ (66.4%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 36.0 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 10.88 seconds
+- Total Cost: $1.4866
+- Cost per Test: $0.00705
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 150
+- Poor Quality Responses: 22
+
+---
+### 5. gpt-4o-mini
+
+**Performance Metrics:**
+- Accuracy Score: 0.662 █████████████░░░░░░░ (66.2%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 484.7 ████░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 14.47 seconds
+- Total Cost: $0.1104
+- Cost per Test: $0.00052
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 150
+- Poor Quality Responses: 19
+
+---
+### 6. grok-3
+
+**Performance Metrics:**
+- Accuracy Score: 0.657 █████████████░░░░░░░ (65.7%)
+- Success Rate: 100.0% (422/422 tests)
+- Cost Effectiveness: 21.8 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 22.64 seconds
+- Total Cost: $5.1005
+- Cost per Test: $0.01209
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 303
+- Poor Quality Responses: 33
+
+---
+### 7. gpt-5-mini
+
+**Performance Metrics:**
+- Accuracy Score: 0.520 ██████████░░░░░░░░░░ (52.0%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 48.5 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 8.86 seconds
+- Total Cost: $0.4571
+- Cost per Test: $0.00217
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 99
+- Poor Quality Responses: 45
+
+---
+### 8. deepseek-chat
+
+**Performance Metrics:**
+- Accuracy Score: 0.470 █████████░░░░░░░░░░░ (47.0%)
+- Success Rate: 100.0% (422/422 tests)
+- Cost Effectiveness: 1326.0 █████████████░░░░░░░ (points/$)
+- Average Response Time: 8.62 seconds
+- Total Cost: $0.0311
+- Cost per Test: $0.00007
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 162
+- Poor Quality Responses: 124
+
+---
+### 9. grok-code-fast-1
+
+**Performance Metrics:**
+- Accuracy Score: 0.427 ████████░░░░░░░░░░░░ (42.7%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 138.6 █░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 6.10 seconds
+- Total Cost: $0.1301
+- Cost per Test: $0.00062
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 85
+- Poor Quality Responses: 77
+
+---
+### 10. grok-4
+
+**Performance Metrics:**
+- Accuracy Score: 0.422 ████████░░░░░░░░░░░░ (42.2%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 10.6 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 20.26 seconds
+- Total Cost: $1.6722
+- Cost per Test: $0.00793
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 79
+- Poor Quality Responses: 83
+
+---
+### 11. gpt-5
+
+**Performance Metrics:**
+- Accuracy Score: 0.395 ███████░░░░░░░░░░░░░ (39.5%)
+- Success Rate: 97.2% (205/211 tests)
+- Cost Effectiveness: 2.4 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 15.54 seconds
+- Total Cost: $1.6656
+- Cost per Test: $0.00789
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 62
+- Poor Quality Responses: 94
+
+---
+### 12. deepseek-reasoner
+
+**Performance Metrics:**
+- Accuracy Score: 0.295 █████░░░░░░░░░░░░░░░ (29.5%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 10.8 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 25.72 seconds
+- Total Cost: $0.2891
+- Cost per Test: $0.00137
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 52
+- Poor Quality Responses: 112
+
+---
+### 13. grok-3-mini
+
+**Performance Metrics:**
+- Accuracy Score: 0.175 ███░░░░░░░░░░░░░░░░░ (17.5%)
+- Success Rate: 100.0% (211/211 tests)
+- Cost Effectiveness: 69.9 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 12.63 seconds
+- Total Cost: $0.0291
+- Cost per Test: $0.00014
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 17
+- Poor Quality Responses: 160
+
+---
+### 14. gemini-2.5-flash
+
+**Performance Metrics:**
+- Accuracy Score: 0.055 █░░░░░░░░░░░░░░░░░░░ (5.5%)
+- Success Rate: 9.5% (20/211 tests)
+- Cost Effectiveness: 24.8 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 1.25 seconds
+- Total Cost: $0.0028
+- Cost per Test: $0.00001
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 13
+- Poor Quality Responses: 195
+
+---
+### 15. gemini-2.0-flash-lite
+
+**Performance Metrics:**
+- Accuracy Score: 0.003 ░░░░░░░░░░░░░░░░░░░░ (0.3%)
+- Success Rate: 0.5% (1/211 tests)
+- Cost Effectiveness: 0.8 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 0.17 seconds
+- Total Cost: $0.0003
+- Cost per Test: $0.00000
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 1
+- Poor Quality Responses: 210
+
+---
+### 16. gemini-2.0-flash
+
+**Performance Metrics:**
+- Accuracy Score: 0.000 ░░░░░░░░░░░░░░░░░░░░ (0.0%)
+- Success Rate: 0.0% (0/211 tests)
+- Cost Effectiveness: 0.0 ░░░░░░░░░░░░░░░░░░░░ (points/$)
+- Average Response Time: 0.10 seconds
+- Total Cost: $0.0000
+- Cost per Test: $0.00000
+
+**Quality Distribution:**
+- Perfect Scores (1.0): 0
+- Good Quality Responses: 0
+- Poor Quality Responses: 211
+
+---
+
+## 🏆 Top Performers Summary
+
+🎯 **Most Accurate:** claude-opus-4 (72.7%)
+💰 **Best Value:** deepseek-chat (1326.0 points/$)
+⚡ **Fastest:** gemini-2.0-flash (0.10s avg)
+
+## 📈 Cost Analysis
+
+**Total Investment:** $37.6313
+**Average Cost per Test:** $0.01039
+
+## 💡 Recommendations
+
+Based on this analysis:
+
+1. **For highest accuracy:** Use claude-opus-4
+2. **For best value:** Use deepseek-chat 
+3. **For fastest results:** Use gemini-2.0-flash
+
+*Note: For visual charts and advanced analysis, install visualization libraries:*
+```bash
+pip install matplotlib seaborn pandas numpy
+```
+
+---
+*Generated by LLM Security Benchmark - Built by Rapticore Security Research Team*

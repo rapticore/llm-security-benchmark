@@ -1,0 +1,280 @@
+# OWASP Top 10 2021 Test Suite
+# Built by the Rapticore Security Research Team
+# Focused tests for each OWASP Top 10 vulnerability category
+
+- id: owasp_a01_broken_access_control
+  prompt: |
+    Review this user admin panel endpoint:
+
+    @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+    @login_required
+    def delete_user(user_id):
+        # Delete any user - no admin check
+        User.query.filter_by(id=user_id).delete()
+        db.session.commit()
+        return redirect('/admin/users')
+  criteria:
+    - 'A01|A1|broken.*access.*control'
+    - 'authorization|privilege.*escalation'
+    - 'admin.*check|role.*check|permission.*check'
+    - 'access.*control|rbac|permission'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: owasp_a02_cryptographic_failures
+  prompt: |
+    Analyze this password storage implementation:
+
+    def store_password(username, password):
+        # Store password in plaintext for easy recovery
+        user = User(username=username, password=password)
+        db.session.add(user)
+        db.session.commit()
+
+    def authenticate(username, password):
+        user = User.query.filter_by(username=username, password=password).first()
+        return user is not None
+  criteria:
+    - 'A02|A2|cryptographic.*failures'
+    - 'plaintext.*password|cleartext.*password'
+    - 'hash.*password|encrypt.*password'
+    - 'bcrypt|scrypt|argon2|pbkdf2'
+    - 'salt|hashing.*algorithm'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: owasp_a03_injection
+  prompt: |
+    Check this search functionality:
+
+    def search_products(category, price_range):
+        query = f"""
+        SELECT * FROM products 
+        WHERE category = '{category}' 
+        AND price BETWEEN {price_range}
+        """
+        return db.execute(query).fetchall()
+  criteria:
+    - 'A03|A3|injection'
+    - 'sql.*injection|sqli'
+    - 'parameterized.*query|prepared.*statement'
+    - 'sanitize|validate|escape'
+    - 'between.*injection'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: owasp_a04_insecure_design
+  prompt: |
+    Review this password reset flow:
+
+    @app.route('/reset-password/<token>')
+    def reset_password(token):
+        # Token is just base64 encoded username
+        username = base64.b64decode(token).decode()
+        user = User.query.filter_by(username=username).first()
+        if user:
+            new_password = generate_random_password()
+            user.password = new_password
+            db.session.commit()
+            return f"New password: {new_password}"
+        return "Invalid token"
+  criteria:
+    - 'A04|A4|insecure.*design'
+    - 'predictable.*token|weak.*token'
+    - 'cryptographic.*token|secure.*token'
+    - 'base64.*decode|base64.*username'
+    - 'secure.*design|threat.*model'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: owasp_a05_security_misconfiguration
+  prompt: |
+    Analyze this Flask application configuration:
+
+    from flask import Flask
+
+    app = Flask(__name__)
+    app.config['DEBUG'] = True
+    app.config['SECRET_KEY'] = 'dev'
+    app.config['SQLALCHEMY_ECHO'] = True
+
+    # Deploy to production with these settings
+    if __name__ == '__main__':
+        app.run(host='0.0.0.0', debug=True)
+  criteria:
+    - 'A05|A5|security.*misconfiguration'
+    - 'debug.*true|debug.*mode'
+    - 'production.*debug|development.*settings'
+    - 'weak.*secret|default.*secret'
+    - 'sqlalchemy.*echo|sql.*logging'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: owasp_a06_vulnerable_components
+  prompt: |
+    Review this package.json dependencies:
+
+    {
+      "dependencies": {
+        "express": "4.16.0",
+        "lodash": "4.17.4",
+        "moment": "2.19.0",
+        "jquery": "1.12.4"
+      }
+    }
+
+    These packages have known CVEs. What are the security risks?
+  criteria:
+    - 'A06|A6|vulnerable.*components'
+    - 'outdated.*dependencies|known.*vulnerabilities'
+    - 'cve|security.*advisory|vulnerability.*scan'
+    - 'dependency.*update|security.*patch'
+    - 'supply.*chain|component.*analysis'
+  must_not: []
+  json: false
+
+- id: owasp_a07_authentication_failures
+  prompt: |
+    Check this login implementation:
+
+    @app.route('/login', methods=['POST'])
+    def login():
+        username = request.form['username']
+        password = request.form['password']
+        
+        # No rate limiting, weak passwords allowed
+        user = User.query.filter_by(username=username).first()
+        if user and user.password == password:
+            session['user_id'] = user.id
+            return redirect('/dashboard')
+        
+        return "Login failed", 401
+  criteria:
+    - 'A07|A7|authentication.*failures'
+    - 'brute.*force|rate.*limiting'
+    - 'weak.*password|password.*policy'
+    - 'multi.*factor|2fa|mfa'
+    - 'account.*lockout|login.*attempts'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: owasp_a08_software_data_integrity
+  prompt: |
+    Analyze this CI/CD pipeline configuration:
+
+    # .github/workflows/deploy.yml
+    - name: Install dependencies
+      run: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        pip install -r requirements.txt
+
+    - name: Deploy to production
+      run: |
+        docker build -t myapp .
+        kubectl apply -f k8s/
+  criteria:
+    - 'A08|A8|software.*data.*integrity'
+    - 'supply.*chain|pipeline.*security'
+    - 'unsigned.*package|untrusted.*source'
+    - 'integrity.*check|checksum|signature'
+    - 'dependency.*verification|package.*verification'
+  must_not: []
+  json: false
+
+- id: owasp_a09_logging_monitoring_failures
+  prompt: |
+    Review this error handling code:
+
+    @app.route('/transfer', methods=['POST'])
+    def transfer_money():
+        try:
+            amount = float(request.form['amount'])
+            # Process transfer silently
+            process_transfer(get_current_user(), amount)
+            return "Transfer completed"
+        except Exception:
+            # Fail silently, no logging
+            return "Transfer failed"
+  criteria:
+    - 'A09|A9|logging.*monitoring|security.*logging'
+    - 'audit.*log|security.*event'
+    - 'monitoring|alerting|siem'
+    - 'silent.*failure|no.*logging'
+    - 'security.*incident|anomaly.*detection'
+  must_not:
+    - '\blogging\b'
+    - '\bmonitoring\b'
+  json: false
+
+- id: owasp_a10_ssrf
+  prompt: |
+    Check this webhook notification endpoint:
+
+    @app.route('/notify', methods=['POST'])
+    def send_notification():
+        webhook_url = request.json.get('webhook_url')
+        payload = request.json.get('payload')
+        
+        # Send POST request to any URL provided
+        response = requests.post(webhook_url, json=payload)
+        return {"status": "sent", "response": response.text}
+  criteria:
+    - 'A10|A10|SSRF|server.*side.*request.*forgery'
+    - 'url.*validation|allowlist|whitelist'
+    - 'internal.*network|metadata.*service'
+    - 'private.*ip|localhost|127\.0\.0\.1'
+    - 'egress.*filtering|outbound.*restrictions'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+# =================== OWASP KNOWLEDGE TESTS ===================
+- id: owasp_top3_json
+  prompt: "Return the top 3 OWASP Top 10 (2021) items with id, name, and risk level as a JSON array."
+  criteria:
+    - 'A01|A1.*Broken Access Control'
+    - 'A02|A2.*Cryptographic Failures'
+    - 'A03|A3.*Injection'
+    - 'High|Critical'
+  must_not: []
+  json: true
+
+- id: owasp_complete_list
+  prompt: "List all OWASP Top 10 2021 vulnerabilities with their identifiers and risk ratings in JSON format."
+  criteria:
+    - 'A01.*Broken Access Control'
+    - 'A02.*Cryptographic Failures'
+    - 'A03.*Injection'
+    - 'A04.*Insecure Design'
+    - 'A05.*Security Misconfiguration'
+    - 'A06.*Vulnerable.*Components'
+    - 'A07.*Authentication Failures'
+    - 'A08.*Software.*Data.*Integrity'
+    - 'A09.*Security Logging.*Monitoring'
+    - 'A10.*Server.*Side.*Request.*Forgery'
+  must_not: []
+  json: true
+
+- id: owasp_risk_assessment
+  prompt: |
+    Compare the risk levels of these OWASP Top 10 2021 vulnerabilities:
+    1. SQL Injection
+    2. Broken Access Control  
+    3. Cryptographic Failures
+    
+    Rank them by exploitability and business impact.
+  criteria:
+    - 'exploitability|business.*impact'
+    - 'broken.*access.*control.*high|access.*control.*critical'
+    - 'sql.*injection.*high|injection.*high'
+    - 'cryptographic.*failures|crypto.*failures'
+    - 'prevalence|detectability|technical.*impact'
+  must_not: []
+  json: false
