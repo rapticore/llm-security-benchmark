@@ -77,19 +77,19 @@ This tool evaluates LLMs' ability to:
 **🏆 Premium Models (Highest Accuracy):**
 - GPT-5 (`gpt-5`) - Advanced reasoning, highest cost
 - Claude Opus 4 (`claude-opus-4`) - Top tier analysis  
-- **Grok-4 (`grok-4`) - X.AI's flagship model, most intelligent globally**
+- Grok-4 (`grok-4`) - X.AI's flagship model
 - Gemini 2.5 Flash (`gemini-2.5-flash`) - Fast premium option
 
 **⚖️ Balanced Models (Speed + Accuracy):**
 - GPT-4o (`gpt-4o`) - OpenAI's optimized model
 - Claude Sonnet 4 (`claude-sonnet-4`) - **Default choice**
-- **Grok-3 (`grok-3`) - X.AI's standard model**
+- Grok-3 (`grok-3`) - X.AI's standard model
 - Gemini 2.0 Flash (`gemini-2.0-flash`) - Google's balanced option
 
 **⚡ Fast Models (Cost-Effective):**
 - GPT-4o Mini (`gpt-4o-mini`) - **Default choice** 
-- **Grok-3-Mini (`grok-3-mini`) - X.AI's fast variant**
-- **Grok-Code-Fast-1 (`grok-code-fast-1`) - X.AI's code-optimized model**
+- Grok-3-Mini (`grok-3-mini`) - X.AI's fast variant
+- Grok-Code-Fast-1 (`grok-code-fast-1`) - X.AI's code-optimized model
 - GPT-5 Mini (`gpt-5-mini`) - Budget OpenAI option
 - Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite`) - Ultrafast
 - Gemini 2.0 Flash Lite (`gemini-2.0-flash-lite`) - Budget Google
