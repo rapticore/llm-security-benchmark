@@ -1,0 +1,972 @@
+# Swift/iOS Comprehensive Security Test Suite
+# Built by the Rapticore Security Research Team
+# Covers Swift and iOS-specific security vulnerabilities
+
+- id: swift_keychain_insecure_storage
+  prompt: |
+    Analyze this Swift insecure keychain and data storage:
+
+    import Security
+    import Foundation
+
+    class InsecureDataStorage {
+        
+        func storePasswordUnsafe(username: String, password: String) {
+            // Storing in UserDefaults (insecure)
+            UserDefaults.standard.set(password, forKey: "user_password")
+            UserDefaults.standard.set(username, forKey: "username")
+        }
+        
+        func saveAPIKeyInsecure(apiKey: String) {
+            // Saving to file without encryption
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let apiKeyPath = documentsPath.appendingPathComponent("api_key.txt")
+            try? apiKey.write(to: apiKeyPath, atomically: true, encoding: .utf8)
+        }
+        
+        func storeInKeychainWeak(service: String, account: String, password: String) {
+            let passwordData = password.data(using: .utf8)!
+            
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecValueData as String: passwordData,
+                kSecAttrAccessible as String: kSecAttrAccessibleAlways  // Too permissive
+            ]
+            
+            SecItemAdd(query as CFDictionary, nil)
+        }
+        
+        func logSensitiveData(userInfo: [String: Any]) {
+            // Logging sensitive information
+            print("User data: \(userInfo)")
+            NSLog("Processing user info: %@", userInfo)
+        }
+        
+        func saveToSharedContainer(data: String) {
+            // Shared app group without proper access control
+            let sharedURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.example.shared")
+            let fileURL = sharedURL?.appendingPathComponent("shared_data.txt")
+            try? data.write(to: fileURL!, atomically: true, encoding: .utf8)
+        }
+    }
+
+    class BiometricBypass {
+        
+        func authenticateWithoutBiometrics(completion: @escaping (Bool) -> Void) {
+            // Bypassing biometric authentication
+            completion(true)  // Always returns success
+        }
+        
+        func weakBiometricCheck() -> Bool {
+            let context = LAContext()
+            var error: NSError?
+            
+            // Only checking capability, not actually authenticating
+            return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        }
+    }
+  criteria:
+    - 'keychain.*security|secure.*enclave'
+    - 'userdefaults.*insecure|encrypted.*storage'
+    - 'biometric.*authentication|local.*authentication'
+    - 'kSecAttrAccessibleWhenUnlocked|access.*control'
+    - 'sensitive.*data.*logging|debug.*information'
+  must_not:
+    - 'userdefaults.*secure.*storage'
+    - 'plain.*text.*storage.*acceptable'
+  json: false
+
+- id: swift_network_security_issues
+  prompt: |
+    Review this Swift network security vulnerability:
+
+    import Foundation
+    import Network
+
+    class InsecureNetworking {
+        
+        func makeHTTPRequest(url: String) {
+            // Using HTTP instead of HTTPS
+            let httpURL = URL(string: url.replacingOccurrences(of: "https://", with: "http://"))!
+            let task = URLSession.shared.dataTask(with: httpURL) { data, response, error in
+                // Processing response without validation
+            }
+            task.resume()
+        }
+        
+        func createInsecureSession() -> URLSession {
+            let config = URLSessionConfiguration.default
+            
+            // Disable certificate validation
+            let session = URLSession(
+                configuration: config,
+                delegate: InsecureSessionDelegate(),
+                delegateQueue: nil
+            )
+            
+            return session
+        }
+        
+        func allowAllCertificates() {
+            // Global certificate bypass
+            class TrustAllDelegate: NSObject, URLSessionDelegate {
+                func urlSession(_ session: URLSession, 
+                              didReceive challenge: URLAuthenticationChallenge, 
+                              completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+                    
+                    // Accept any certificate
+                    let credential = URLCredential(trust: challenge.protectionSpace.serverTrust!)
+                    completionHandler(.useCredential, credential)
+                }
+            }
+        }
+        
+        func sendUserDataHTTP(userData: [String: Any]) {
+            let json = try! JSONSerialization.data(withJSONObject: userData)
+            var request = URLRequest(url: URL(string: "http://api.example.com/users")!)
+            request.httpMethod = "POST"
+            request.httpBody = json
+            
+            URLSession.shared.dataTask(with: request).resume()
+        }
+        
+        func certificatePinningBypass() {
+            // Weak certificate pinning implementation
+            let serverTrust = SecTrustCreateWithCertificates(nil, nil)
+            // No actual validation performed
+        }
+    }
+
+    class InsecureSessionDelegate: NSObject, URLSessionDelegate {
+        func urlSession(_ session: URLSession, 
+                      didReceive challenge: URLAuthenticationChallenge, 
+                      completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+            
+            // Always trust server certificates
+            completionHandler(.useCredential, URLCredential(trust: challenge.protectionSpace.serverTrust!))
+        }
+    }
+  criteria:
+    - 'certificate.*pinning|ssl.*certificate.*validation'
+    - 'https.*only|app.*transport.*security'
+    - 'network.*security.*config|secure.*networking'
+    - 'certificate.*validation|trust.*evaluation'
+    - 'man.*in.*middle.*prevention|tls.*security'
+  must_not:
+    - 'http.*secure.*enough'
+    - 'certificate.*validation.*bypass.*safe'
+  json: false
+
+- id: swift_sql_injection_core_data
+  prompt: |
+    Analyze this Swift SQL injection vulnerability in Core Data:
+
+    import CoreData
+    import SQLite3
+
+    class DataManager {
+        
+        lazy var persistentContainer: NSPersistentContainer = {
+            let container = NSPersistentContainer(name: "DataModel")
+            container.loadPersistentStores { _, error in
+                if let error = error {
+                    fatalError("Core Data error: \(error)")
+                }
+            }
+            return container
+        }()
+        
+        func findUser(username: String, password: String) -> User? {
+            let context = persistentContainer.viewContext
+            
+            // SQL injection via NSPredicate format string
+            let predicate = NSPredicate(format: "username == '\(username)' AND password == '\(password)'")
+            
+            let request: NSFetchRequest<User> = User.fetchRequest()
+            request.predicate = predicate
+            
+            do {
+                let users = try context.fetch(request)
+                return users.first
+            } catch {
+                return nil
+            }
+        }
+        
+        func searchUsers(searchTerm: String) -> [User] {
+            let context = persistentContainer.viewContext
+            
+            // Vulnerable predicate construction
+            let predicate = NSPredicate(format: "name CONTAINS '\(searchTerm)'")
+            
+            let request: NSFetchRequest<User> = User.fetchRequest()
+            request.predicate = predicate
+            
+            return (try? context.fetch(request)) ?? []
+        }
+        
+        func executeRawSQL(query: String) -> [[String: Any]] {
+            var results: [[String: Any]] = []
+            
+            // Direct SQLite usage with user input
+            let dbPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+            var db: OpaquePointer?
+            
+            if sqlite3_open("\(dbPath)/database.sqlite", &db) == SQLITE_OK {
+                var statement: OpaquePointer?
+                
+                if sqlite3_prepare_v2(db, query, -1, &statement, nil) == SQLITE_OK {
+                    while sqlite3_step(statement) == SQLITE_ROW {
+                        // Process results
+                        var row: [String: Any] = [:]
+                        let columnCount = sqlite3_column_count(statement)
+                        
+                        for i in 0..<columnCount {
+                            let columnName = String(cString: sqlite3_column_name(statement, i))
+                            let columnValue = String(cString: sqlite3_column_text(statement, i))
+                            row[columnName] = columnValue
+                        }
+                        results.append(row)
+                    }
+                }
+                
+                sqlite3_finalize(statement)
+                sqlite3_close(db)
+            }
+            
+            return results
+        }
+        
+        func deleteUserData(userId: String, condition: String) {
+            let context = persistentContainer.viewContext
+            
+            // Dynamic predicate with user input
+            let predicate = NSPredicate(format: "userId == \(userId) AND \(condition)")
+            
+            let request: NSFetchRequest<NSFetchRequestResult> = User.fetchRequest()
+            request.predicate = predicate
+            
+            let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
+            try? context.execute(deleteRequest)
+        }
+    }
+  criteria:
+    - 'sql.*injection|parameterized.*queries'
+    - 'nspredicate.*format.*safe|predicate.*substitution'
+    - 'core.*data.*security|sqlite.*injection'
+    - 'input.*validation|escape.*sql'
+    - 'prepared.*statements|bind.*parameters'
+  must_not:
+    - 'string.*interpolation.*predicate.*safe'
+    - 'core.*data.*prevents.*sql.*injection'
+  json: false
+
+- id: swift_url_scheme_vulnerabilities
+  prompt: |
+    Review this Swift URL scheme handling vulnerability:
+
+    import UIKit
+
+    class URLSchemeHandler {
+        
+        func application(_ app: UIApplication, open url: URL, 
+                        options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+            
+            guard let scheme = url.scheme, let host = url.host else { return false }
+            
+            switch scheme {
+            case "myapp":
+                handleCustomScheme(url: url)
+            case "http", "https":
+                handleWebURL(url: url)
+            default:
+                return false
+            }
+            
+            return true
+        }
+        
+        func handleCustomScheme(url: URL) {
+            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            
+            // Vulnerable parameter handling
+            if let action = components?.queryItems?.first(where: { $0.name == "action" })?.value {
+                switch action {
+                case "transfer":
+                    let amount = components?.queryItems?.first(where: { $0.name == "amount" })?.value ?? "0"
+                    let recipient = components?.queryItems?.first(where: { $0.name == "to" })?.value ?? ""
+                    transferMoney(amount: amount, to: recipient)
+                    
+                case "execute":
+                    let command = components?.queryItems?.first(where: { $0.name == "cmd" })?.value ?? ""
+                    executeCommand(command)
+                    
+                case "open":
+                    let path = components?.queryItems?.first(where: { $0.name == "path" })?.value ?? ""
+                    openFile(path: path)
+                    
+                case "redirect":
+                    let targetURL = components?.queryItems?.first(where: { $0.name == "url" })?.value ?? ""
+                    redirectToURL(targetURL)
+                }
+            }
+        }
+        
+        func handleWebURL(url: URL) {
+            // Opening any URL without validation
+            UIApplication.shared.open(url)
+        }
+        
+        func transferMoney(amount: String, to recipient: String) {
+            // Direct money transfer without confirmation
+            let amountValue = Double(amount) ?? 0
+            print("Transferring $\(amountValue) to \(recipient)")
+        }
+        
+        func executeCommand(_ command: String) {
+            // Command execution from URL
+            let task = Process()
+            task.launchPath = "/bin/sh"
+            task.arguments = ["-c", command]
+            task.launch()
+        }
+        
+        func openFile(path: String) {
+            // Path traversal vulnerability
+            let fullPath = NSHomeDirectory() + "/" + path
+            let data = NSData(contentsOfFile: fullPath)
+            // Process file without validation
+        }
+        
+        func redirectToURL(_ urlString: String) {
+            // Open redirect vulnerability
+            guard let url = URL(string: urlString) else { return }
+            UIApplication.shared.open(url)
+        }
+        
+        // Deep link handling without validation
+        func handleDeepLink(_ url: URL) {
+            let path = url.path
+            let components = path.components(separatedBy: "/")
+            
+            switch components[1] {
+            case "user":
+                let userId = components[2]
+                showUserProfile(userId: userId)
+            case "admin":
+                let action = components[2]
+                performAdminAction(action)
+            default:
+                break
+            }
+        }
+        
+        func showUserProfile(userId: String) {
+            // No access control check
+            let profileVC = UserProfileViewController(userId: userId)
+            // Present profile
+        }
+        
+        func performAdminAction(_ action: String) {
+            // Admin functions without authentication
+            switch action {
+            case "reset":
+                resetAllUserData()
+            case "delete":
+                deleteAllData()
+            default:
+                break
+            }
+        }
+        
+        func resetAllUserData() {
+            // Destructive action without confirmation
+        }
+        
+        func deleteAllData() {
+            // Destructive action without confirmation
+        }
+    }
+  criteria:
+    - 'url.*scheme.*validation|deep.*link.*security'
+    - 'input.*validation|parameter.*sanitization'
+    - 'authentication.*authorization|access.*control'
+    - 'open.*redirect.*prevention|url.*whitelist'
+    - 'user.*confirmation|sensitive.*operations'
+  must_not:
+    - 'url.*scheme.*always.*safe'
+    - 'deep.*links.*secure.*by.*default'
+  json: false
+
+- id: swift_webview_vulnerabilities
+  prompt: |
+    Analyze this Swift WebView security vulnerability:
+
+    import WebKit
+    import UIKit
+
+    class WebViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
+        
+        var webView: WKWebView!
+        
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            
+            let configuration = WKWebViewConfiguration()
+            
+            // Dangerous configuration
+            configuration.preferences.javaScriptEnabled = true
+            configuration.allowsInlineMediaPlayback = true
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+            
+            // Adding JavaScript bridge without validation
+            configuration.userContentController.add(self, name: "nativeHandler")
+            configuration.userContentController.add(self, name: "fileSystem")
+            configuration.userContentController.add(self, name: "deviceInfo")
+            
+            webView = WKWebView(frame: view.bounds, configuration: configuration)
+            webView.navigationDelegate = self
+            view.addSubview(webView)
+            
+            // Loading user-controlled URL
+            if let urlString = UserDefaults.standard.string(forKey: "webview_url"),
+               let url = URL(string: urlString) {
+                webView.load(URLRequest(url: url))
+            }
+        }
+        
+        func userContentController(_ userContentController: WKUserContentController, 
+                                 didReceive message: WKScriptMessage) {
+            
+            guard let messageBody = message.body as? [String: Any] else { return }
+            
+            switch message.name {
+            case "nativeHandler":
+                handleNativeMessage(messageBody)
+            case "fileSystem":
+                handleFileSystemAccess(messageBody)
+            case "deviceInfo":
+                handleDeviceInfoRequest(messageBody)
+            default:
+                break
+            }
+        }
+        
+        func handleNativeMessage(_ message: [String: Any]) {
+            guard let action = message["action"] as? String else { return }
+            
+            switch action {
+            case "executeCommand":
+                let command = message["command"] as? String ?? ""
+                executeSystemCommand(command)
+                
+            case "accessKeychain":
+                let service = message["service"] as? String ?? ""
+                let account = message["account"] as? String ?? ""
+                let password = getKeychainPassword(service: service, account: account)
+                webView.evaluateJavaScript("handleKeychainResult('\(password)')")
+                
+            case "readFile":
+                let path = message["path"] as? String ?? ""
+                let content = readFileContent(path: path)
+                webView.evaluateJavaScript("handleFileContent('\(content)')")
+                
+            case "sendPushNotification":
+                let title = message["title"] as? String ?? ""
+                let body = message["body"] as? String ?? ""
+                sendLocalNotification(title: title, body: body)
+            }
+        }
+        
+        func handleFileSystemAccess(_ message: [String: Any]) {
+            let operation = message["operation"] as? String ?? ""
+            let path = message["path"] as? String ?? ""
+            let content = message["content"] as? String ?? ""
+            
+            switch operation {
+            case "write":
+                writeFile(path: path, content: content)
+            case "delete":
+                deleteFile(path: path)
+            case "list":
+                let files = listDirectory(path: path)
+                webView.evaluateJavaScript("handleDirectoryListing(\(files))")
+            }
+        }
+        
+        func executeSystemCommand(_ command: String) {
+            // Command injection from WebView
+            let task = Process()
+            task.launchPath = "/bin/sh"
+            task.arguments = ["-c", command]
+            task.launch()
+        }
+        
+        func getKeychainPassword(service: String, account: String) -> String {
+            // Exposing keychain to JavaScript
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecReturnData as String: true
+            ]
+            
+            var result: AnyObject?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+            
+            if status == errSecSuccess,
+               let data = result as? Data,
+               let password = String(data: data, encoding: .utf8) {
+                return password
+            }
+            
+            return ""
+        }
+        
+        func readFileContent(path: String) -> String {
+            // Path traversal vulnerability
+            return (try? String(contentsOfFile: path)) ?? ""
+        }
+        
+        func writeFile(path: String, content: String) {
+            // Unrestricted file writing
+            try? content.write(toFile: path, atomically: true, encoding: .utf8)
+        }
+        
+        // Navigation delegate methods with insufficient validation
+        func webView(_ webView: WKWebView, 
+                    decidePolicyFor navigationAction: WKNavigationAction, 
+                    decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            
+            // Allow all navigation
+            decisionHandler(.allow)
+        }
+    }
+  criteria:
+    - 'webview.*security|javascript.*bridge.*validation'
+    - 'url.*validation|navigation.*policy'
+    - 'file.*access.*restriction|path.*traversal.*prevention'
+    - 'keychain.*access.*webview|sensitive.*data.*exposure'
+    - 'command.*injection.*prevention|input.*sanitization'
+  must_not:
+    - 'webview.*javascript.*bridge.*always.*safe'
+    - 'unrestricted.*file.*access.*acceptable'
+  json: false
+
+- id: swift_cryptographic_vulnerabilities
+  prompt: |
+    Review this Swift cryptographic implementation vulnerability:
+
+    import CryptoKit
+    import CommonCrypto
+    import Security
+
+    class InsecureCrypto {
+        
+        func hashPasswordWeak(_ password: String) -> String {
+            // Weak hashing using MD5
+            let data = password.data(using: .utf8)!
+            var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+            data.withUnsafeBytes { bytes in
+                CC_MD5(bytes.baseAddress, CC_LONG(data.count), &digest)
+            }
+            return digest.map { String(format: "%02x", $0) }.joined()
+        }
+        
+        func encryptWithWeakKey(data: String) -> Data? {
+            // Hard-coded weak key
+            let key = "1234567890123456"
+            let keyData = key.data(using: .utf8)!
+            let dataToEncrypt = data.data(using: .utf8)!
+            
+            // Using ECB mode (patterns visible)
+            var encryptedData = Data()
+            let cryptLength = size_t(dataToEncrypt.count + kCCBlockSizeAES128)
+            encryptedData.count = cryptLength
+            
+            var numBytesEncrypted: size_t = 0
+            
+            let cryptStatus = encryptedData.withUnsafeMutableBytes { encryptedBytes in
+                dataToEncrypt.withUnsafeBytes { dataBytes in
+                    keyData.withUnsafeBytes { keyBytes in
+                        CCCrypt(CCOperation(kCCEncrypt),
+                               CCAlgorithm(kCCAlgorithmAES),
+                               CCOptions(kCCOptionECBMode),  // Insecure ECB mode
+                               keyBytes.baseAddress, keyData.count,
+                               nil,  // No IV
+                               dataBytes.baseAddress, dataToEncrypt.count,
+                               encryptedBytes.baseAddress, cryptLength,
+                               &numBytesEncrypted)
+                    }
+                }
+            }
+            
+            guard cryptStatus == kCCSuccess else { return nil }
+            encryptedData.count = numBytesEncrypted
+            return encryptedData
+        }
+        
+        func generateWeakRandomToken() -> String {
+            // Using weak random number generation
+            let randomValue = arc4random_uniform(1000000)
+            return String(randomValue)
+        }
+        
+        func insecureKeyGeneration() -> Data {
+            // Predictable key generation
+            let timestamp = Date().timeIntervalSince1970
+            let key = "secret\(Int(timestamp))"
+            return key.data(using: .utf8) ?? Data()
+        }
+        
+        func comparePasswordsInsecure(stored: String, provided: String) -> Bool {
+            // Timing attack vulnerability
+            return stored == provided
+        }
+        
+        func createWeakDigitalSignature(data: Data) -> Data? {
+            // Weak signature algorithm
+            var digest = [UInt8](repeating: 0, count: Int(CC_SHA1_DIGEST_LENGTH))
+            data.withUnsafeBytes { bytes in
+                CC_SHA1(bytes.baseAddress, CC_LONG(data.count), &digest)
+            }
+            return Data(digest)
+        }
+        
+        func validateCertificateInsecure(certificate: SecCertificate) -> Bool {
+            // No certificate validation
+            return true
+        }
+        
+        func weakKeyDerivation(password: String, salt: Data) -> Data? {
+            // Weak PBKDF2 parameters
+            let rounds = 100  // Too few iterations
+            var derivedKey = Data(count: 32)
+            
+            let result = derivedKey.withUnsafeMutableBytes { derivedKeyBytes in
+                password.withCString { passwordBytes in
+                    salt.withUnsafeBytes { saltBytes in
+                        CCKeyDerivationPBKDF(
+                            CCPBKDFAlgorithm(kCCPBKDF2),
+                            passwordBytes, strlen(passwordBytes),
+                            saltBytes.bindMemory(to: UInt8.self).baseAddress, salt.count,
+                            CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA1),  // Weak PRF
+                            UInt32(rounds),
+                            derivedKeyBytes.bindMemory(to: UInt8.self).baseAddress, 32
+                        )
+                    }
+                }
+            }
+            
+            guard result == kCCSuccess else { return nil }
+            return derivedKey
+        }
+        
+        // Modern CryptoKit usage with vulnerabilities
+        func cryptoKitWeakImplementation(data: Data) -> Data? {
+            // Using CryptoKit but with weak patterns
+            let key = SymmetricKey(data: "weakfixedkey123".data(using: .utf8)!)  // Fixed key
+            
+            do {
+                // No authenticated encryption
+                let sealedBox = try ChaChaPoly.seal(data, using: key, nonce: ChaChaPoly.Nonce())
+                return sealedBox.ciphertext  // Returning only ciphertext, no authentication
+            } catch {
+                return nil
+            }
+        }
+    }
+  criteria:
+    - 'weak.*hash.*md5.*sha1|secure.*hash.*sha256.*sha3'
+    - 'secure.*random|cryptokit.*random'
+    - 'aes.*cbc.*gcm|avoid.*ecb.*mode'
+    - 'pbkdf2.*iterations|key.*derivation.*secure'
+    - 'timing.*attack.*prevention|constant.*time.*comparison'
+  must_not:
+    - 'md5.*secure.*hash'
+    - 'arc4random.*cryptographic.*secure'
+  json: false
+
+- id: swift_memory_safety_bypass
+  prompt: |
+    Analyze this Swift memory safety bypass vulnerability:
+
+    import Foundation
+
+    class MemorySafetyBypass {
+        
+        func unsafePointerAccess(data: Data) -> String? {
+            // Unsafe pointer manipulation
+            return data.withUnsafeBytes { bytes in
+                let pointer = bytes.bindMemory(to: CChar.self).baseAddress
+                return String(cString: pointer!)  // Potential crash if data is not null-terminated
+            }
+        }
+        
+        func bufferOverflowRisk(input: String) {
+            // Fixed-size buffer with potential overflow
+            var buffer = [CChar](repeating: 0, count: 100)
+            let cString = input.cString(using: .utf8)!
+            
+            // No bounds checking
+            for i in 0..<cString.count {
+                buffer[i] = cString[i]  // Potential buffer overflow
+            }
+        }
+        
+        func dangerousMutablePointer() {
+            let data = Data([1, 2, 3, 4, 5])
+            
+            data.withUnsafeMutableBytes { bytes in
+                let pointer = bytes.bindMemory(to: UInt32.self).baseAddress!
+                // Modifying read-only data
+                pointer.pointee = 0xDEADBEEF
+            }
+        }
+        
+        func unsafeStringManipulation(input: String) -> String {
+            // Unsafe string operations
+            let cString = input.cString(using: .utf8)!
+            let mutablePointer = UnsafeMutablePointer<CChar>.allocate(capacity: input.count + 1)
+            
+            // Manual memory management without deallocation
+            strcpy(mutablePointer, cString)
+            
+            let result = String(cString: mutablePointer)
+            // Memory leak - forgot to deallocate
+            return result
+        }
+        
+        func arrayBoundsViolation(array: [Int], index: Int) -> Int {
+            // No bounds checking
+            return array[index]  // Potential crash with out-of-bounds access
+        }
+        
+        func forcedUnwrappingDanger(optionalValue: String?) -> String {
+            // Force unwrapping without checking
+            return optionalValue!  // Potential runtime crash
+        }
+        
+        func unsafeCollectionAccess() {
+            var dictionary: [String: String] = [:]
+            
+            // Force unwrapping dictionary access
+            let value = dictionary["nonexistent"]!  // Runtime crash
+            print(value)
+        }
+        
+        func memoryCorruption() {
+            // Creating dangling pointers
+            var data = Data([1, 2, 3, 4])
+            var pointer: UnsafePointer<UInt8>?
+            
+            data.withUnsafeBytes { bytes in
+                pointer = bytes.bindMemory(to: UInt8.self).baseAddress
+            }
+            
+            // data goes out of scope, pointer becomes dangling
+            data = Data()
+            
+            // Accessing dangling pointer
+            print(pointer!.pointee)  // Undefined behavior
+        }
+        
+        func raceConditionMemory() {
+            var sharedArray: [Int] = []
+            let queue = DispatchQueue(label: "concurrent", attributes: .concurrent)
+            
+            for i in 0..<1000 {
+                queue.async {
+                    // Race condition on shared mutable state
+                    sharedArray.append(i)  // Not thread-safe
+                }
+            }
+        }
+        
+        func stringBufferOverflow(input: String) -> String {
+            // C-style string manipulation in Swift
+            let maxLength = 50
+            var buffer = [CChar](repeating: 0, count: maxLength)
+            let inputCString = input.cString(using: .utf8)!
+            
+            // Potential buffer overflow
+            strcpy(&buffer, inputCString)  // No length checking
+            
+            return String(cString: buffer)
+        }
+    }
+  criteria:
+    - 'memory.*safety|bounds.*checking'
+    - 'optional.*handling|nil.*checking'
+    - 'unsafe.*pointer.*validation|memory.*deallocation'
+    - 'thread.*safety|concurrent.*access'
+    - 'buffer.*overflow.*prevention|array.*bounds'
+  must_not:
+    - 'swift.*prevents.*all.*memory.*issues'
+    - 'unsafe.*pointers.*always.*safe'
+  json: false
+
+- id: swift_plist_xml_vulnerabilities
+  prompt: |
+    Review this Swift Property List and XML processing vulnerability:
+
+    import Foundation
+
+    class PlistXMLProcessor {
+        
+        func processPlistFromUser(plistData: Data) -> [String: Any]? {
+            // Deserializing user-controlled plist
+            do {
+                let plist = try PropertyListSerialization.propertyList(
+                    from: plistData,
+                    options: [],
+                    format: nil
+                )
+                return plist as? [String: Any]
+            } catch {
+                return nil
+            }
+        }
+        
+        func loadConfigFromURL(urlString: String) -> [String: Any]? {
+            // Loading plist from user-controlled URL
+            guard let url = URL(string: urlString) else { return nil }
+            
+            do {
+                let data = try Data(contentsOf: url)
+                return try PropertyListSerialization.propertyList(
+                    from: data,
+                    options: [],
+                    format: nil
+                ) as? [String: Any]
+            } catch {
+                return nil
+            }
+        }
+        
+        func processXMLPlist(xmlString: String) -> [String: Any]? {
+            // XML plist processing without XXE protection
+            guard let xmlData = xmlString.data(using: .utf8) else { return nil }
+            
+            do {
+                return try PropertyListSerialization.propertyList(
+                    from: xmlData,
+                    options: [],
+                    format: nil
+                ) as? [String: Any]
+            } catch {
+                return nil
+            }
+        }
+        
+        func executeObjectFromPlist(plistData: Data) {
+            // Dangerous object instantiation from plist
+            do {
+                if let plist = try PropertyListSerialization.propertyList(
+                    from: plistData,
+                    options: [],
+                    format: nil
+                ) as? [String: Any] {
+                    
+                    if let className = plist["class"] as? String,
+                       let classType = NSClassFromString(className) as? NSObject.Type {
+                        // Instantiating arbitrary classes
+                        let instance = classType.init()
+                        
+                        // Setting properties from plist
+                        if let properties = plist["properties"] as? [String: Any] {
+                            for (key, value) in properties {
+                                instance.setValue(value, forKey: key)
+                            }
+                        }
+                    }
+                }
+            } catch {
+                print("Error: \(error)")
+            }
+        }
+        
+        func saveSensitiveDataToPlist(data: [String: Any]) {
+            // Saving sensitive data to plist without encryption
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let plistPath = documentsPath.appendingPathComponent("sensitive.plist")
+            
+            do {
+                let plistData = try PropertyListSerialization.data(
+                    fromPropertyList: data,
+                    format: .xml,
+                    options: 0
+                )
+                try plistData.write(to: plistPath)
+            } catch {
+                print("Failed to save plist: \(error)")
+            }
+        }
+        
+        func processRemotePlist() {
+            // Loading plist from remote URL without validation
+            let urlString = UserDefaults.standard.string(forKey: "remote_config_url") ?? ""
+            guard let url = URL(string: urlString) else { return }
+            
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                guard let data = data else { return }
+                
+                do {
+                    let config = try PropertyListSerialization.propertyList(
+                        from: data,
+                        options: [],
+                        format: nil
+                    ) as? [String: Any]
+                    
+                    // Applying configuration without validation
+                    self.applyRemoteConfig(config ?? [:])
+                } catch {
+                    print("Plist parsing error: \(error)")
+                }
+            }.resume()
+        }
+        
+        func applyRemoteConfig(_ config: [String: Any]) {
+            // Dangerous configuration application
+            for (key, value) in config {
+                UserDefaults.standard.set(value, forKey: key)
+                
+                // Executing actions based on remote config
+                if key == "debug_mode", value as? Bool == true {
+                    enableDebugMode()
+                } else if key == "admin_override", value as? Bool == true {
+                    grantAdminAccess()
+                } else if key == "execute_command", let command = value as? String {
+                    executeCommand(command)
+                }
+            }
+        }
+        
+        func enableDebugMode() {
+            // Enable debugging features
+        }
+        
+        func grantAdminAccess() {
+            // Grant administrative privileges
+        }
+        
+        func executeCommand(_ command: String) {
+            // Execute system command from config
+            let task = Process()
+            task.launchPath = "/bin/sh"
+            task.arguments = ["-c", command]
+            task.launch()
+        }
+    }
+  criteria:
+    - 'plist.*security|xml.*external.*entity'
+    - 'remote.*config.*validation|url.*whitelist'
+    - 'object.*instantiation.*validation|class.*whitelist'
+    - 'sensitive.*data.*encryption|secure.*storage'
+    - 'command.*execution.*prevention|config.*validation'
+  must_not:
+    - 'plist.*always.*safe'
+    - 'remote.*config.*secure.*by.*default'
+  json: false

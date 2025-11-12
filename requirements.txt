@@ -1,0 +1,162 @@
+# LLM Security Benchmark Requirements
+# Built by the Rapticore Security Research Team
+# Quality-First Score (QFS) Audit-Compliant System
+
+# =============================================================================
+# CORE API CLIENT DEPENDENCIES
+# =============================================================================
+# LLM API clients for model testing
+openai>=1.0.0                    # OpenAI GPT models (GPT-4o, GPT-5)
+anthropic>=0.8.0                 # Anthropic Claude models (Sonnet, Opus)
+google-generativeai>=0.3.0       # Google Gemini models (Pro, Flash)
+python-dotenv>=1.0.0             # Environment variable management
+requests>=2.31.0                 # HTTP client for API requests
+
+# =============================================================================
+# DATA PROCESSING & ANALYSIS
+# =============================================================================
+# Core data manipulation and analysis
+pandas>=1.3.0                    # Data analysis and manipulation
+numpy>=1.21.0                    # Numerical computing foundation  
+scipy>=1.16.0                    # Statistical functions for QFS audit (bootstrap CIs)
+pyyaml>=6.0.0                    # YAML test suite parsing
+
+# Token counting and text processing  
+tiktoken>=0.9.0                  # OpenAI token counting
+python-dateutil>=2.9.0           # Date parsing for timestamps
+
+# =============================================================================
+# QFS AUDIT & STATISTICAL ANALYSIS
+# =============================================================================
+# Statistical rigor and methodological consistency  
+# scipy: Bootstrap confidence intervals, Wilson CIs, statistical tests
+# pandas: Data validation, schema enforcement, slice analysis
+# numpy: Geometric mean calculations, cost normalization
+
+# =============================================================================
+# VISUALIZATION & REPORTING
+# =============================================================================
+# Quality-first visualizations with Pareto frontier analysis
+matplotlib>=3.5.0                # Core plotting functionality
+seaborn>=0.11.0                  # Statistical visualizations and styling
+
+# Enhanced visualization dependencies
+contourpy>=1.3.0                 # Contour plotting for matplotlib
+cycler>=0.12.0                   # Color cycling for consistent charts
+fonttools>=4.59.0                # Font handling for professional charts
+kiwisolver>=1.4.0                # Constraint solver for matplotlib layouts
+pyparsing>=3.2.0                 # Text parsing for matplotlib
+
+# =============================================================================
+# SYSTEM MONITORING & PERFORMANCE
+# =============================================================================
+# Performance monitoring and resource tracking
+psutil>=5.8.0                    # System monitoring (CPU, memory, disk)
+tqdm>=4.67.0                     # Progress bars for long benchmark runs
+
+# =============================================================================
+# DATA EXPORT & SERIALIZATION  
+# =============================================================================
+# Multi-format data export capabilities
+# Built-in modules used: json, csv, pickle, gzip, pathlib
+# No additional dependencies needed for core export functionality
+
+# =============================================================================
+# CONCURRENT PROCESSING
+# =============================================================================
+# Parallel benchmark execution
+# Built-in modules used: concurrent.futures, threading, asyncio
+# No additional dependencies needed for concurrency
+
+# =============================================================================
+# GOOGLE API EXTENSIONS (Optional)
+# =============================================================================
+# Extended Google API functionality
+google-api-python-client>=2.0.0  # Full Google API client
+google-auth-httplib2>=0.2.0       # Authentication for Google APIs
+cachetools>=5.5.0                # Caching for API efficiency  
+grpcio>=1.74.0                   # gRPC support for Google APIs
+grpcio-status>=1.71.0            # Status handling for gRPC
+proto-plus>=1.26.0               # Protocol buffer extensions
+protobuf>=5.29.0                 # Protocol buffers
+
+# =============================================================================
+# HTTP & NETWORKING
+# =============================================================================
+# Robust HTTP client stack
+httpx>=0.28.0                    # Modern async HTTP client
+httpcore>=1.0.0                  # HTTP core functionality  
+anyio>=4.10.0                    # Async I/O compatibility
+sniffio>=1.3.0                   # Async library detection
+h11>=0.16.0                      # HTTP/1.1 implementation
+idna>=3.10.0                     # Internationalized domain names
+charset-normalizer>=3.4.0        # Character encoding detection
+certifi>=2025.8.0                # SSL certificate bundle
+urllib3>=2.5.0                   # HTTP library compatibility
+
+# =============================================================================
+# SECURITY & ENCRYPTION  
+# =============================================================================
+# Security for API communications
+pyasn1>=0.6.0                   # ASN.1 encoding/decoding
+pyasn1-modules>=0.4.0           # ASN.1 modules
+rsa>=4.9.0                      # RSA encryption
+cffi>=1.17.0                    # C Foreign Function Interface
+
+# =============================================================================
+# DATA VALIDATION & SERIALIZATION
+# =============================================================================
+# Robust data validation for QFS audit compliance
+pydantic>=2.11.0                # Data validation and settings
+annotated-types>=0.7.0          # Type annotations for validation
+jiter>=0.10.0                   # Fast JSON parsing
+packaging>=25.0                 # Version parsing and comparison
+
+# =============================================================================
+# SYSTEM COMPATIBILITY
+# =============================================================================
+# Cross-platform compatibility
+distro>=1.9.0                   # Linux distribution detection
+pytz>=2025.2                    # Timezone handling
+six>=1.17.0                     # Python 2/3 compatibility utilities
+
+# =============================================================================
+# COMPRESSION & FILE HANDLING
+# =============================================================================
+# Data compression for efficient storage
+brotlicffi>=1.0.9               # Brotli compression
+# Built-in modules: gzip, zipfile for standard compression
+
+# =============================================================================  
+# IMAGE PROCESSING (Optional)
+# =============================================================================
+# Chart and visualization enhancement  
+pillow>=11.3.0                  # Image processing for charts
+
+# =============================================================================
+# DEVELOPMENT & DEBUGGING (Optional)
+# =============================================================================
+# Development and testing tools
+# setuptools>=78.0.0            # Package development (usually pre-installed)
+# pip>=25.0.0                   # Package installer (usually pre-installed)
+
+# =============================================================================
+# INSTALLATION NOTES
+# =============================================================================
+# 
+# Required for QFS Audit Compliance:
+# - scipy: Statistical functions, bootstrap CIs, hypothesis testing
+# - pandas: Data validation, schema enforcement, slice analysis  
+# - numpy: Mathematical operations, geometric mean, normalization
+# - matplotlib/seaborn: Quality-first visualizations, Pareto frontier
+#
+# Install all dependencies:
+#   pip install -r requirements.txt
+#
+# Or install with system packages flag if needed:  
+#   pip install --break-system-packages -r requirements.txt
+#
+# Core QFS features work with: openai, anthropic, google-generativeai,
+#                             pandas, numpy, scipy, matplotlib, seaborn
+#
+# =============================================================================

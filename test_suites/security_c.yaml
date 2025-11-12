@@ -1,0 +1,406 @@
+# C Security Test Suite
+# Built by the Rapticore Security Research Team
+# C language specific security vulnerability tests
+
+- id: c_buffer_overflow
+  prompt: |
+    Analyze this C code for memory safety issues:
+
+    #include <stdio.h>
+    #include <string.h>
+
+    void processUserInput(char* input) {
+        char buffer[256];
+        strcpy(buffer, input);
+        printf("Processing: %s\n", buffer);
+    }
+
+    int main() {
+        char userInput[1024];
+        printf("Enter data: ");
+        gets(userInput);
+        processUserInput(userInput);
+        return 0;
+    }
+  criteria:
+    - 'buffer.*overflow|buffer.*overrun'
+    - 'strcpy.*unsafe|gets.*unsafe'
+    - 'strncpy|fgets|safer.*alternative'
+    - 'bounds.*check|length.*validation'
+    - 'stack.*smashing|memory.*corruption'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: c_format_string
+  prompt: |
+    Review this C logging function:
+
+    #include <stdio.h>
+    #include <syslog.h>
+
+    void logUserMessage(char* message) {
+        printf(message);
+        fprintf(stderr, message);
+        syslog(LOG_INFO, message);
+    }
+
+    void handleUserInput() {
+        char input[512];
+        printf("Enter log message: ");
+        fgets(input, sizeof(input), stdin);
+        logUserMessage(input);
+    }
+  criteria:
+    - 'format.*string.*vulnerability|format.*string.*bug'
+    - 'printf.*user.*input|fprintf.*user.*input'
+    - 'printf.*format.*specifier|%.*specifier'
+    - 'snprintf|safe.*printf|format.*validation'
+    - 'arbitrary.*memory.*read|stack.*leak'
+  must_not:
+    - 'format.*string.*safe'
+  json: false
+
+- id: c_integer_overflow
+  prompt: |
+    Check this C memory allocation:
+
+    #include <stdlib.h>
+    #include <string.h>
+
+    char* allocateBuffer(unsigned int count, unsigned int size) {
+        unsigned int totalSize = count * size;
+        
+        if (totalSize > 1000000) {
+            return NULL;
+        }
+        
+        char* buffer = malloc(totalSize);
+        if (buffer) {
+            memset(buffer, 0, totalSize);
+        }
+        
+        return buffer;
+    }
+
+    void processArray(unsigned int numElements) {
+        char* data = allocateBuffer(numElements, 1024);
+        if (data) {
+            // Use data...
+            free(data);
+        }
+    }
+  criteria:
+    - 'integer.*overflow|arithmetic.*overflow'
+    - 'multiplication.*overflow|wraparound'
+    - 'checked.*arithmetic|overflow.*check'
+    - 'SIZE_MAX|limits\.h'
+    - 'memory.*allocation.*size'
+  must_not:
+    - 'overflow.*check'
+    - 'SIZE_MAX'
+  json: false
+
+- id: c_use_after_free
+  prompt: |
+    Analyze this C memory management:
+
+    #include <stdlib.h>
+    #include <stdio.h>
+
+    struct User {
+        char* name;
+        int id;
+    };
+
+    void processUser(struct User* user) {
+        printf("Processing user: %s\n", user->name);
+        free(user->name);
+        free(user);
+    }
+
+    int main() {
+        struct User* user = malloc(sizeof(struct User));
+        user->name = malloc(50);
+        strcpy(user->name, "John Doe");
+        user->id = 123;
+        
+        processUser(user);
+        
+        // Later in code...
+        printf("User ID: %d\n", user->id); // Oops!
+        
+        return 0;
+    }
+  criteria:
+    - 'use.*after.*free|dangling.*pointer'
+    - 'double.*free|memory.*leak'
+    - 'null.*pointer.*assignment|pointer.*nullification'
+    - 'memory.*safety|undefined.*behavior'
+    - 'valgrind|memory.*debugging'
+  must_not:
+    - 'user.*=.*NULL'
+    - '\bsafe\b'
+  json: false
+
+- id: c_null_pointer_dereference
+  prompt: |
+    Review this C pointer handling:
+
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+
+    char* processString(char* input) {
+        char* result = malloc(strlen(input) + 1);
+        strcpy(result, input);
+        return result;
+    }
+
+    void handleInput(char* userInput) {
+        char* processed = processString(userInput);
+        
+        // Use processed string
+        printf("Processed: %s\n", processed);
+        printf("Length: %zu\n", strlen(processed));
+        
+        free(processed);
+    }
+
+    int main() {
+        char* input = NULL;
+        handleInput(input);
+        return 0;
+    }
+  criteria:
+    - 'null.*pointer.*dereference|segmentation.*fault'
+    - 'null.*check|pointer.*validation'
+    - 'strlen.*null|strcpy.*null'
+    - 'defensive.*programming|input.*validation'
+    - 'crash|sigsegv'
+  must_not:
+    - 'null.*check'
+    - 'input.*validation'
+  json: false
+
+- id: c_race_condition
+  prompt: |
+    Check this C multithreading code:
+
+    #include <pthread.h>
+    #include <stdio.h>
+
+    int global_counter = 0;
+
+    void* worker_thread(void* arg) {
+        for (int i = 0; i < 10000; i++) {
+            global_counter++;
+        }
+        return NULL;
+    }
+
+    int main() {
+        pthread_t threads[5];
+        
+        for (int i = 0; i < 5; i++) {
+            pthread_create(&threads[i], NULL, worker_thread, NULL);
+        }
+        
+        for (int i = 0; i < 5; i++) {
+            pthread_join(threads[i], NULL);
+        }
+        
+        printf("Final counter: %d\n", global_counter);
+        return 0;
+    }
+  criteria:
+    - 'race.*condition|data.*race'
+    - 'thread.*safety|concurrent.*access'
+    - 'mutex|pthread_mutex|lock'
+    - 'atomic.*operation|synchronization'
+    - 'shared.*variable|critical.*section'
+  must_not:
+    - 'mutex|pthread_mutex'
+    - 'atomic'
+  json: false
+
+- id: c_command_injection
+  prompt: |
+    Analyze this C system command execution:
+
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+
+    void executeCommand(char* userCommand) {
+        char command[512];
+        snprintf(command, sizeof(command), "ls -la %s", userCommand);
+        system(command);
+    }
+
+    void backupFile(char* filename) {
+        char cmd[256];
+        sprintf(cmd, "cp %s /backup/", filename);
+        system(cmd);
+    }
+
+    int main() {
+        char input[128];
+        printf("Enter directory name: ");
+        fgets(input, sizeof(input), stdin);
+        
+        // Remove newline
+        input[strcspn(input, "\n")] = 0;
+        
+        executeCommand(input);
+        return 0;
+    }
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'system.*call.*user.*input|popen.*unsafe'
+    - 'shell.*escape|command.*validation'
+    - 'whitelist.*command|execv.*safe'
+    - 'input.*sanitization|argument.*validation'
+  must_not:
+    - 'execv|execve'
+    - '\bsafe\b'
+  json: false
+
+- id: c_toctou_vulnerability
+  prompt: |
+    Review this C file access pattern:
+
+    #include <stdio.h>
+    #include <unistd.h>
+    #include <sys/stat.h>
+
+    int writeToFile(char* filename, char* data) {
+        struct stat st;
+        
+        // Check if file exists and is owned by current user
+        if (stat(filename, &st) == 0) {
+            if (st.st_uid != getuid()) {
+                printf("File not owned by current user\n");
+                return -1;
+            }
+        }
+        
+        // Open and write to file
+        FILE* file = fopen(filename, "w");
+        if (file) {
+            fprintf(file, "%s", data);
+            fclose(file);
+            return 0;
+        }
+        
+        return -1;
+    }
+
+    int main() {
+        writeToFile("/tmp/userdata.txt", "sensitive data");
+        return 0;
+    }
+  criteria:
+    - 'TOCTOU|time.*of.*check.*time.*of.*use'
+    - 'race.*condition|file.*system.*race'
+    - 'atomic.*operation|file.*descriptor'
+    - 'symlink.*attack|symbolic.*link'
+    - 'fstat.*vs.*stat|file.*descriptor.*check'
+  must_not:
+    - 'atomic.*operation'
+    - 'fstat'
+  json: false
+
+- id: c_path_traversal
+  prompt: |
+    Check this C file reading function:
+
+    #include <stdio.h>
+    #include <string.h>
+    #include <stdlib.h>
+
+    void readUserFile(char* filename) {
+        char filepath[512];
+        snprintf(filepath, sizeof(filepath), "/app/userfiles/%s", filename);
+        
+        FILE* file = fopen(filepath, "r");
+        if (file) {
+            char buffer[1024];
+            while (fgets(buffer, sizeof(buffer), file)) {
+                printf("%s", buffer);
+            }
+            fclose(file);
+        } else {
+            printf("File not found: %s\n", filepath);
+        }
+    }
+
+    int main() {
+        char input[256];
+        printf("Enter filename: ");
+        fgets(input, sizeof(input), stdin);
+        
+        // Remove newline
+        input[strcspn(input, "\n")] = 0;
+        
+        readUserFile(input);
+        return 0;
+    }
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'realpath|canonical.*path|path.*resolution'
+    - 'path.*validation|filename.*validation'
+    - 'sanitize.*filename|normalize.*path'
+  must_not:
+    - 'realpath|canonical'
+    - '\bsafe\b'
+  json: false
+
+- id: c_stack_buffer_overflow
+  prompt: |
+    Analyze this C input handling:
+
+    #include <stdio.h>
+    #include <string.h>
+
+    void processCredentials(char* username, char* password) {
+        char user_buf[32];
+        char pass_buf[32];
+        
+        strcpy(user_buf, username);
+        strcpy(pass_buf, password);
+        
+        printf("Authenticating user: %s\n", user_buf);
+        
+        // Simulate authentication
+        if (strcmp(user_buf, "admin") == 0 && strcmp(pass_buf, "secret") == 0) {
+            printf("Access granted\n");
+        } else {
+            printf("Access denied\n");
+        }
+    }
+
+    int main() {
+        char username[256];
+        char password[256];
+        
+        printf("Username: ");
+        scanf("%s", username);
+        
+        printf("Password: ");
+        scanf("%s", password);
+        
+        processCredentials(username, password);
+        return 0;
+    }
+  criteria:
+    - 'stack.*buffer.*overflow|stack.*smashing'
+    - 'strcpy.*fixed.*buffer|scanf.*overflow'
+    - 'strncpy|fgets|input.*length.*limit'
+    - 'buffer.*bounds|input.*validation'
+    - 'return.*address.*overwrite|control.*flow'
+  must_not:
+    - 'strncpy|fgets'
+    - '\bsafe\b'
+  json: false

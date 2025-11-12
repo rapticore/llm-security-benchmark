@@ -1,0 +1,379 @@
+# Go Security Test Suite
+# Built by the Rapticore Security Research Team
+# Go-specific security vulnerability tests
+
+- id: go_race_condition
+  prompt: |
+    Analyze this Go code for concurrency issues:
+
+    package main
+
+    import (
+        "fmt"
+        "time"
+    )
+
+    var counter int
+
+    func increment() {
+        for i := 0; i < 1000; i++ {
+            counter++
+        }
+    }
+
+    func main() {
+        go increment()
+        go increment()
+        time.Sleep(time.Second)
+        fmt.Println("Counter:", counter)
+    }
+  criteria:
+    - 'race.*condition|data.*race'
+    - 'mutex|sync\\.Mutex|atomic'
+    - 'concurrent.*access|shared.*variable'
+    - 'go.*routine|goroutine'
+    - 'synchronization|sync\\.RWMutex'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: go_sql_injection
+  prompt: |
+    Review this Go database query:
+
+    func getUserByID(db *sql.DB, userID string) (*User, error) {
+        query := fmt.Sprintf("SELECT * FROM users WHERE id = '%s'", userID)
+        row := db.QueryRow(query)
+        
+        var user User
+        err := row.Scan(&user.ID, &user.Name, &user.Email)
+        if err != nil {
+            return nil, err
+        }
+        return &user, nil
+    }
+  criteria:
+    - 'sql.*injection|sqli'
+    - 'prepared.*statement|parameterized'
+    - 'fmt\\.Sprintf.*sql|string.*formatting'
+    - 'db\\.Query.*placeholder|\\?.*placeholder'
+    - 'sanitize|validate'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: go_path_traversal
+  prompt: |
+    Check this Go file serving code:
+
+    func serveFile(w http.ResponseWriter, r *http.Request) {
+        filename := r.URL.Query().Get("file")
+        filepath := "/app/uploads/" + filename
+        
+        file, err := os.Open(filepath)
+        if err != nil {
+            http.Error(w, "File not found", 404)
+            return
+        }
+        defer file.Close()
+        
+        io.Copy(w, file)
+    }
+  criteria:
+    - 'path.*traversal|directory.*traversal'
+    - '\.\.\/|\.\.\\\\|\.\./|\.\.\\\\'
+    - 'filepath\\.Clean|filepath\\.Join'
+    - 'path.*validation|filename.*validation'
+    - 'sanitize.*path|clean.*path'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: go_command_injection
+  prompt: |
+    Analyze this Go command execution:
+
+    func executeCommand(command string) (string, error) {
+        cmd := exec.Command("sh", "-c", command)
+        output, err := cmd.Output()
+        if err != nil {
+            return "", err
+        }
+        return string(output), nil
+    }
+
+    func handleRequest(w http.ResponseWriter, r *http.Request) {
+        userCmd := r.FormValue("cmd")
+        result, _ := executeCommand(userCmd)
+        fmt.Fprintf(w, "Result: %s", result)
+    }
+  criteria:
+    - 'command.*injection|shell.*injection'
+    - 'exec\\.Command.*sh.*-c'
+    - 'shell.*escape|command.*validation'
+    - 'whitelist.*command|allowed.*command'
+    - 'sanitize.*input|validate.*command'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: go_unsafe_pointer
+  prompt: |
+    Review this Go unsafe pointer usage:
+
+    package main
+
+    import (
+        "fmt"
+        "unsafe"
+    )
+
+    func main() {
+        s := "hello"
+        ptr := unsafe.Pointer(&s)
+        
+        // Convert to different type
+        intPtr := (*int)(ptr)
+        fmt.Println(*intPtr)
+        
+        // Pointer arithmetic
+        newPtr := unsafe.Pointer(uintptr(ptr) + 8)
+        fmt.Println(*((*string)(newPtr)))
+    }
+  criteria:
+    - 'unsafe.*pointer|unsafe\\.Pointer'
+    - 'memory.*safety|buffer.*overflow'
+    - 'pointer.*arithmetic|uintptr.*addition'
+    - 'type.*safety|undefined.*behavior'
+    - 'memory.*corruption|segmentation.*fault'
+  must_not:
+    - '\bsafe\b'
+  json: false
+
+- id: go_goroutine_leak
+  prompt: |
+    Check this Go goroutine management:
+
+    func processRequests() {
+        for {
+            go func() {
+                // Process request without any exit condition
+                for {
+                    time.Sleep(1 * time.Second)
+                    // Do some work that might block indefinitely
+                    processData()
+                }
+            }()
+            time.Sleep(100 * time.Millisecond)
+        }
+    }
+
+    func processData() {
+        // Potentially blocking operation
+        http.Get("http://external-api.com/data")
+    }
+  criteria:
+    - 'goroutine.*leak|resource.*leak'
+    - 'context.*cancellation|context\\.WithCancel'
+    - 'timeout|context\\.WithTimeout'
+    - 'infinite.*loop|endless.*goroutine'
+    - 'graceful.*shutdown|cleanup'
+  must_not:
+    - 'context\\.WithCancel'
+    - 'context\\.WithTimeout'
+  json: false
+
+- id: go_tls_config
+  prompt: |
+    Analyze this Go TLS configuration:
+
+    func createHTTPClient() *http.Client {
+        tr := &http.Transport{
+            TLSClientConfig: &tls.Config{
+                InsecureSkipVerify: true,
+                MinVersion:         tls.VersionTLS10,
+                CipherSuites: []uint16{
+                    tls.TLS_RSA_WITH_RC4_128_SHA,
+                    tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+                },
+            },
+        }
+        return &http.Client{Transport: tr}
+    }
+  criteria:
+    - 'InsecureSkipVerify.*true'
+    - 'weak.*cipher|insecure.*cipher'
+    - 'TLS.*version.*10|SSL.*version'
+    - 'RC4|3DES|weak.*crypto'
+    - 'certificate.*validation|TLS.*security'
+  must_not:
+    - '\bsecure\b'
+  json: false
+
+- id: go_json_injection
+  prompt: |
+    Review this Go JSON handling:
+
+    func updateUser(w http.ResponseWriter, r *http.Request) {
+        var data map[string]interface{}
+        decoder := json.NewDecoder(r.Body)
+        decoder.UseNumber()
+        
+        if err := decoder.Decode(&data); err != nil {
+            http.Error(w, "Invalid JSON", 400)
+            return
+        }
+        
+        // Directly update user without validation
+        userID := data["user_id"].(string)
+        isAdmin := data["is_admin"].(bool)
+        
+        updateUserInDB(userID, data)
+    }
+  criteria:
+    - 'mass.*assignment|parameter.*pollution'
+    - 'json.*injection|deserialization'
+    - 'input.*validation|field.*validation'
+    - 'type.*assertion.*panic|interface.*conversion'
+    - 'privilege.*escalation|is_admin'
+  must_not:
+    - '\bvalidated\b'
+  json: false
+
+- id: go_crypto_weak_random
+  prompt: |
+    Check this Go random number generation:
+
+    func generateToken() string {
+        rand.Seed(time.Now().UnixNano())
+        
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        result := make([]byte, 32)
+        
+        for i := range result {
+            result[i] = chars[rand.Intn(len(chars))]
+        }
+        
+        return string(result)
+    }
+
+    func generateSessionID() string {
+        return fmt.Sprintf("%d", rand.Int63())
+    }
+  criteria:
+    - 'weak.*random|predictable.*random'
+    - 'crypto/rand|cryptographically.*secure'
+    - 'math/rand.*security|deterministic.*random'
+    - 'session.*id.*predictable|token.*predictable'
+    - 'entropy|randomness.*quality'
+  must_not:
+    - 'crypto/rand'
+    - '\bsecure\b'
+  json: false
+
+- id: go_xml_external_entity
+  prompt: |
+    Analyze this Go XML processing:
+
+    func parseXML(xmlData []byte) error {
+        decoder := xml.NewDecoder(bytes.NewReader(xmlData))
+        
+        for {
+            token, err := decoder.Token()
+            if err == io.EOF {
+                break
+            }
+            if err != nil {
+                return err
+            }
+            
+            switch element := token.(type) {
+            case xml.StartElement:
+                fmt.Printf("Element: %s\n", element.Name.Local)
+            }
+        }
+        return nil
+    }
+  criteria:
+    - 'XXE|xml.*external.*entity'
+    - 'xml.*parser.*security|entity.*processing'
+    - 'disable.*external.*entities'
+    - 'xml.*bomb|billion.*laughs'
+    - 'secure.*xml.*parsing'
+  must_not:
+    - 'DisallowDoctype'
+    - 'entity.*disabled'
+  json: false
+
+# Additional advanced Go security tests
+- id: go_memory_safety_cgo
+  prompt: |
+    Review this Go code using CGO:
+
+    /*
+    #include <stdlib.h>
+    #include <string.h>
+    
+    void process_data(char* data, int len) {
+        char buffer[256];
+        strcpy(buffer, data);  // Unsafe
+        // Process buffer
+    }
+    */
+    import "C"
+    import "unsafe"
+
+    func ProcessUserData(userData string) {
+        cStr := C.CString(userData)
+        defer C.free(unsafe.Pointer(cStr))
+        C.process_data(cStr, C.int(len(userData)))
+    }
+
+    func GetDataPointer(data []byte) uintptr {
+        return uintptr(unsafe.Pointer(&data[0]))
+    }
+  criteria:
+    - 'CGO.*memory.*safety|unsafe.*pointer.*CGO'
+    - 'buffer.*overflow|strcpy.*unsafe'
+    - 'C\.CString.*memory.*leak|C\.free.*missing'
+    - 'memory.*management.*CGO|unsafe.*conversion'
+    - 'bounds.*checking|input.*validation'
+  must_not:
+    - 'bounds.*check'
+    - '\bsafe\b'
+  json: false
+
+- id: go_sql_injection_advanced
+  prompt: |
+    Check this advanced Go database query:
+
+    func searchUsers(db *sql.DB, filters map[string]interface{}) ([]User, error) {
+        query := "SELECT * FROM users WHERE 1=1"
+        args := []interface{}{}
+        
+        for field, value := range filters {
+            query += fmt.Sprintf(" AND %s = ?", field)
+            args = append(args, value)
+        }
+        
+        rows, err := db.Query(query, args...)
+        // ... process results
+        return users, err
+    }
+
+    func buildComplexQuery(table, orderBy string, conditions []string) string {
+        query := fmt.Sprintf("SELECT * FROM %s WHERE ", table)
+        query += strings.Join(conditions, " AND ")
+        query += fmt.Sprintf(" ORDER BY %s", orderBy)
+        return query
+    }
+  criteria:
+    - 'sql.*injection|dynamic.*query.*construction'
+    - 'table.*name.*injection|column.*name.*injection'
+    - 'ORDER.*BY.*injection|WHERE.*clause.*injection'
+    - 'whitelist.*columns|allowed.*fields'
+    - 'query.*builder.*safe|parameter.*validation'
+  must_not:
+    - 'whitelist.*column'
+    - '\bsafe\b'
+  json: false
